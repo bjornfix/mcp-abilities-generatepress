@@ -1,9 +1,14 @@
 # MCP Abilities - GeneratePress
 
-**GeneratePress and GenerateBlocks management for WordPress via MCP.** Control theme settings, global colors, typography, and block styles.
+GeneratePress theme management for WordPress via MCP.
 
 [![GitHub release](https://img.shields.io/github/v/release/bjornfix/mcp-abilities-generatepress)](https://github.com/bjornfix/mcp-abilities-generatepress/releases)
 [![License: GPL v2](https://img.shields.io/badge/License-GPL%20v2-blue.svg)](https://www.gnu.org/licenses/gpl-2.0)
+
+**Tested up to:** 6.7
+**Stable tag:** 1.0.0
+**License:** GPLv2 or later
+**License URI:** https://www.gnu.org/licenses/gpl-2.0.html
 
 ## What It Does
 
