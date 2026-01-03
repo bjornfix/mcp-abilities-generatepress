@@ -5,8 +5,8 @@ GeneratePress theme management for WordPress via MCP.
 [![GitHub release](https://img.shields.io/github/v/release/bjornfix/mcp-abilities-generatepress)](https://github.com/bjornfix/mcp-abilities-generatepress/releases)
 [![License: GPL v2](https://img.shields.io/badge/License-GPL%20v2-blue.svg)](https://www.gnu.org/licenses/gpl-2.0)
 
-**Tested up to:** 6.7
-**Stable tag:** 1.0.0
+**Tested up to:** 6.9
+**Stable tag:** 1.0.1
 **License:** GPLv2 or later
 **License URI:** https://www.gnu.org/licenses/gpl-2.0.html
 
@@ -32,12 +32,13 @@ This add-on plugin exposes GeneratePress theme and GenerateBlocks settings throu
 3. Upload via WordPress Admin → Plugins → Add New → Upload Plugin
 4. Activate the plugin
 
-## Abilities (5)
+## Abilities (6)
 
 | Ability | Description |
 |---------|-------------|
 | `generatepress/get-settings` | Get theme settings (colors, typography, layout) |
 | `generatepress/update-settings` | Update theme settings |
+| `generatepress/update-page-meta` | Update page-specific settings (disable title, sidebar, footer, etc.) |
 | `generateblocks/get-global-styles` | Get GenerateBlocks global styles |
 | `generateblocks/update-global-styles` | Update GenerateBlocks global styles |
 | `generateblocks/clear-cache` | Clear GenerateBlocks CSS cache |

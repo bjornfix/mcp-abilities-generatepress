@@ -3,7 +3,7 @@
  * Plugin Name: MCP Abilities - GeneratePress
  * Plugin URI: https://github.com/bjornfix/mcp-abilities-generatepress
  * Description: GeneratePress and GenerateBlocks abilities for MCP. Manage theme settings, global colors, typography, and block styles.
- * Version: 1.0.0
+ * Version: 1.0.1
  * Author: Devenia
  * Author URI: https://devenia.com
  * License: GPL-2.0+
@@ -351,6 +351,145 @@ function mcp_register_generatepress_abilities(): void {
 			},
 			'permission_callback' => function (): bool {
 				return current_user_can( 'edit_theme_options' );
+			},
+			'meta'                => array(
+				'annotations' => array(
+					'readonly'    => false,
+					'destructive' => false,
+					'idempotent'  => true,
+				),
+			),
+		)
+	);
+
+	// =========================================================================
+	// GENERATEPRESS - Update Page Meta
+	// =========================================================================
+	wp_register_ability(
+		'generatepress/update-page-meta',
+		array(
+			'label'               => 'Update GeneratePress Page Meta',
+			'description'         => 'Updates GeneratePress page-specific settings like disabling title, sidebar layout, content width, navigation, and footer.',
+			'category'            => 'content',
+			'input_schema'        => array(
+				'type'                 => 'object',
+				'required'             => array( 'id' ),
+				'properties'           => array(
+					'id' => array(
+						'type'        => 'integer',
+						'description' => 'Post or page ID to update.',
+					),
+					'disable_headline' => array(
+						'type'        => 'boolean',
+						'description' => 'Disable the page/post title.',
+					),
+					'disable_nav' => array(
+						'type'        => 'boolean',
+						'description' => 'Disable primary navigation.',
+					),
+					'disable_footer' => array(
+						'type'        => 'boolean',
+						'description' => 'Disable site footer.',
+					),
+					'disable_footer_widgets' => array(
+						'type'        => 'boolean',
+						'description' => 'Disable footer widgets.',
+					),
+					'sidebar_layout' => array(
+						'type'        => 'string',
+						'enum'        => array( '', 'right-sidebar', 'left-sidebar', 'no-sidebar', 'both-sidebars', 'both-left', 'both-right' ),
+						'description' => 'Sidebar layout for this page.',
+					),
+					'content_area' => array(
+						'type'        => 'string',
+						'enum'        => array( '', 'full-width', 'contained', 'full-width-content' ),
+						'description' => 'Content area style.',
+					),
+					'transparent_header' => array(
+						'type'        => 'boolean',
+						'description' => 'Use transparent header on this page.',
+					),
+					'sticky_header' => array(
+						'type'        => 'boolean',
+						'description' => 'Use sticky header on this page.',
+					),
+				),
+				'additionalProperties' => false,
+			),
+			'output_schema'       => array(
+				'type'       => 'object',
+				'properties' => array(
+					'success' => array( 'type' => 'boolean' ),
+					'updated' => array( 'type' => 'array' ),
+					'message' => array( 'type' => 'string' ),
+				),
+			),
+			'execute_callback'    => function ( $input = array() ): array {
+				$input = is_array( $input ) ? $input : array();
+
+				if ( empty( $input['id'] ) ) {
+					return array( 'success' => false, 'message' => 'Post ID is required' );
+				}
+
+				$post_id = intval( $input['id'] );
+				$post    = get_post( $post_id );
+
+				if ( ! $post ) {
+					return array( 'success' => false, 'message' => "Post {$post_id} not found" );
+				}
+
+				$updated = array();
+
+				// Meta key mappings.
+				$meta_map = array(
+					'disable_headline'       => '_generate-disable-headline',
+					'disable_nav'            => '_generate-disable-nav',
+					'disable_footer'         => '_generate-disable-footer',
+					'disable_footer_widgets' => '_generate-disable-footer-widgets',
+					'sidebar_layout'         => '_generate-sidebar-layout-meta',
+					'content_area'           => '_generate-content-area-meta',
+					'transparent_header'     => '_generate-transparent-header',
+					'sticky_header'          => '_generate-sticky-navigation-meta',
+				);
+
+				foreach ( $meta_map as $input_key => $meta_key ) {
+					if ( isset( $input[ $input_key ] ) ) {
+						$value = $input[ $input_key ];
+
+						// Boolean fields: store 'true' string or delete.
+						if ( is_bool( $value ) ) {
+							if ( $value ) {
+								update_post_meta( $post_id, $meta_key, 'true' );
+								$updated[] = "{$input_key} = true";
+							} else {
+								delete_post_meta( $post_id, $meta_key );
+								$updated[] = "{$input_key} = false (removed)";
+							}
+						} else {
+							// String fields.
+							if ( '' === $value ) {
+								delete_post_meta( $post_id, $meta_key );
+								$updated[] = "{$input_key} = '' (removed)";
+							} else {
+								update_post_meta( $post_id, $meta_key, sanitize_text_field( $value ) );
+								$updated[] = "{$input_key} = {$value}";
+							}
+						}
+					}
+				}
+
+				if ( empty( $updated ) ) {
+					return array( 'success' => false, 'message' => 'No valid settings provided to update' );
+				}
+
+				return array(
+					'success' => true,
+					'updated' => $updated,
+					'message' => 'GeneratePress page meta updated for post ' . $post_id,
+				);
+			},
+			'permission_callback' => function (): bool {
+				return current_user_can( 'edit_posts' );
 			},
 			'meta'                => array(
 				'annotations' => array(
