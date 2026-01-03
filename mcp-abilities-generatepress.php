@@ -3,7 +3,7 @@
  * Plugin Name: MCP Abilities - GeneratePress
  * Plugin URI: https://github.com/bjornfix/mcp-abilities-generatepress
  * Description: GeneratePress and GenerateBlocks abilities for MCP. Manage theme settings, global colors, typography, and block styles.
- * Version: 1.0.1
+ * Version: 1.0.2
  * Author: Devenia
  * Author URI: https://devenia.com
  * License: GPL-2.0+
@@ -370,7 +370,7 @@ function mcp_register_generatepress_abilities(): void {
 		array(
 			'label'               => 'Update GeneratePress Page Meta',
 			'description'         => 'Updates GeneratePress page-specific settings like disabling title, sidebar layout, content width, navigation, and footer.',
-			'category'            => 'content',
+			'category'            => 'site',
 			'input_schema'        => array(
 				'type'                 => 'object',
 				'required'             => array( 'id' ),
@@ -489,7 +489,7 @@ function mcp_register_generatepress_abilities(): void {
 				);
 			},
 			'permission_callback' => function (): bool {
-				return current_user_can( 'edit_posts' );
+				return current_user_can( 'edit_theme_options' );
 			},
 			'meta'                => array(
 				'annotations' => array(
