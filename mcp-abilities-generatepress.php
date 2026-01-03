@@ -3,7 +3,7 @@
  * Plugin Name: MCP Abilities - GeneratePress
  * Plugin URI: https://github.com/bjornfix/mcp-abilities-generatepress
  * Description: GeneratePress and GenerateBlocks abilities for MCP. Manage theme settings, global colors, typography, and block styles.
- * Version: 1.0.2
+ * Version: 1.0.3
  * Author: Devenia
  * Author URI: https://devenia.com
  * License: GPL-2.0+
@@ -224,6 +224,15 @@ function mcp_register_generatepress_abilities(): void {
 
 				if ( ! empty( $input['global_colors'] ) ) {
 					update_option( 'generate_global_colors', $input['global_colors'] );
+				}
+
+				// Clear GP's CSS cache to force regeneration from new settings.
+				delete_option( 'generate_dynamic_css_output' );
+				delete_option( 'generate_dynamic_css_cached_version' );
+
+				// Trigger GP's cache rebuild if the function exists.
+				if ( function_exists( 'generate_update_dynamic_css_cache' ) ) {
+					generate_update_dynamic_css_cache();
 				}
 
 				return array(
