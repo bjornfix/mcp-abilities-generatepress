@@ -6,13 +6,13 @@ GeneratePress theme management for WordPress via MCP.
 [![License: GPL v2](https://img.shields.io/badge/License-GPL%20v2-blue.svg)](https://www.gnu.org/licenses/gpl-2.0)
 
 **Tested up to:** 6.9
-**Stable tag:** 1.0.2
+**Stable tag:** 1.1.0
 **License:** GPLv2 or later
 **License URI:** https://www.gnu.org/licenses/gpl-2.0.html
 
 ## What It Does
 
-This add-on plugin exposes GeneratePress theme and GenerateBlocks settings through MCP (Model Context Protocol). Your AI assistant can adjust colors, typography, layouts, and global styles - all through conversation.
+This add-on plugin exposes GeneratePress theme settings, elements, and GenerateBlocks settings through MCP (Model Context Protocol). Your AI assistant can adjust colors, typography, layouts, global styles, and hook elements - all through conversation.
 
 **Part of the [MCP Expose Abilities](https://devenia.com/plugins/mcp-expose-abilities/) ecosystem.**
 
@@ -32,13 +32,26 @@ This add-on plugin exposes GeneratePress theme and GenerateBlocks settings throu
 3. Upload via WordPress Admin → Plugins → Add New → Upload Plugin
 4. Activate the plugin
 
-## Abilities (6)
+## Abilities (17)
+
+New in 1.1.0: elements CRUD, option access, page meta read, and GP cache control.
 
 | Ability | Description |
 |---------|-------------|
+| `generatepress/get-info` | Get active theme and GeneratePress Premium status |
+| `generatepress/list-options` | List GeneratePress/GenerateBlocks options in wp_options |
+| `generatepress/get-options` | Get specific GeneratePress/GenerateBlocks options |
+| `generatepress/update-options` | Update or delete GeneratePress/GenerateBlocks options |
 | `generatepress/get-settings` | Get theme settings (colors, typography, layout) |
 | `generatepress/update-settings` | Update theme settings |
+| `generatepress/clear-cache` | Clear GeneratePress dynamic CSS cache |
+| `generatepress/get-page-meta` | Get page-specific settings (disable title, sidebar, footer, etc.) |
 | `generatepress/update-page-meta` | Update page-specific settings (disable title, sidebar, footer, etc.) |
+| `generatepress/list-elements` | List GeneratePress Elements (hooks, blocks, headers, layouts) |
+| `generatepress/get-element` | Get a GeneratePress Element by ID |
+| `generatepress/create-element` | Create a GeneratePress Element |
+| `generatepress/update-element` | Update a GeneratePress Element |
+| `generatepress/delete-element` | Delete a GeneratePress Element |
 | `generateblocks/get-global-styles` | Get GenerateBlocks global styles |
 | `generateblocks/update-global-styles` | Update GenerateBlocks global styles |
 | `generateblocks/clear-cache` | Clear GenerateBlocks CSS cache |
@@ -92,6 +105,14 @@ Sections: `all`, `colors`, `typography`, `layout`, `buttons`, `site_identity`
   "parameters": {}
 }
 ```
+
+## Changelog
+
+### 1.1.0
+
+- Add GeneratePress elements CRUD and option access
+- Add page meta read ability and GP cache control
+- Expose GenerateBlocks settings option
 
 ## License
 
