@@ -3,7 +3,7 @@ Contributors: devenia
 Tags: mcp, generatepress, theme, ai, automation
 Requires at least: 6.9
 Tested up to: 6.9
-Stable tag: 1.1.0
+Stable tag: 1.1.1
 Requires PHP: 8.0
 License: GPLv2 or later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
@@ -17,10 +17,13 @@ This add-on plugin exposes GeneratePress theme settings, elements, and GenerateB
 == Abilities ==
 
 * Theme settings (colors, typography, layout, buttons)
+* Typography rules and font manager (Local Font Library)
+* Module status management and module settings access
 * GeneratePress options (read/write)
 * GeneratePress Elements (list/get/create/update/delete)
 * Page-specific meta (read/write)
 * GeneratePress cache control
+* Starter Site cache inspection/clear
 * GenerateBlocks global styles/defaults/settings
 * GenerateBlocks CSS cache control
 
@@ -34,6 +37,18 @@ Part of the MCP Expose Abilities ecosystem.
 4. Activate the plugin
 
 == Changelog ==
+
+= 1.1.1 =
+* Fix: Store content in _generate_element_content meta for hook elements (was only saving to post_content)
+* Change: delete-element now only moves to trash (no permanent deletion)
+* Add: list-elements can filter by status (publish, draft, trash, etc)
+* Add: restore-element ability to restore trashed elements
+
+= 1.2.0 =
+* Add: Module status and module settings abilities
+* Add: Typography and font manager abilities
+* Add: Starter Site cache inspection/clear abilities
+* Update: get-settings includes typography rules and site identity
 
 = 1.1.0 =
 * Add: GeneratePress elements CRUD (hooks/blocks/headers/layouts)

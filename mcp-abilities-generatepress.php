@@ -3,7 +3,7 @@
  * Plugin Name: MCP Abilities - GeneratePress
  * Plugin URI: https://github.com/bjornfix/mcp-abilities-generatepress
  * Description: GeneratePress and GenerateBlocks abilities for MCP. Manage theme settings, elements, global styles, page meta, and caches.
- * Version: 1.1.0
+ * Version: 1.1.1
  * Author: Devenia
  * Author URI: https://devenia.com
  * License: GPL-2.0+
@@ -59,6 +59,14 @@ function mcp_abilities_generatepress_get_theme_info(): array {
 		'parent_version'   => $parent ? $parent->get( 'Version' ) : '',
 		'is_generatepress' => $is_generatepress,
 	);
+}
+
+/**
+ * Check if GeneratePress theme is active.
+ */
+function mcp_abilities_generatepress_is_active(): bool {
+	$theme_info = mcp_abilities_generatepress_get_theme_info();
+	return ! empty( $theme_info['is_generatepress'] );
 }
 
 /**
@@ -133,10 +141,79 @@ function mcp_abilities_generatepress_default_element_meta_keys(): array {
 }
 
 /**
+ * Clear GeneratePress dynamic CSS cache.
+ */
+function mcp_abilities_generatepress_clear_dynamic_css_cache(): void {
+	delete_option( 'generate_dynamic_css_output' );
+	delete_option( 'generate_dynamic_css_cached_version' );
+
+	if ( function_exists( 'generate_update_dynamic_css_cache' ) ) {
+		generate_update_dynamic_css_cache();
+	}
+}
+
+/**
+ * Map page meta labels to GeneratePress meta keys.
+ */
+function mcp_abilities_generatepress_page_meta_map(): array {
+	return array(
+		'disable_headline'       => '_generate-disable-headline',
+		'disable_nav'            => '_generate-disable-nav',
+		'disable_footer'         => '_generate-disable-footer',
+		'disable_footer_widgets' => '_generate-disable-footer-widgets',
+		'sidebar_layout'         => '_generate-sidebar-layout-meta',
+		'content_area'           => '_generate-content-area-meta',
+		'transparent_header'     => '_generate-transparent-header',
+		'sticky_header'          => '_generate-sticky-navigation-meta',
+	);
+}
+
+/**
+ * Map module slugs to GeneratePress settings options.
+ */
+function mcp_abilities_generatepress_module_settings_map(): array {
+	return array(
+		'blog'          => 'generate_blog_settings',
+		'spacing'       => 'generate_spacing_settings',
+		'menu_plus'     => 'generate_menu_plus_settings',
+		'secondary_nav' => 'generate_secondary_nav_settings',
+		'woocommerce'   => 'generate_woocommerce_settings',
+	);
+}
+
+/**
+ * Normalize module status values.
+ */
+function mcp_abilities_generatepress_normalize_module_status( $value ): ?string {
+	if ( is_bool( $value ) ) {
+		return $value ? 'activated' : 'deactivated';
+	}
+	if ( ! is_string( $value ) ) {
+		return null;
+	}
+
+	$value = strtolower( trim( $value ) );
+	if ( in_array( $value, array( 'activated', 'active', 'enable', 'enabled', 'on', 'true', '1' ), true ) ) {
+		return 'activated';
+	}
+	if ( in_array( $value, array( 'deactivated', 'inactive', 'disable', 'disabled', 'off', 'false', '0' ), true ) ) {
+		return 'deactivated';
+	}
+
+	return null;
+}
+
+/**
  * Register GeneratePress and GenerateBlocks abilities.
  */
 function mcp_abilities_generatepress_register_abilities(): void {
 	if ( ! mcp_abilities_generatepress_check_dependencies() ) {
+		return;
+	}
+	if ( ! mcp_abilities_generatepress_is_active() ) {
+		add_action( 'admin_notices', function () {
+			echo '<div class="notice notice-error"><p><strong>MCP Abilities - GeneratePress</strong> requires the GeneratePress theme to be installed and active.</p></div>';
+		} );
 		return;
 	}
 
@@ -223,12 +300,7 @@ function mcp_abilities_generatepress_register_abilities(): void {
 					return array( 'success' => false, 'message' => 'Confirmation required to clear cache.' );
 				}
 
-				delete_option( 'generate_dynamic_css_output' );
-				delete_option( 'generate_dynamic_css_cached_version' );
-
-				if ( function_exists( 'generate_update_dynamic_css_cache' ) ) {
-					generate_update_dynamic_css_cache();
-				}
+				mcp_abilities_generatepress_clear_dynamic_css_cache();
 
 				return array(
 					'success' => true,
@@ -612,6 +684,17 @@ function mcp_abilities_generatepress_register_abilities(): void {
 					'form_button_border_radius',
 				);
 
+				// Site identity keys.
+				$site_identity_keys = array(
+					'font_site_title', 'font_site_tagline',
+					'site_title_font_size', 'site_tagline_font_size',
+					'site_title_font_weight', 'site_title_font_transform',
+					'site_title_color', 'site_tagline_color',
+					'logo_width', 'retina_logo',
+					'mobile_site_title_font_size', 'tablet_site_title_font_size',
+					'mobile_navigation_site_title_font_size', 'header_alignment_setting',
+				);
+
 				$result = array();
 
 				if ( 'all' === $section || 'colors' === $section ) {
@@ -629,6 +712,12 @@ function mcp_abilities_generatepress_register_abilities(): void {
 							$result['typography'][ $key ] = $settings[ $key ];
 						}
 					}
+					if ( isset( $settings['font_manager'] ) ) {
+						$result['typography']['font_manager'] = $settings['font_manager'];
+					}
+					if ( isset( $settings['typography'] ) ) {
+						$result['typography']['typography'] = $settings['typography'];
+					}
 				}
 
 				if ( 'all' === $section || 'layout' === $section ) {
@@ -643,6 +732,14 @@ function mcp_abilities_generatepress_register_abilities(): void {
 					foreach ( $button_keys as $key ) {
 						if ( isset( $settings[ $key ] ) ) {
 							$result['buttons'][ $key ] = $settings[ $key ];
+						}
+					}
+				}
+
+				if ( 'all' === $section || 'site_identity' === $section ) {
+					foreach ( $site_identity_keys as $key ) {
+						if ( isset( $settings[ $key ] ) ) {
+							$result['site_identity'][ $key ] = $settings[ $key ];
 						}
 					}
 				}
@@ -723,13 +820,7 @@ function mcp_abilities_generatepress_register_abilities(): void {
 				}
 
 				// Clear GP's CSS cache to force regeneration from new settings.
-				delete_option( 'generate_dynamic_css_output' );
-				delete_option( 'generate_dynamic_css_cached_version' );
-
-				// Trigger GP's cache rebuild if the function exists.
-				if ( function_exists( 'generate_update_dynamic_css_cache' ) ) {
-					generate_update_dynamic_css_cache();
-				}
+				mcp_abilities_generatepress_clear_dynamic_css_cache();
 
 				return array(
 					'success' => true,
@@ -744,6 +835,558 @@ function mcp_abilities_generatepress_register_abilities(): void {
 					'readonly'    => false,
 					'destructive' => false,
 					'idempotent'  => true,
+				),
+			),
+		)
+	);
+
+	// =========================================================================
+	// GENERATEPRESS - List Modules
+	// =========================================================================
+	wp_register_ability(
+		'generatepress/list-modules',
+		array(
+			'label'               => 'List GeneratePress Modules',
+			'description'         => 'Lists GeneratePress Premium module statuses (generate_package_* options).',
+			'category'            => 'site',
+			'input_schema'        => array(
+				'type'                 => 'object',
+				'properties'           => array(),
+				'additionalProperties' => false,
+			),
+			'output_schema'       => array(
+				'type'       => 'object',
+				'properties' => array(
+					'success' => array( 'type' => 'boolean' ),
+					'modules' => array( 'type' => 'array' ),
+					'message' => array( 'type' => 'string' ),
+				),
+			),
+			'execute_callback'    => function (): array {
+				global $wpdb;
+
+				$prefix = 'generate_package_';
+				$like   = $wpdb->esc_like( $prefix ) . '%';
+
+				// phpcs:ignore WordPress.DB.PreparedSQL.NotPrepared, WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching, PluginCheck.Security.DirectDB.UnescapedDBParameter -- Module discovery uses prepared LIKE.
+				$rows = $wpdb->get_results(
+					$wpdb->prepare(
+						'SELECT option_name, option_value FROM ' . $wpdb->options . ' WHERE option_name LIKE %s ORDER BY option_name ASC',
+						$like
+					),
+					ARRAY_A
+				);
+
+				$modules = array();
+				foreach ( $rows as $row ) {
+					$option_name = $row['option_name'];
+					$slug        = substr( $option_name, strlen( $prefix ) );
+					$value       = maybe_unserialize( $row['option_value'] );
+					$status      = is_string( $value ) ? $value : '';
+
+					$modules[] = array(
+						'slug'        => $slug,
+						'option_name' => $option_name,
+						'status'      => $status,
+						'active'      => ( 'activated' === $status ),
+					);
+				}
+
+				return array(
+					'success' => true,
+					'modules' => $modules,
+					'message' => 'Modules retrieved successfully',
+				);
+			},
+			'permission_callback' => function (): bool {
+				return current_user_can( 'manage_options' );
+			},
+			'meta'                => array(
+				'annotations' => array(
+					'readonly'    => true,
+					'destructive' => false,
+					'idempotent'  => true,
+				),
+			),
+		)
+	);
+
+	// =========================================================================
+	// GENERATEPRESS - Update Modules
+	// =========================================================================
+	wp_register_ability(
+		'generatepress/update-modules',
+		array(
+			'label'               => 'Update GeneratePress Modules',
+			'description'         => 'Activates or deactivates GeneratePress Premium modules (generate_package_* options).',
+			'category'            => 'site',
+			'input_schema'        => array(
+				'type'                 => 'object',
+				'required'             => array( 'modules' ),
+				'properties'           => array(
+					'modules' => array(
+						'type'        => 'object',
+						'description' => 'Map of module slugs to status (activated/deactivated or boolean).',
+					),
+				),
+				'additionalProperties' => false,
+			),
+			'output_schema'       => array(
+				'type'       => 'object',
+				'properties' => array(
+					'success'  => array( 'type' => 'boolean' ),
+					'updated'  => array( 'type' => 'array' ),
+					'missing'  => array( 'type' => 'array' ),
+					'rejected' => array( 'type' => 'array' ),
+					'message'  => array( 'type' => 'string' ),
+				),
+			),
+			'execute_callback'    => function ( array $input = array() ): array {
+				$modules = isset( $input['modules'] ) && is_array( $input['modules'] ) ? $input['modules'] : array();
+				if ( empty( $modules ) ) {
+					return array( 'success' => false, 'message' => 'No modules provided.' );
+				}
+
+				$updated  = array();
+				$missing  = array();
+				$rejected = array();
+				$marker   = 'mcp_missing_' . wp_generate_password( 12, false );
+
+				foreach ( $modules as $module => $status_input ) {
+					if ( ! is_string( $module ) || '' === $module ) {
+						continue;
+					}
+
+					$module = sanitize_key( $module );
+					$module = str_replace( '-', '_', $module );
+					if ( '' === $module ) {
+						continue;
+					}
+
+					$status = mcp_abilities_generatepress_normalize_module_status( $status_input );
+					if ( null === $status ) {
+						$rejected[] = $module;
+						continue;
+					}
+
+					$option_name = 'generate_package_' . $module;
+					$current     = get_option( $option_name, $marker );
+					if ( $current === $marker ) {
+						$missing[] = $module;
+						continue;
+					}
+
+					update_option( $option_name, $status );
+					$updated[] = $module;
+				}
+
+				return array(
+					'success'  => true,
+					'updated'  => $updated,
+					'missing'  => $missing,
+					'rejected' => $rejected,
+					'message'  => 'Module statuses updated successfully',
+				);
+			},
+			'permission_callback' => function (): bool {
+				return current_user_can( 'manage_options' );
+			},
+			'meta'                => array(
+				'annotations' => array(
+					'readonly'    => false,
+					'destructive' => false,
+					'idempotent'  => false,
+				),
+			),
+		)
+	);
+
+	// =========================================================================
+	// GENERATEPRESS - Get Module Settings
+	// =========================================================================
+	wp_register_ability(
+		'generatepress/get-module-settings',
+		array(
+			'label'               => 'Get GeneratePress Module Settings',
+			'description'         => 'Gets settings for a GeneratePress Premium module (blog, spacing, menu_plus, secondary_nav, woocommerce).',
+			'category'            => 'site',
+			'input_schema'        => array(
+				'type'                 => 'object',
+				'required'             => array( 'module' ),
+				'properties'           => array(
+					'module' => array(
+						'type'        => 'string',
+						'enum'        => array_keys( mcp_abilities_generatepress_module_settings_map() ),
+						'description' => 'Module slug to retrieve.',
+					),
+				),
+				'additionalProperties' => false,
+			),
+			'output_schema'       => array(
+				'type'       => 'object',
+				'properties' => array(
+					'success'     => array( 'type' => 'boolean' ),
+					'module'      => array( 'type' => 'string' ),
+					'option_name' => array( 'type' => 'string' ),
+					'settings'    => array( 'type' => 'object' ),
+					'message'     => array( 'type' => 'string' ),
+				),
+			),
+			'execute_callback'    => function ( array $input = array() ): array {
+				$module = isset( $input['module'] ) ? sanitize_key( $input['module'] ) : '';
+				$module = str_replace( '-', '_', $module );
+				$map    = mcp_abilities_generatepress_module_settings_map();
+
+				if ( '' === $module || ! isset( $map[ $module ] ) ) {
+					return array( 'success' => false, 'message' => 'Unknown module.' );
+				}
+
+				$option_name = $map[ $module ];
+				$settings    = get_option( $option_name, array() );
+
+				if ( ! is_array( $settings ) ) {
+					$settings = array();
+				}
+
+				return array(
+					'success'     => true,
+					'module'      => $module,
+					'option_name' => $option_name,
+					'settings'    => $settings,
+					'message'     => 'Module settings retrieved successfully',
+				);
+			},
+			'permission_callback' => function (): bool {
+				return current_user_can( 'edit_theme_options' );
+			},
+			'meta'                => array(
+				'annotations' => array(
+					'readonly'    => true,
+					'destructive' => false,
+					'idempotent'  => true,
+				),
+			),
+		)
+	);
+
+	// =========================================================================
+	// GENERATEPRESS - Update Module Settings
+	// =========================================================================
+	wp_register_ability(
+		'generatepress/update-module-settings',
+		array(
+			'label'               => 'Update GeneratePress Module Settings',
+			'description'         => 'Updates settings for a GeneratePress Premium module (blog, spacing, menu_plus, secondary_nav, woocommerce).',
+			'category'            => 'site',
+			'input_schema'        => array(
+				'type'                 => 'object',
+				'required'             => array( 'module', 'settings' ),
+				'properties'           => array(
+					'module' => array(
+						'type'        => 'string',
+						'enum'        => array_keys( mcp_abilities_generatepress_module_settings_map() ),
+						'description' => 'Module slug to update.',
+					),
+					'settings' => array(
+						'type'        => 'object',
+						'description' => 'Settings to update (merged with existing unless replace is true).',
+					),
+					'replace' => array(
+						'type'        => 'boolean',
+						'default'     => false,
+						'description' => 'Replace settings entirely instead of merging.',
+					),
+				),
+				'additionalProperties' => false,
+			),
+			'output_schema'       => array(
+				'type'       => 'object',
+				'properties' => array(
+					'success'     => array( 'type' => 'boolean' ),
+					'module'      => array( 'type' => 'string' ),
+					'option_name' => array( 'type' => 'string' ),
+					'message'     => array( 'type' => 'string' ),
+				),
+			),
+			'execute_callback'    => function ( array $input = array() ): array {
+				$module  = isset( $input['module'] ) ? sanitize_key( $input['module'] ) : '';
+				$module  = str_replace( '-', '_', $module );
+				$map     = mcp_abilities_generatepress_module_settings_map();
+				$settings = isset( $input['settings'] ) && is_array( $input['settings'] ) ? $input['settings'] : array();
+
+				if ( '' === $module || ! isset( $map[ $module ] ) ) {
+					return array( 'success' => false, 'message' => 'Unknown module.' );
+				}
+
+				if ( empty( $settings ) ) {
+					return array( 'success' => false, 'message' => 'No settings provided.' );
+				}
+
+				$option_name = $map[ $module ];
+				$replace     = ! empty( $input['replace'] );
+
+				if ( $replace ) {
+					$updated = $settings;
+				} else {
+					$current = get_option( $option_name, array() );
+					if ( ! is_array( $current ) ) {
+						$current = array();
+					}
+					$updated = array_merge( $current, $settings );
+				}
+
+				update_option( $option_name, $updated );
+				mcp_abilities_generatepress_clear_dynamic_css_cache();
+
+				return array(
+					'success'     => true,
+					'module'      => $module,
+					'option_name' => $option_name,
+					'message'     => 'Module settings updated successfully',
+				);
+			},
+			'permission_callback' => function (): bool {
+				return current_user_can( 'edit_theme_options' );
+			},
+			'meta'                => array(
+				'annotations' => array(
+					'readonly'    => false,
+					'destructive' => false,
+					'idempotent'  => false,
+				),
+			),
+		)
+	);
+
+	// =========================================================================
+	// GENERATEPRESS - Get Typography
+	// =========================================================================
+	wp_register_ability(
+		'generatepress/get-typography',
+		array(
+			'label'               => 'Get GeneratePress Typography',
+			'description'         => 'Retrieves GeneratePress typography rules and font manager entries (Local Font Library).',
+			'category'            => 'site',
+			'input_schema'        => array(
+				'type'                 => 'object',
+				'properties'           => array(),
+				'additionalProperties' => false,
+			),
+			'output_schema'       => array(
+				'type'       => 'object',
+				'properties' => array(
+					'success'      => array( 'type' => 'boolean' ),
+					'font_manager' => array( 'type' => 'array' ),
+					'typography'   => array( 'type' => 'array' ),
+					'message'      => array( 'type' => 'string' ),
+				),
+			),
+			'execute_callback'    => function (): array {
+				$settings     = get_option( 'generate_settings', array() );
+				$font_manager = isset( $settings['font_manager'] ) && is_array( $settings['font_manager'] ) ? $settings['font_manager'] : array();
+				$typography   = isset( $settings['typography'] ) && is_array( $settings['typography'] ) ? $settings['typography'] : array();
+
+				return array(
+					'success'      => true,
+					'font_manager' => $font_manager,
+					'typography'   => $typography,
+					'message'      => 'Typography retrieved successfully',
+				);
+			},
+			'permission_callback' => function (): bool {
+				return current_user_can( 'edit_theme_options' );
+			},
+			'meta'                => array(
+				'annotations' => array(
+					'readonly'    => true,
+					'destructive' => false,
+					'idempotent'  => true,
+				),
+			),
+		)
+	);
+
+	// =========================================================================
+	// GENERATEPRESS - Update Typography
+	// =========================================================================
+	wp_register_ability(
+		'generatepress/update-typography',
+		array(
+			'label'               => 'Update GeneratePress Typography',
+			'description'         => 'Updates GeneratePress typography rules and/or font manager entries (Local Font Library).',
+			'category'            => 'site',
+			'input_schema'        => array(
+				'type'                 => 'object',
+				'properties'           => array(
+					'font_manager' => array(
+						'type'        => 'array',
+						'description' => 'Font manager entries to save (replaces existing).',
+					),
+					'typography' => array(
+						'type'        => 'array',
+						'description' => 'Typography rules to save (replaces existing).',
+					),
+				),
+				'additionalProperties' => false,
+			),
+			'output_schema'       => array(
+				'type'       => 'object',
+				'properties' => array(
+					'success' => array( 'type' => 'boolean' ),
+					'message' => array( 'type' => 'string' ),
+				),
+			),
+			'execute_callback'    => function ( array $input = array() ): array {
+				$input = is_array( $input ) ? $input : array();
+
+				$has_font_manager = array_key_exists( 'font_manager', $input );
+				$has_typography   = array_key_exists( 'typography', $input );
+
+				if ( ! $has_font_manager && ! $has_typography ) {
+					return array( 'success' => false, 'message' => 'No typography data provided.' );
+				}
+
+				$current = get_option( 'generate_settings', array() );
+				if ( ! is_array( $current ) ) {
+					$current = array();
+				}
+
+				if ( $has_font_manager ) {
+					$current['font_manager'] = is_array( $input['font_manager'] ) ? $input['font_manager'] : array();
+				}
+				if ( $has_typography ) {
+					$current['typography'] = is_array( $input['typography'] ) ? $input['typography'] : array();
+				}
+
+				update_option( 'generate_settings', $current );
+				mcp_abilities_generatepress_clear_dynamic_css_cache();
+
+				return array(
+					'success' => true,
+					'message' => 'Typography updated successfully',
+				);
+			},
+			'permission_callback' => function (): bool {
+				return current_user_can( 'edit_theme_options' );
+			},
+			'meta'                => array(
+				'annotations' => array(
+					'readonly'    => false,
+					'destructive' => false,
+					'idempotent'  => false,
+				),
+			),
+		)
+	);
+
+	// =========================================================================
+	// GENERATEPRESS - Get Site Library Cache
+	// =========================================================================
+	wp_register_ability(
+		'generatepress/get-site-library-cache',
+		array(
+			'label'               => 'Get GeneratePress Site Library Cache',
+			'description'         => 'Returns cached Starter Site library metadata without dumping the full dataset.',
+			'category'            => 'site',
+			'input_schema'        => array(
+				'type'                 => 'object',
+				'properties'           => array(),
+				'additionalProperties' => false,
+			),
+			'output_schema'       => array(
+				'type'       => 'object',
+				'properties' => array(
+					'success'     => array( 'type' => 'boolean' ),
+					'cached'      => array( 'type' => 'boolean' ),
+					'item_count'  => array( 'type' => 'integer' ),
+					'expires_at'  => array( 'type' => 'string' ),
+					'expires_gmt' => array( 'type' => 'string' ),
+					'message'     => array( 'type' => 'string' ),
+				),
+			),
+			'execute_callback'    => function (): array {
+				$library = get_option( 'generatepress_sites', array() );
+				$expires = get_option( 'generatepress_sites_expiration', '' );
+
+				$item_count = is_array( $library ) ? count( $library ) : 0;
+				$cached     = ( $item_count > 0 );
+				$expires_gmt = '';
+
+				if ( is_numeric( $expires ) ) {
+					$expires_gmt = gmdate( 'Y-m-d H:i:s', (int) $expires );
+				}
+
+				return array(
+					'success'     => true,
+					'cached'      => $cached,
+					'item_count'  => $item_count,
+					'expires_at'  => (string) $expires,
+					'expires_gmt' => $expires_gmt,
+					'message'     => 'Site library cache inspected successfully',
+				);
+			},
+			'permission_callback' => function (): bool {
+				return current_user_can( 'manage_options' );
+			},
+			'meta'                => array(
+				'annotations' => array(
+					'readonly'    => true,
+					'destructive' => false,
+					'idempotent'  => true,
+				),
+			),
+		)
+	);
+
+	// =========================================================================
+	// GENERATEPRESS - Clear Site Library Cache
+	// =========================================================================
+	wp_register_ability(
+		'generatepress/clear-site-library-cache',
+		array(
+			'label'               => 'Clear GeneratePress Site Library Cache',
+			'description'         => 'Clears the cached Starter Site library to force a refresh.',
+			'category'            => 'site',
+			'input_schema'        => array(
+				'type'                 => 'object',
+				'properties'           => array(
+					'confirm' => array(
+						'type'        => 'boolean',
+						'default'     => true,
+						'description' => 'Confirm cache clear operation.',
+					),
+				),
+				'additionalProperties' => false,
+			),
+			'output_schema'       => array(
+				'type'       => 'object',
+				'properties' => array(
+					'success' => array( 'type' => 'boolean' ),
+					'message' => array( 'type' => 'string' ),
+				),
+			),
+			'execute_callback'    => function ( $input = array() ): array {
+				$confirm = isset( $input['confirm'] ) ? (bool) $input['confirm'] : true;
+				if ( ! $confirm ) {
+					return array( 'success' => false, 'message' => 'Confirmation required to clear cache.' );
+				}
+
+				delete_option( 'generatepress_sites' );
+				delete_option( 'generatepress_sites_expiration' );
+
+				return array(
+					'success' => true,
+					'message' => 'Site library cache cleared successfully',
+				);
+			},
+			'permission_callback' => function (): bool {
+				return current_user_can( 'manage_options' );
+			},
+			'meta'                => array(
+				'annotations' => array(
+					'readonly'    => false,
+					'destructive' => false,
+					'idempotent'  => false,
 				),
 			),
 		)
@@ -926,16 +1569,7 @@ function mcp_abilities_generatepress_register_abilities(): void {
 					return array( 'success' => false, 'message' => "Post {$post_id} not found" );
 				}
 
-				$meta_map = array(
-					'disable_headline'       => '_generate-disable-headline',
-					'disable_nav'            => '_generate-disable-nav',
-					'disable_footer'         => '_generate-disable-footer',
-					'disable_footer_widgets' => '_generate-disable-footer-widgets',
-					'sidebar_layout'         => '_generate-sidebar-layout-meta',
-					'content_area'           => '_generate-content-area-meta',
-					'transparent_header'     => '_generate-transparent-header',
-					'sticky_header'          => '_generate-sticky-navigation-meta',
-				);
+				$meta_map = mcp_abilities_generatepress_page_meta_map();
 
 				$meta = array();
 				foreach ( $meta_map as $label => $meta_key ) {
@@ -1062,16 +1696,7 @@ function mcp_abilities_generatepress_register_abilities(): void {
 				$updated = array();
 
 				// Meta key mappings.
-				$meta_map = array(
-					'disable_headline'       => '_generate-disable-headline',
-					'disable_nav'            => '_generate-disable-nav',
-					'disable_footer'         => '_generate-disable-footer',
-					'disable_footer_widgets' => '_generate-disable-footer-widgets',
-					'sidebar_layout'         => '_generate-sidebar-layout-meta',
-					'content_area'           => '_generate-content-area-meta',
-					'transparent_header'     => '_generate-transparent-header',
-					'sticky_header'          => '_generate-sticky-navigation-meta',
-				);
+				$meta_map = mcp_abilities_generatepress_page_meta_map();
 
 				foreach ( $meta_map as $input_key => $meta_key ) {
 					if ( isset( $input[ $input_key ] ) ) {
@@ -1167,6 +1792,12 @@ function mcp_abilities_generatepress_register_abilities(): void {
 						'type'        => 'string',
 						'description' => 'Search term for element titles.',
 					),
+					'status' => array(
+						'type'        => 'string',
+						'enum'        => array( 'publish', 'draft', 'pending', 'private', 'trash' ),
+						'default'     => 'publish',
+						'description' => 'Filter by post status.',
+					),
 					'per_page' => array(
 						'type'        => 'integer',
 						'default'     => 50,
@@ -1245,18 +1876,11 @@ function mcp_abilities_generatepress_register_abilities(): void {
 					's'              => $search,
 				);
 
-				if ( ! empty( $input['element_type'] ) ) {
-					$args['meta_query'] = array(
-						array(
-							'key'     => '_generate_element_type',
-							'value'   => sanitize_text_field( $input['element_type'] ),
-							'compare' => '=',
-						),
-					);
-				}
-
 				$query    = new WP_Query( $args );
 				$elements = array();
+
+				// Filter by element type in PHP to avoid slow meta_query
+				$filter_type = ! empty( $input['element_type'] ) ? sanitize_text_field( $input['element_type'] ) : '';
 
 				$include_meta    = ! empty( $input['include_meta'] );
 				$include_content = ! empty( $input['include_content'] );
@@ -1272,6 +1896,12 @@ function mcp_abilities_generatepress_register_abilities(): void {
 				}
 
 				foreach ( $query->posts as $post ) {
+					// Filter by element type in PHP to avoid slow meta_query
+					$element_type = get_post_meta( $post->ID, '_generate_element_type', true );
+					if ( $filter_type !== '' && $element_type !== $filter_type ) {
+						continue;
+					}
+
 					$item = array(
 						'id'          => $post->ID,
 						'title'       => $post->post_title,
@@ -1280,7 +1910,6 @@ function mcp_abilities_generatepress_register_abilities(): void {
 						'modified_gmt' => $post->post_modified_gmt,
 					);
 
-					$element_type = get_post_meta( $post->ID, '_generate_element_type', true );
 					if ( '' !== $element_type ) {
 						$item['element_type'] = $element_type;
 					}
@@ -1565,8 +2194,9 @@ function mcp_abilities_generatepress_register_abilities(): void {
 					return array( 'success' => false, 'message' => $post_id->get_error_message() );
 				}
 
-				if ( '' !== $content ) {
-					update_post_meta( $post_id, '_generate_element_content', $content );
+				// Update _generate_element_content meta - always set it when content is provided
+				if ( isset( $input['content'] ) && $input['content'] !== '' ) {
+					update_post_meta( $post_id, '_generate_element_content', $input['content'] );
 				}
 
 				if ( isset( $input['element_type'] ) ) {
@@ -1754,7 +2384,8 @@ function mcp_abilities_generatepress_register_abilities(): void {
 					}
 				}
 
-				if ( array_key_exists( 'content', $input ) ) {
+				// Update _generate_element_content meta - always set it when content is provided
+				if ( array_key_exists( 'content', $input ) && $input['content'] !== '' ) {
 					update_post_meta( $post->ID, '_generate_element_content', $input['content'] );
 				}
 
@@ -1832,7 +2463,7 @@ function mcp_abilities_generatepress_register_abilities(): void {
 		'generatepress/delete-element',
 		array(
 			'label'               => 'Delete GeneratePress Element',
-			'description'         => 'Deletes a GeneratePress Element (gp_elements) by ID.',
+			'description'         => 'Moves a GeneratePress Element (gp_elements) to trash. Restore from WordPress admin.',
 			'category'            => 'site',
 			'input_schema'        => array(
 				'type'                 => 'object',
@@ -1841,11 +2472,6 @@ function mcp_abilities_generatepress_register_abilities(): void {
 					'id' => array(
 						'type'        => 'integer',
 						'description' => 'Element ID to delete.',
-					),
-					'force' => array(
-						'type'        => 'boolean',
-						'default'     => false,
-						'description' => 'Force delete (bypass trash).',
 					),
 				),
 				'additionalProperties' => false,
@@ -1876,16 +2502,15 @@ function mcp_abilities_generatepress_register_abilities(): void {
 					return array( 'success' => false, 'message' => 'Element not found.' );
 				}
 
-				$force = ! empty( $input['force'] );
-				$deleted = wp_delete_post( $post_id, $force );
+				$deleted = wp_delete_post( $post_id, false );
 				if ( ! $deleted ) {
-					return array( 'success' => false, 'message' => 'Failed to delete element.' );
+					return array( 'success' => false, 'message' => 'Failed to move element to trash.' );
 				}
 
 				return array(
 					'success' => true,
 					'id'      => $post_id,
-					'message' => 'GeneratePress element deleted successfully',
+					'message' => 'GeneratePress element moved to trash. Restore from WordPress admin.',
 				);
 			},
 			'permission_callback' => function (): bool {
@@ -1895,6 +2520,80 @@ function mcp_abilities_generatepress_register_abilities(): void {
 				'annotations' => array(
 					'readonly'    => false,
 					'destructive' => true,
+					'idempotent'  => false,
+				),
+			),
+		)
+	);
+
+	// =========================================================================
+	// GENERATEPRESS - Restore Element from Trash
+	// =========================================================================
+	wp_register_ability(
+		'generatepress/restore-element',
+		array(
+			'label'               => 'Restore GeneratePress Element',
+			'description'         => 'Restores a trashed GeneratePress Element (gp_elements) by ID.',
+			'category'            => 'site',
+			'input_schema'        => array(
+				'type'                 => 'object',
+				'required'             => array( 'id' ),
+				'properties'           => array(
+					'id' => array(
+						'type'        => 'integer',
+						'description' => 'Element ID to restore.',
+					),
+				),
+				'additionalProperties' => false,
+			),
+			'output_schema'       => array(
+				'type'       => 'object',
+				'properties' => array(
+					'success' => array( 'type' => 'boolean' ),
+					'id'      => array( 'type' => 'integer' ),
+					'message' => array( 'type' => 'string' ),
+				),
+			),
+			'execute_callback'    => function ( array $input = array() ): array {
+				if ( empty( $input['id'] ) ) {
+					return array( 'success' => false, 'message' => 'Element ID is required.' );
+				}
+
+				if ( ! post_type_exists( 'gp_elements' ) ) {
+					return array(
+						'success' => false,
+						'message' => 'GeneratePress Elements are not available (gp_elements post type missing).',
+					);
+				}
+
+				$post_id = (int) $input['id'];
+				$post    = get_post( $post_id );
+				if ( ! $post || 'gp_elements' !== $post->post_type ) {
+					return array( 'success' => false, 'message' => 'Element not found.' );
+				}
+
+				if ( 'trash' !== $post->post_status ) {
+					return array( 'success' => false, 'message' => 'Element is not in trash.' );
+				}
+
+				$restored = wp_untrash_post( $post_id );
+				if ( ! $restored ) {
+					return array( 'success' => false, 'message' => 'Failed to restore element from trash.' );
+				}
+
+				return array(
+					'success' => true,
+					'id'      => $post_id,
+					'message' => 'GeneratePress element restored from trash.',
+				);
+			},
+			'permission_callback' => function (): bool {
+				return current_user_can( 'edit_theme_options' );
+			},
+			'meta'                => array(
+				'annotations' => array(
+					'readonly'    => false,
+					'destructive' => false,
 					'idempotent'  => false,
 				),
 			),
