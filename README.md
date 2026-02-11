@@ -181,6 +181,13 @@ GPL-2.0+
 
 [Devenia](https://devenia.com) - We've been doing SEO and web development since 1993.
 
+## Devenia MCP Guides
+
+- [WordPress MCP Compatibility Matrix (2026)](https://devenia.com/learn/wordpress-mcp-compatibility-matrix/)
+- [MCP + Elementor: Setup and Pitfalls](https://devenia.com/learn/mcp-elementor-setup-pitfalls/)
+- [MCP Security Checklist for Production WordPress](https://devenia.com/learn/mcp-security-checklist-wordpress/)
+- [Top MCP Errors and Fixes (WordPress)](https://devenia.com/learn/mcp-top-errors-and-fixes/)
+
 ## Links
 
 - [Plugin Page](https://devenia.com/plugins/mcp-expose-abilities/)
