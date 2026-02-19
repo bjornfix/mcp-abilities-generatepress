@@ -1793,7 +1793,7 @@ function mcp_abilities_generatepress_register_abilities(): void {
 					),
 					'status' => array(
 						'type'        => 'string',
-						'enum'        => array( 'publish', 'draft', 'pending', 'private', 'trash' ),
+						'enum'        => array( 'publish', 'draft', 'pending', 'private', 'trash', 'any' ),
 						'default'     => 'publish',
 						'description' => 'Filter by post status.',
 					),
