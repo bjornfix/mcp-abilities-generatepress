@@ -6,7 +6,7 @@ GeneratePress theme management for WordPress via MCP.
 [![License: GPL v2](https://img.shields.io/badge/License-GPL%20v2-blue.svg)](https://www.gnu.org/licenses/gpl-2.0)
 
 **Tested up to:** 6.9
-**Stable tag:** 1.2.0
+**Stable tag:** 1.1.2
 **License:** GPLv2 or later
 **License URI:** https://www.gnu.org/licenses/gpl-2.0.html
 
@@ -32,9 +32,7 @@ This add-on plugin exposes GeneratePress theme settings, elements, and GenerateB
 3. Upload via WordPress Admin → Plugins → Add New → Upload Plugin
 4. Activate the plugin
 
-## Abilities (25)
-
-New in 1.2.0: module status controls, module settings access, typography/font manager access, and Starter Site cache tools.
+## Abilities (26)
 
 | Ability | Description |
 |---------|-------------|
@@ -60,6 +58,7 @@ New in 1.2.0: module status controls, module settings access, typography/font ma
 | `generatepress/create-element` | Create a GeneratePress Element |
 | `generatepress/update-element` | Update a GeneratePress Element |
 | `generatepress/delete-element` | Delete a GeneratePress Element |
+| `generatepress/restore-element` | Restore a trashed GeneratePress Element |
 | `generateblocks/get-global-styles` | Get GenerateBlocks global styles |
 | `generateblocks/update-global-styles` | Update GenerateBlocks global styles |
 | `generateblocks/clear-cache` | Clear GenerateBlocks CSS cache |
@@ -160,12 +159,14 @@ Modules: `blog`, `spacing`, `menu_plus`, `secondary_nav`, `woocommerce`. Use `ge
 
 ## Changelog
 
-### 1.2.0
+### 1.1.2
+- Fixed: removed hard plugin header dependency on `abilities-api` to avoid slug-mismatch activation blocking
+- Fixed: list-elements status schema now supports any
 
-- Add module status and module settings abilities
-- Add typography and font manager abilities
-- Add Starter Site cache inspection/clear abilities
-- Expand get-settings with typography rules and site identity
+### 1.1.1
+- Fixed: hook element content now stored in `_generate_element_content`
+- Changed: delete-element now moves elements to trash
+- Added: list-elements status filter and `generatepress/restore-element`
 
 ### 1.1.0
 

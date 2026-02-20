@@ -49,13 +49,11 @@ Part of the MCP Expose Abilities ecosystem.
 * Add: list-elements can filter by status (publish, draft, trash, etc)
 * Add: restore-element ability to restore trashed elements
 
-= 1.2.0 =
+= 1.1.0 =
 * Add: Module status and module settings abilities
 * Add: Typography and font manager abilities
 * Add: Starter Site cache inspection/clear abilities
 * Update: get-settings includes typography rules and site identity
-
-= 1.1.0 =
 * Add: GeneratePress elements CRUD (hooks/blocks/headers/layouts)
 * Add: Option listing/get/update for GeneratePress/GenerateBlocks
 * Add: Theme info ability and page meta read ability

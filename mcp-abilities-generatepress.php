@@ -386,11 +386,11 @@ function mcp_abilities_generatepress_register_abilities(): void {
 					);
 				}
 
-				$allowed_names = mcp_abilities_generatepress_allowed_option_names();
-				if ( ! empty( $allowed_names ) ) {
-					$escaped_names = array_map( 'esc_sql', $allowed_names );
-					$conditions[]  = 'option_name IN (\'' . implode( '\',\'', $escaped_names ) . '\')';
-				}
+					$allowed_names = mcp_abilities_generatepress_allowed_option_names();
+					if ( ! empty( $allowed_names ) ) {
+						$escaped_names = array_map( 'esc_sql', $allowed_names );
+						$conditions[]  = 'option_name IN (\'' . implode( '\',\'', $escaped_names ) . '\')';
+					}
 
 				if ( empty( $conditions ) ) {
 					return array(
@@ -829,13 +829,13 @@ function mcp_abilities_generatepress_register_abilities(): void {
 			'permission_callback' => function (): bool {
 				return current_user_can( 'edit_theme_options' );
 			},
-			'meta'                => array(
-				'annotations' => array(
-					'readonly'    => false,
-					'destructive' => false,
-					'idempotent'  => true,
+				'meta'                => array(
+					'annotations' => array(
+						'readonly'    => false,
+						'destructive' => true,
+						'idempotent'  => true,
+					),
 				),
-			),
 		)
 	);
 
@@ -1508,13 +1508,13 @@ function mcp_abilities_generatepress_register_abilities(): void {
 			'permission_callback' => function (): bool {
 				return current_user_can( 'edit_theme_options' );
 			},
-			'meta'                => array(
-				'annotations' => array(
-					'readonly'    => false,
-					'destructive' => false,
-					'idempotent'  => true,
+				'meta'                => array(
+					'annotations' => array(
+						'readonly'    => false,
+						'destructive' => true,
+						'idempotent'  => true,
+					),
 				),
-			),
 		)
 	);
 
