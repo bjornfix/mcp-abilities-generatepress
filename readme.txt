@@ -3,7 +3,7 @@ Contributors: devenia
 Tags: mcp, generatepress, theme, ai, automation
 Requires at least: 6.9
 Tested up to: 6.9
-Stable tag: 1.1.3
+Stable tag: 1.1.4
 Requires PHP: 8.0
 License: GPLv2 or later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
@@ -37,6 +37,9 @@ Part of the MCP Expose Abilities ecosystem.
 4. Activate the plugin
 
 == Changelog ==
+
+= 1.1.4 =
+* Fixed: `generateblocks/clear-cache` input schema now actually exposes `force` so proxy validation matches the callback
 
 = 1.1.3 =
 * Fixed: `generatepress/clear-cache` and `generateblocks/clear-cache` now accept `force` as an alias for `confirm` for client compatibility
