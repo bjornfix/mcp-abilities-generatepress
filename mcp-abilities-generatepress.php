@@ -3,7 +3,7 @@
  * Plugin Name: MCP Abilities - GeneratePress
  * Plugin URI: https://github.com/bjornfix/mcp-abilities-generatepress
  * Description: GeneratePress and GenerateBlocks abilities for MCP. Manage theme settings, elements, global styles, page meta, and caches.
- * Version: 1.1.2
+ * Version: 1.1.3
  * Author: Devenia
  * Author URI: https://devenia.com
  * License: GPL-2.0+
@@ -283,6 +283,11 @@ function mcp_abilities_generatepress_register_abilities(): void {
 						'default'     => true,
 						'description' => 'Confirm cache clear operation.',
 					),
+					'force'   => array(
+						'type'        => 'boolean',
+						'default'     => true,
+						'description' => 'Alias for confirm; accepted for client compatibility.',
+					),
 				),
 				'additionalProperties' => false,
 			),
@@ -294,7 +299,12 @@ function mcp_abilities_generatepress_register_abilities(): void {
 				),
 			),
 			'execute_callback'    => function ( $input = array() ): array {
-				$confirm = isset( $input['confirm'] ) ? (bool) $input['confirm'] : true;
+				$confirm = true;
+				if ( isset( $input['confirm'] ) ) {
+					$confirm = (bool) $input['confirm'];
+				} elseif ( isset( $input['force'] ) ) {
+					$confirm = (bool) $input['force'];
+				}
 				if ( ! $confirm ) {
 					return array( 'success' => false, 'message' => 'Confirmation required to clear cache.' );
 				}
@@ -1353,6 +1363,11 @@ function mcp_abilities_generatepress_register_abilities(): void {
 						'type'        => 'boolean',
 						'default'     => true,
 						'description' => 'Confirm cache clear operation.',
+					),
+					'force'   => array(
+						'type'        => 'boolean',
+						'default'     => true,
+						'description' => 'Alias for confirm; accepted for client compatibility.',
 					),
 				),
 				'additionalProperties' => false,
@@ -2628,6 +2643,20 @@ function mcp_abilities_generatepress_register_abilities(): void {
 				),
 			),
 			'execute_callback'    => function ( $input = array() ): array {
+				$confirm = true;
+				if ( isset( $input['confirm'] ) ) {
+					$confirm = (bool) $input['confirm'];
+				} elseif ( isset( $input['force'] ) ) {
+					$confirm = (bool) $input['force'];
+				}
+				if ( ! $confirm ) {
+					return array(
+						'success' => false,
+						'deleted' => 0,
+						'message' => 'Confirmation required to clear cache.',
+					);
+				}
+
 				$upload_dir = wp_upload_dir();
 				$css_dir    = $upload_dir['basedir'] . '/generateblocks/';
 				$deleted    = 0;

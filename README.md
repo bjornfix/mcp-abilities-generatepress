@@ -6,7 +6,7 @@ GeneratePress theme management for WordPress via MCP.
 [![License: GPL v2](https://img.shields.io/badge/License-GPL%20v2-blue.svg)](https://www.gnu.org/licenses/gpl-2.0)
 
 **Tested up to:** 6.9
-**Stable tag:** 1.1.2
+**Stable tag:** 1.1.3
 **License:** GPLv2 or later
 **License URI:** https://www.gnu.org/licenses/gpl-2.0.html
 
@@ -157,7 +157,13 @@ Modules: `blog`, `spacing`, `menu_plus`, `secondary_nav`, `woocommerce`. Use `ge
 }
 ```
 
+`generatepress/clear-cache` and `generateblocks/clear-cache` also accept `{"force": true}` as a compatibility alias for `{"confirm": true}`.
+
 ## Changelog
+
+### 1.1.3
+- Fixed: `generatepress/clear-cache` and `generateblocks/clear-cache` now accept `force` as an alias for `confirm` for client compatibility
+- Fixed: cache clear abilities now reject `confirm=false` / `force=false` explicitly instead of silently proceeding
 
 ### 1.1.2
 - Fixed: removed hard plugin header dependency on `abilities-api` to avoid slug-mismatch activation blocking
