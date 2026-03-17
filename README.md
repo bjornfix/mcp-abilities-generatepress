@@ -14,7 +14,24 @@ GeneratePress theme management for WordPress via MCP.
 
 This add-on plugin exposes GeneratePress theme settings, elements, and GenerateBlocks settings through MCP (Model Context Protocol). Your AI assistant can adjust colors, typography, layouts, global styles, and hook elements - all through conversation.
 
-**Part of the [MCP Expose Abilities](https://devenia.com/plugins/mcp-expose-abilities/) ecosystem.**
+**Part of the [MCP Expose Abilities](https://github.com/bjornfix/mcp-expose-abilities) ecosystem.**
+
+This is one piece of a bigger open WordPress automation stack that lets AI agents do real theme and GenerateBlocks work instead of handing humans a checklist.
+
+## Why This Is Cool
+
+Theme settings, Elements, page meta, and GenerateBlocks styles are exactly the kind of tasks that make WordPress maintenance drag.
+
+With this add-on, you can ask Codex or Claude to inspect the current setup, change one setting, patch one Element, clear the right cache, and move on. That is a radically better workflow than clicking through multiple admin screens for every tiny change.
+
+## Documentation
+
+- [Core Plugin: MCP Expose Abilities](https://github.com/bjornfix/mcp-expose-abilities)
+- [MCP Wiki Home](https://github.com/bjornfix/mcp-expose-abilities/wiki)
+- [Why Teams Use It](https://github.com/bjornfix/mcp-expose-abilities/wiki/Why-Teams-Use-It)
+- [Use Cases](https://github.com/bjornfix/mcp-expose-abilities/wiki/Use-Cases)
+- [GeneratePress Add-On Guide](https://github.com/bjornfix/mcp-expose-abilities/wiki/Addon-GeneratePress)
+- [Getting Started](https://github.com/bjornfix/mcp-expose-abilities/wiki/Getting-Started)
 
 ## Requirements
 
@@ -191,8 +208,19 @@ GPL-2.0+
 
 [Devenia](https://devenia.com) - We've been doing SEO and web development since 1993.
 
+## Free and Open
+
+Like the rest of the ecosystem, this add-on is free, fully open source, and built from real use rather than demo-only marketing.
+
+## Star and Share
+
+If this add-on helps, please star the repo, share the ecosystem, and point people to the main wiki:
+
+- https://github.com/bjornfix/mcp-expose-abilities
+- https://github.com/bjornfix/mcp-expose-abilities/wiki
+
 ## Links
 
-- [Plugin Page](https://devenia.com/plugins/mcp-expose-abilities/)
 - [Core Plugin (MCP Expose Abilities)](https://github.com/bjornfix/mcp-expose-abilities)
-- [All Add-on Plugins](https://devenia.com/plugins/mcp-expose-abilities/#add-ons)
+- [Main Wiki](https://github.com/bjornfix/mcp-expose-abilities/wiki)
+- [GeneratePress Add-On Guide](https://github.com/bjornfix/mcp-expose-abilities/wiki/Addon-GeneratePress)
