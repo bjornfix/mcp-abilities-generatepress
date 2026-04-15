@@ -3,7 +3,7 @@ Contributors: devenia
 Tags: mcp, generatepress, theme, ai, automation
 Requires at least: 6.9
 Tested up to: 6.9
-Stable tag: 1.1.4
+Stable tag: 1.1.5
 Requires PHP: 8.0
 License: GPLv2 or later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
@@ -37,6 +37,9 @@ Part of the MCP Expose Abilities ecosystem.
 4. Activate the plugin
 
 == Changelog ==
+
+= 1.1.5 =
+* Fixed: zero-parameter ability schemas now avoid empty `properties` objects so MCP Adapter 0.4.x clients do not receive invalid `properties: []` JSON
 
 = 1.1.4 =
 * Fixed: `generateblocks/clear-cache` input schema now actually exposes `force` so proxy validation matches the callback
