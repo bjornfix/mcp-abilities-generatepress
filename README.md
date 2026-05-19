@@ -6,7 +6,7 @@ GeneratePress theme management for WordPress via MCP.
 [![License: GPL v2](https://img.shields.io/badge/License-GPL%20v2-blue.svg)](https://www.gnu.org/licenses/gpl-2.0)
 
 **Tested up to:** 6.9
-**Stable tag:** 1.1.12
+**Stable tag:** 1.1.13
 **License:** GPLv2 or later
 **License URI:** https://www.gnu.org/licenses/gpl-2.0.html
 
@@ -271,6 +271,9 @@ Use this ability for site-wide design decisions instead of page/block-level styl
 `generateblocks/clear-cache` preserves existing generated CSS files by default and only clears cache metadata. Use `{"delete_files": true}` only for destructive file clearing; warming then verifies that the expected per-page CSS file was actually regenerated. You can also pass `post_ids` and `limit` to restrict warming.
 
 ## Changelog
+
+### 1.1.13
+- Fixed featured-image audit/regeneration abilities to use the supported `site` ability category so they register reliably.
 
 ### 1.1.12
 - Added `generatepress/list-setting-keys` to discover live GeneratePress settings, classify keys, and expose module/theme-mod/image-size control surfaces.

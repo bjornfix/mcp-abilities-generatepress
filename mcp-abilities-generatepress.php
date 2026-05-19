@@ -3,7 +3,7 @@
  * Plugin Name: MCP Abilities - GeneratePress
  * Plugin URI: https://github.com/bjornfix/mcp-abilities-generatepress
  * Description: GeneratePress and GenerateBlocks abilities for MCP. Manage theme settings, elements, global styles, page meta, and caches.
- * Version: 1.1.12
+ * Version: 1.1.13
  * Author: Devenia
  * Author URI: https://devenia.com
  * License: GPL-2.0+
@@ -4017,7 +4017,7 @@ function mcp_abilities_generatepress_register_abilities(): void {
 		array(
 			'label'               => 'Audit Featured Image Sizes',
 			'description'         => 'Audits posts for missing featured images and missing generated image sizes so native GeneratePress archive images can be trusted.',
-			'category'            => 'media',
+			'category'            => 'site',
 			'input_schema'        => array(
 				'type'                 => 'object',
 				'properties'           => array(
@@ -4153,7 +4153,7 @@ function mcp_abilities_generatepress_register_abilities(): void {
 		array(
 			'label'               => 'Regenerate Featured Image Sizes',
 			'description'         => 'Regenerates attachment metadata for featured images on selected posts or recent posts, then reports remaining missing sizes.',
-			'category'            => 'media',
+			'category'            => 'site',
 			'input_schema'        => array(
 				'type'                 => 'object',
 				'properties'           => array(

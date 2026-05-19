@@ -3,7 +3,7 @@ Contributors: devenia
 Tags: mcp, generatepress, theme, ai, automation
 Requires at least: 6.9
 Tested up to: 6.9
-Stable tag: 1.1.12
+Stable tag: 1.1.13
 Requires PHP: 8.0
 License: GPLv2 or later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
@@ -40,6 +40,9 @@ Part of the MCP Expose Abilities ecosystem.
 4. Activate the plugin
 
 == Changelog ==
+
+= 1.1.13 =
+* Fixed: featured-image audit/regeneration abilities now use the supported `site` ability category so they register reliably.
 
 = 1.1.12 =
 * Added: `generatepress/list-setting-keys` to discover live GeneratePress settings, classify keys, and expose module/theme-mod/image-size control surfaces.
