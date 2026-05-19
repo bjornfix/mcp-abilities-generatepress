@@ -6,7 +6,7 @@ GeneratePress theme management for WordPress via MCP.
 [![License: GPL v2](https://img.shields.io/badge/License-GPL%20v2-blue.svg)](https://www.gnu.org/licenses/gpl-2.0)
 
 **Tested up to:** 6.9
-**Stable tag:** 1.1.7
+**Stable tag:** 1.1.8
 **License:** GPLv2 or later
 **License URI:** https://www.gnu.org/licenses/gpl-2.0.html
 
@@ -176,9 +176,13 @@ Modules: `blog`, `spacing`, `menu_plus`, `secondary_nav`, `woocommerce`. Use `ge
 
 `generatepress/clear-cache` and `generateblocks/clear-cache` also accept `{"force": true}` as a compatibility alias for `{"confirm": true}`.
 
-`generateblocks/clear-cache` warms regenerated CSS files by default after deleting cache files. Use `{"warm": false}` only when you explicitly want to delete files without rebuilding them. You can also pass `post_ids` and `limit` to restrict warming.
+`generateblocks/clear-cache` preserves existing generated CSS files by default and only clears cache metadata. Use `{"delete_files": true}` only for destructive file clearing; warming then verifies that the expected per-page CSS file was actually regenerated. You can also pass `post_ids` and `limit` to restrict warming.
 
 ## Changelog
+
+### 1.1.8
+- Fixed `generateblocks/clear-cache` to preserve per-page CSS files by default so frontend pages do not temporarily load without styling after cache maintenance.
+- Improved GenerateBlocks CSS warming so a post is only reported as warmed when its expected CSS file exists after the request.
 
 ### 1.1.7
 - Fixed `generateblocks/clear-cache` so it warms regenerated CSS files for known GenerateBlocks posts after deleting cache files, preventing frontend pages from loading without their per-page CSS.

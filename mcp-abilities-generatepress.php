@@ -3,7 +3,7 @@
  * Plugin Name: MCP Abilities - GeneratePress
  * Plugin URI: https://github.com/bjornfix/mcp-abilities-generatepress
  * Description: GeneratePress and GenerateBlocks abilities for MCP. Manage theme settings, elements, global styles, page meta, and caches.
- * Version: 1.1.7
+ * Version: 1.1.8
  * Author: Devenia
  * Author URI: https://devenia.com
  * License: GPL-2.0+
@@ -152,6 +152,18 @@ function mcp_abilities_generatepress_clear_dynamic_css_cache(): void {
 }
 
 /**
+ * Get the expected GenerateBlocks generated CSS file path for a post.
+ */
+function mcp_abilities_generatepress_generateblocks_css_path( int $post_id ): string {
+	global $blog_id;
+
+	$upload_dir  = wp_get_upload_dir();
+	$css_blog_id = is_multisite() && isset( $blog_id ) && $blog_id > 1 ? '_blog-' . (int) $blog_id : '';
+
+	return trailingslashit( $upload_dir['basedir'] ) . 'generateblocks/style' . $css_blog_id . '-' . $post_id . '.css';
+}
+
+/**
  * Warm GenerateBlocks generated CSS files by requesting pages that use dynamic CSS.
  *
  * @param array<int>|null $post_ids Optional list of post IDs to warm. Null warms all known GenerateBlocks posts.
@@ -194,12 +206,19 @@ function mcp_abilities_generatepress_warm_generateblocks_css( ?array $post_ids =
 
 		$count++;
 		$url      = add_query_arg( 'mcp_gb_css_warm', (string) time(), $permalink );
+		$css_file = mcp_abilities_generatepress_generateblocks_css_path( $post_id );
+
+		update_option( 'generateblocks_dynamic_css_time', 0, false );
+
 		$response = wp_remote_get(
 			$url,
 			array(
 				'timeout'     => 15,
 				'redirection' => 3,
 				'user-agent'  => 'MCP GenerateBlocks CSS warmer',
+				'headers'     => array(
+					'Cache-Control' => 'no-cache',
+				),
 			)
 		);
 
@@ -209,8 +228,10 @@ function mcp_abilities_generatepress_warm_generateblocks_css( ?array $post_ids =
 		}
 
 		$status = (int) wp_remote_retrieve_response_code( $response );
-		if ( $status >= 200 && $status < 400 ) {
+		if ( $status >= 200 && $status < 400 && file_exists( $css_file ) ) {
 			$warmed[] = $post_id;
+		} elseif ( $status >= 200 && $status < 400 ) {
+			$failed[ $post_id ] = 'CSS file was not generated.';
 		} else {
 			$failed[ $post_id ] = 'HTTP ' . $status;
 		}
@@ -2703,7 +2724,7 @@ function mcp_abilities_generatepress_register_abilities(): void {
 		'generateblocks/clear-cache',
 		array(
 			'label'               => 'Clear GenerateBlocks Cache',
-			'description'         => 'Clears GenerateBlocks CSS cache by deleting generated CSS files.',
+			'description'         => 'Clears GenerateBlocks CSS cache metadata while preserving generated files by default.',
 			'category'            => 'site',
 			'input_schema'        => array(
 				'type'                 => 'object',
@@ -2720,8 +2741,13 @@ function mcp_abilities_generatepress_register_abilities(): void {
 					),
 					'warm'    => array(
 						'type'        => 'boolean',
-						'default'     => true,
-						'description' => 'Warm regenerated GenerateBlocks CSS files after clearing the cache.',
+						'default'     => false,
+						'description' => 'Warm regenerated GenerateBlocks CSS files. Only needed after delete_files or for targeted post_ids.',
+					),
+					'delete_files' => array(
+						'type'        => 'boolean',
+						'default'     => false,
+						'description' => 'Delete generated CSS files. Defaults to false to avoid frontend pages loading without their per-page CSS.',
 					),
 					'post_ids' => array(
 						'type'        => 'array',
@@ -2743,6 +2769,7 @@ function mcp_abilities_generatepress_register_abilities(): void {
 				'properties' => array(
 					'success' => array( 'type' => 'boolean' ),
 					'deleted' => array( 'type' => 'integer' ),
+					'delete_files' => array( 'type' => 'boolean' ),
 					'warmed'  => array(
 						'type'  => 'array',
 						'items' => array( 'type' => 'integer' ),
@@ -2767,11 +2794,12 @@ function mcp_abilities_generatepress_register_abilities(): void {
 					);
 				}
 
-				$upload_dir = wp_upload_dir();
-				$css_dir    = $upload_dir['basedir'] . '/generateblocks/';
-				$deleted    = 0;
+				$upload_dir   = wp_upload_dir();
+				$css_dir      = $upload_dir['basedir'] . '/generateblocks/';
+				$deleted      = 0;
+				$delete_files = isset( $input['delete_files'] ) && (bool) $input['delete_files'];
 
-				if ( is_dir( $css_dir ) ) {
+				if ( $delete_files && is_dir( $css_dir ) ) {
 					$files = glob( $css_dir . '*.css' );
 					if ( $files ) {
 						foreach ( $files as $file ) {
@@ -2782,7 +2810,7 @@ function mcp_abilities_generatepress_register_abilities(): void {
 					}
 				}
 
-				// Also delete the CSS version option to force regeneration.
+				// Clear metadata without deleting generated CSS files by default.
 				delete_option( 'generateblocks_css_version' );
 
 				$warm_result = array(
@@ -2790,7 +2818,8 @@ function mcp_abilities_generatepress_register_abilities(): void {
 					'failed'  => array(),
 					'skipped' => 0,
 				);
-				$warm        = ! array_key_exists( 'warm', $input ) || (bool) $input['warm'];
+				$has_post_ids = isset( $input['post_ids'] ) && is_array( $input['post_ids'] ) && ! empty( $input['post_ids'] );
+				$warm         = isset( $input['warm'] ) ? (bool) $input['warm'] : ( $delete_files || $has_post_ids );
 
 				if ( $warm ) {
 					$post_ids    = isset( $input['post_ids'] ) && is_array( $input['post_ids'] )
@@ -2803,18 +2832,21 @@ function mcp_abilities_generatepress_register_abilities(): void {
 				return array(
 					'success' => true,
 					'deleted' => $deleted,
+					'delete_files' => $delete_files,
 					'warmed'  => $warm_result['warmed'],
 					'failed'  => $warm_result['failed'],
 					'skipped' => $warm_result['skipped'],
 					'message' => $warm
 						? sprintf(
-							'Cleared %1$d GenerateBlocks CSS file(s); warmed %2$d post(s); %3$d failed; %4$d skipped.',
+							'Cleared GenerateBlocks CSS metadata; %1$d file(s) deleted; warmed %2$d post(s); %3$d failed; %4$d skipped.',
 							$deleted,
 							count( $warm_result['warmed'] ),
 							count( $warm_result['failed'] ),
 							$warm_result['skipped']
 						)
-						: "Cleared {$deleted} GenerateBlocks CSS file(s)",
+						: ( $delete_files
+							? "Cleared GenerateBlocks CSS metadata and deleted {$deleted} CSS file(s)."
+							: 'Cleared GenerateBlocks CSS metadata; existing CSS files were preserved.' ),
 				);
 			},
 			'permission_callback' => function (): bool {
