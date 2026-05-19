@@ -3,7 +3,7 @@ Contributors: devenia
 Tags: mcp, generatepress, theme, ai, automation
 Requires at least: 6.9
 Tested up to: 6.9
-Stable tag: 1.1.10
+Stable tag: 1.1.11
 Requires PHP: 8.0
 License: GPLv2 or later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
@@ -38,6 +38,10 @@ Part of the MCP Expose Abilities ecosystem.
 4. Activate the plugin
 
 == Changelog ==
+
+= 1.1.11 =
+* Added: `letterSpacing` support to `generatepress/update-global-design-settings` typography groups.
+* Added: flat `settings` object to `generatepress/update-global-design-settings` so the global settings workflow can update any GeneratePress global setting.
 
 = 1.1.10 =
 * Added: `generatepress/update-global-design-settings` for site-wide typography, colors, layout, buttons, and site identity changes.

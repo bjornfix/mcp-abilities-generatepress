@@ -6,7 +6,7 @@ GeneratePress theme management for WordPress via MCP.
 [![License: GPL v2](https://img.shields.io/badge/License-GPL%20v2-blue.svg)](https://www.gnu.org/licenses/gpl-2.0)
 
 **Tested up to:** 6.9
-**Stable tag:** 1.1.10
+**Stable tag:** 1.1.11
 **License:** GPLv2 or later
 **License URI:** https://www.gnu.org/licenses/gpl-2.0.html
 
@@ -141,7 +141,7 @@ Modules: `blog`, `spacing`, `menu_plus`, `secondary_nav`, `woocommerce`. Use `ge
 
 ### Update global design settings
 
-Use this ability for site-wide design decisions instead of page/block-level styling.
+Use this ability for site-wide design decisions instead of page/block-level styling. Named sections cover common changes; use `settings` for any other flat GeneratePress setting key.
 
 ```json
 {
@@ -153,7 +153,8 @@ Use this ability for site-wide design decisions instead of page/block-level styl
         "fontWeight": "300",
         "fontSize": "64",
         "fontSizeMobile": "42",
-        "lineHeight": "1.05",
+        "lineHeight": "0.98",
+        "letterSpacing": "-0.025em",
         "textTransform": "none"
       },
       "body": {
@@ -164,6 +165,10 @@ Use this ability for site-wide design decisions instead of page/block-level styl
     },
     "layout": {
       "container_width": 1140
+    },
+    "settings": {
+      "paragraph_margin": "1.5",
+      "underline_links": "never"
     }
   }
 }
@@ -210,6 +215,10 @@ Use this ability for site-wide design decisions instead of page/block-level styl
 `generateblocks/clear-cache` preserves existing generated CSS files by default and only clears cache metadata. Use `{"delete_files": true}` only for destructive file clearing; warming then verifies that the expected per-page CSS file was actually regenerated. You can also pass `post_ids` and `limit` to restrict warming.
 
 ## Changelog
+
+### 1.1.11
+- Added `letterSpacing` support to `generatepress/update-global-design-settings` typography groups.
+- Added a flat `settings` object to `generatepress/update-global-design-settings` so the global settings workflow can update any GeneratePress global setting, not just the named convenience sections.
 
 ### 1.1.10
 - Added `generatepress/update-global-design-settings` for site-wide typography, colors, layout, buttons, and site identity changes.

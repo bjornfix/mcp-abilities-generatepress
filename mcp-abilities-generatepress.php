@@ -3,7 +3,7 @@
  * Plugin Name: MCP Abilities - GeneratePress
  * Plugin URI: https://github.com/bjornfix/mcp-abilities-generatepress
  * Description: GeneratePress and GenerateBlocks abilities for MCP. Manage theme settings, elements, global styles, page meta, and caches.
- * Version: 1.1.10
+ * Version: 1.1.11
  * Author: Devenia
  * Author URI: https://devenia.com
  * License: GPL-2.0+
@@ -334,6 +334,7 @@ function mcp_abilities_generatepress_apply_typography_group( array &$settings, a
 				'fontWeight'    => 'body_font_weight',
 				'fontSize'      => 'body_font_size',
 				'lineHeight'    => 'body_line_height',
+				'letterSpacing' => 'body_letter_spacing',
 				'textTransform' => 'body_font_transform',
 			),
 		),
@@ -344,6 +345,7 @@ function mcp_abilities_generatepress_apply_typography_group( array &$settings, a
 				'fontFamily'    => 'font_navigation',
 				'fontWeight'    => 'navigation_font_weight',
 				'fontSize'      => 'navigation_font_size',
+				'letterSpacing' => 'navigation_letter_spacing',
 				'textTransform' => 'navigation_font_transform',
 			),
 		),
@@ -354,6 +356,7 @@ function mcp_abilities_generatepress_apply_typography_group( array &$settings, a
 				'fontFamily'    => 'font_buttons',
 				'fontWeight'    => 'buttons_font_weight',
 				'fontSize'      => 'buttons_font_size',
+				'letterSpacing' => 'buttons_letter_spacing',
 				'textTransform' => 'buttons_font_transform',
 			),
 		),
@@ -369,6 +372,7 @@ function mcp_abilities_generatepress_apply_typography_group( array &$settings, a
 				'fontSize'       => 'heading_' . $level . '_font_size',
 				'fontSizeMobile' => 'mobile_heading_' . $level . '_font_size',
 				'lineHeight'     => 'heading_' . $level . '_line_height',
+				'letterSpacing'  => 'heading_' . $level . '_letter_spacing',
 				'textTransform'  => 'heading_' . $level . '_transform',
 			),
 		);
@@ -475,6 +479,36 @@ function mcp_abilities_generatepress_is_global_design_setting_key( string $key )
 	}
 
 	return str_ends_with( $key, '_color' ) || str_contains( $key, '_background_color' );
+}
+
+/**
+ * Check if a value can be safely stored as a flat GeneratePress setting.
+ */
+function mcp_abilities_generatepress_is_flat_setting_value( $value ): bool {
+	if ( null === $value || is_scalar( $value ) ) {
+		return true;
+	}
+
+	if ( ! is_array( $value ) ) {
+		return false;
+	}
+
+	foreach ( $value as $item ) {
+		if ( is_array( $item ) ) {
+			foreach ( $item as $nested_value ) {
+				if ( is_array( $nested_value ) || is_object( $nested_value ) ) {
+					return false;
+				}
+			}
+			continue;
+		}
+
+		if ( is_object( $item ) ) {
+			return false;
+		}
+	}
+
+	return true;
 }
 
 /**
@@ -969,14 +1003,15 @@ function mcp_abilities_generatepress_register_abilities(): void {
 				// Typography keys.
 				$typo_keys = array(
 					'font_body', 'body_font_weight', 'body_font_transform', 'body_font_size', 'body_line_height',
-					'font_heading_1', 'heading_1_weight', 'heading_1_transform', 'heading_1_font_size', 'mobile_heading_1_font_size', 'heading_1_line_height',
-					'font_heading_2', 'heading_2_weight', 'heading_2_transform', 'heading_2_font_size', 'mobile_heading_2_font_size', 'heading_2_line_height',
-					'font_heading_3', 'heading_3_weight', 'heading_3_transform', 'heading_3_font_size', 'mobile_heading_3_font_size', 'heading_3_line_height',
-					'font_heading_4', 'heading_4_weight', 'heading_4_transform', 'heading_4_font_size', 'mobile_heading_4_font_size', 'heading_4_line_height',
-					'font_heading_5', 'heading_5_weight', 'heading_5_transform', 'heading_5_font_size', 'mobile_heading_5_font_size', 'heading_5_line_height',
-					'font_heading_6', 'heading_6_weight', 'heading_6_transform', 'heading_6_font_size', 'mobile_heading_6_font_size', 'heading_6_line_height',
-					'font_navigation', 'navigation_font_weight', 'navigation_font_transform', 'navigation_font_size',
-					'font_buttons', 'buttons_font_weight', 'buttons_font_transform', 'buttons_font_size',
+					'body_letter_spacing',
+					'font_heading_1', 'heading_1_weight', 'heading_1_transform', 'heading_1_font_size', 'mobile_heading_1_font_size', 'heading_1_line_height', 'heading_1_letter_spacing',
+					'font_heading_2', 'heading_2_weight', 'heading_2_transform', 'heading_2_font_size', 'mobile_heading_2_font_size', 'heading_2_line_height', 'heading_2_letter_spacing',
+					'font_heading_3', 'heading_3_weight', 'heading_3_transform', 'heading_3_font_size', 'mobile_heading_3_font_size', 'heading_3_line_height', 'heading_3_letter_spacing',
+					'font_heading_4', 'heading_4_weight', 'heading_4_transform', 'heading_4_font_size', 'mobile_heading_4_font_size', 'heading_4_line_height', 'heading_4_letter_spacing',
+					'font_heading_5', 'heading_5_weight', 'heading_5_transform', 'heading_5_font_size', 'mobile_heading_5_font_size', 'heading_5_line_height', 'heading_5_letter_spacing',
+					'font_heading_6', 'heading_6_weight', 'heading_6_transform', 'heading_6_font_size', 'mobile_heading_6_font_size', 'heading_6_line_height', 'heading_6_letter_spacing',
+					'font_navigation', 'navigation_font_weight', 'navigation_font_transform', 'navigation_font_size', 'navigation_letter_spacing',
+					'font_buttons', 'buttons_font_weight', 'buttons_font_transform', 'buttons_font_size', 'buttons_letter_spacing',
 				);
 
 				// Layout keys.
@@ -1185,7 +1220,7 @@ function mcp_abilities_generatepress_register_abilities(): void {
 		'generatepress/update-global-design-settings',
 		array(
 			'label'               => 'Update GeneratePress Global Design Settings',
-			'description'         => 'Updates global GeneratePress design settings for typography, colors, layout, buttons, and site identity. Use this instead of page/block-level styling for site-wide design decisions.',
+			'description'         => 'Updates global GeneratePress design settings. Use this instead of page/block-level styling for site-wide design decisions.',
 			'category'            => 'site',
 			'input_schema'        => array(
 				'type'                 => 'object',
@@ -1195,6 +1230,10 @@ function mcp_abilities_generatepress_register_abilities(): void {
 					'layout'       => array( 'type' => 'object' ),
 					'buttons'      => array( 'type' => 'object' ),
 					'site_identity' => array( 'type' => 'object' ),
+					'settings'     => array(
+						'type'        => 'object',
+						'description' => 'Flat generate_settings keys to update. Use for any GeneratePress global setting not covered by the named sections.',
+					),
 				),
 				'additionalProperties' => false,
 			),
@@ -1265,6 +1304,33 @@ function mcp_abilities_generatepress_register_abilities(): void {
 								$updated_keys       = array_merge( $updated_keys, $changed );
 							}
 						}
+					}
+				}
+
+				if ( isset( $input['settings'] ) && is_array( $input['settings'] ) ) {
+					foreach ( $input['settings'] as $key => $value ) {
+						if ( ! is_string( $key ) || '' === $key ) {
+							continue;
+						}
+						if ( 'typography' === $key ) {
+							return array(
+								'success' => false,
+								'message' => 'Use the typography groups in generatepress/update-global-design-settings instead of writing the raw typography rule array.',
+							);
+						}
+						if ( ! mcp_abilities_generatepress_is_flat_setting_value( $value ) ) {
+							return array(
+								'success' => false,
+								'message' => 'Refusing nested value for GeneratePress setting "' . $key . '".',
+							);
+						}
+						if ( null === $value || '' === $value ) {
+							unset( $settings[ $key ] );
+						} else {
+							$settings[ $key ] = $value;
+						}
+						$updated_sections[] = 'settings';
+						$updated_keys[]     = $key;
 					}
 				}
 
