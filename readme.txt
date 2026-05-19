@@ -3,7 +3,7 @@ Contributors: devenia
 Tags: mcp, generatepress, theme, ai, automation
 Requires at least: 6.9
 Tested up to: 6.9
-Stable tag: 1.1.11
+Stable tag: 1.1.12
 Requires PHP: 8.0
 License: GPLv2 or later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
@@ -17,15 +17,17 @@ This add-on plugin exposes GeneratePress theme settings, elements, and GenerateB
 == Abilities ==
 
 * Theme settings (colors, typography, layout, buttons)
-* Global design settings updates for typography, colors, layout, buttons, and site identity
+* Live GeneratePress setting-key discovery and global design settings updates for typography, colors, layout, spacing, buttons, and site identity
 * Typography rules and font manager (Local Font Library)
 * Module status management and module settings access
+* Native blog archive settings and featured-image size diagnostics
 * GeneratePress options (read/write)
+* GeneratePress theme mods (read/write for GP-relevant mods)
 * GeneratePress Elements (list/get/create/update/delete)
 * Page-specific meta (read/write)
 * GeneratePress cache control
 * Starter Site cache inspection/clear
-* GenerateBlocks global styles/defaults/settings
+* GenerateBlocks global styles/defaults/settings and control-surface diagnostics
 * GenerateBlocks CSS cache control
 
 Part of the MCP Expose Abilities ecosystem.
@@ -38,6 +40,14 @@ Part of the MCP Expose Abilities ecosystem.
 4. Activate the plugin
 
 == Changelog ==
+
+= 1.1.12 =
+* Added: `generatepress/list-setting-keys` to discover live GeneratePress settings, classify keys, and expose module/theme-mod/image-size control surfaces.
+* Added: `generatepress/get-theme-mods` and `generatepress/update-theme-mods` for GeneratePress-relevant theme mods.
+* Added: `generatepress/get-blog-archive-settings` and `generatepress/update-blog-archive-settings` for native blog archive control.
+* Added: `generatepress/audit-featured-image-sizes` and `generatepress/regenerate-featured-image-sizes` for reliable native archive images.
+* Added: `generateblocks/list-control-surface` for GenerateBlocks options, global styles, dynamic CSS posts, and generated CSS file status.
+* Expanded: global design updates now include the spacing group.
 
 = 1.1.11 =
 * Added: `letterSpacing` support to `generatepress/update-global-design-settings` typography groups.

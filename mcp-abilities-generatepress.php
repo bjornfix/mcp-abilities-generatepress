@@ -3,7 +3,7 @@
  * Plugin Name: MCP Abilities - GeneratePress
  * Plugin URI: https://github.com/bjornfix/mcp-abilities-generatepress
  * Description: GeneratePress and GenerateBlocks abilities for MCP. Manage theme settings, elements, global styles, page meta, and caches.
- * Version: 1.1.11
+ * Version: 1.1.12
  * Author: Devenia
  * Author URI: https://devenia.com
  * License: GPL-2.0+
@@ -509,6 +509,308 @@ function mcp_abilities_generatepress_is_flat_setting_value( $value ): bool {
 	}
 
 	return true;
+}
+
+/**
+ * Known GeneratePress setting groups used for discovery, auditing, and safer updates.
+ *
+ * GeneratePress stores the authoritative theme design state in one option:
+ * generate_settings. The exact key set can vary by GP/GP Premium version, so MCP
+ * abilities must discover the live keys and classify them instead of pretending a
+ * static schema is complete forever.
+ */
+function mcp_abilities_generatepress_setting_groups(): array {
+	return array(
+		'colors'        => array(
+			'global_colors',
+			'background_color',
+			'text_color',
+			'link_color',
+			'link_color_hover',
+			'link_color_visited',
+			'header_background_color',
+			'header_text_color',
+			'header_link_color',
+			'header_link_hover_color',
+			'navigation_background_color',
+			'navigation_text_color',
+			'navigation_background_hover_color',
+			'navigation_text_hover_color',
+			'navigation_background_current_color',
+			'navigation_text_current_color',
+			'subnavigation_background_color',
+			'subnavigation_text_color',
+			'subnavigation_background_hover_color',
+			'subnavigation_text_hover_color',
+			'subnavigation_background_current_color',
+			'subnavigation_text_current_color',
+			'content_background_color',
+			'content_text_color',
+			'content_link_color',
+			'content_link_hover_color',
+			'sidebar_widget_background_color',
+			'sidebar_widget_title_color',
+			'sidebar_widget_text_color',
+			'footer_widget_background_color',
+			'footer_widget_title_color',
+			'footer_widget_text_color',
+			'footer_widget_link_color',
+			'footer_widget_link_hover_color',
+			'footer_background_color',
+			'footer_text_color',
+			'footer_link_color',
+			'footer_link_hover_color',
+			'entry_meta_text_color',
+			'entry_meta_link_color',
+			'entry_meta_link_color_hover',
+			'form_background_color',
+			'form_text_color',
+			'form_background_color_focus',
+			'form_text_color_focus',
+			'form_border_color',
+			'form_border_color_focus',
+			'form_button_background_color',
+			'form_button_background_color_hover',
+			'form_button_text_color',
+			'form_button_text_color_hover',
+			'top_bar_background_color',
+			'top_bar_text_color',
+			'top_bar_link_color',
+			'top_bar_link_color_hover',
+			'navigation_search_background_color',
+			'navigation_search_text_color',
+		),
+		'typography'    => array(
+			'font_manager',
+			'typography',
+			'font_body',
+			'body_font_weight',
+			'body_font_transform',
+			'body_font_size',
+			'body_line_height',
+			'body_letter_spacing',
+			'font_site_title',
+			'site_title_font_size',
+			'tablet_site_title_font_size',
+			'mobile_site_title_font_size',
+			'mobile_navigation_site_title_font_size',
+			'site_title_font_weight',
+			'site_title_font_transform',
+			'font_site_tagline',
+			'site_tagline_font_size',
+			'site_tagline_font_weight',
+			'site_tagline_font_transform',
+			'font_navigation',
+			'navigation_font_weight',
+			'navigation_font_transform',
+			'navigation_font_size',
+			'navigation_letter_spacing',
+			'font_subnavigation',
+			'subnavigation_font_weight',
+			'subnavigation_font_transform',
+			'subnavigation_font_size',
+			'subnavigation_letter_spacing',
+			'font_buttons',
+			'buttons_font_weight',
+			'buttons_font_transform',
+			'buttons_font_size',
+			'buttons_letter_spacing',
+			'buttons_line_height',
+		),
+		'layout'        => array(
+			'container_width',
+			'container_alignment',
+			'content_layout_setting',
+			'content_width',
+			'layout_setting',
+			'blog_layout_setting',
+			'single_layout_setting',
+			'sidebar_width',
+			'left_sidebar_width',
+			'right_sidebar_width',
+			'header_layout_setting',
+			'header_inner_width',
+			'header_alignment_setting',
+			'nav_layout_setting',
+			'nav_inner_width',
+			'nav_alignment_setting',
+			'nav_position_setting',
+			'nav_drop_point',
+			'nav_dropdown_type',
+			'nav_dropdown_direction',
+			'nav_search',
+			'nav_search_modal',
+			'mobile_header',
+			'mobile_header_sticky',
+			'footer_layout_setting',
+			'footer_inner_width',
+			'footer_widget_setting',
+			'footer_bar_alignment',
+			'top_bar_width',
+			'top_bar_inner_width',
+			'top_bar_alignment',
+			'back_to_top',
+		),
+		'spacing'       => array(
+			'top_bar_top',
+			'top_bar_right',
+			'top_bar_bottom',
+			'top_bar_left',
+			'header_top',
+			'header_right',
+			'header_bottom',
+			'header_left',
+			'menu_item',
+			'menu_item_height',
+			'sub_menu_item_height',
+			'content_top',
+			'content_right',
+			'content_bottom',
+			'content_left',
+			'separator',
+			'widget_top',
+			'widget_right',
+			'widget_bottom',
+			'widget_left',
+			'footer_widget_container_top',
+			'footer_widget_container_right',
+			'footer_widget_container_bottom',
+			'footer_widget_container_left',
+			'footer_top',
+			'footer_right',
+			'footer_bottom',
+			'footer_left',
+		),
+		'buttons'       => array(
+			'form_button_background_color',
+			'form_button_background_color_hover',
+			'form_button_text_color',
+			'form_button_text_color_hover',
+			'form_button_border_color',
+			'form_button_border_color_hover',
+			'form_button_border_radius',
+			'button_padding_top',
+			'button_padding_right',
+			'button_padding_bottom',
+			'button_padding_left',
+		),
+		'site_identity' => array(
+			'hide_title',
+			'hide_tagline',
+			'logo',
+			'retina_logo',
+			'logo_width',
+			'inline_logo_site_branding',
+			'custom_logo',
+			'site_title_color',
+			'site_tagline_color',
+		),
+	);
+}
+
+/**
+ * Classify a live generate_settings key into a broad GeneratePress control group.
+ */
+function mcp_abilities_generatepress_classify_setting_key( string $key ): string {
+	foreach ( mcp_abilities_generatepress_setting_groups() as $group => $keys ) {
+		if ( in_array( $key, $keys, true ) ) {
+			return $group;
+		}
+	}
+
+	if ( preg_match( '/^(font_|body_|heading_|mobile_heading_|site_title_|site_tagline_|navigation_|subnavigation_|buttons_).*(font|weight|size|line_height|letter_spacing|transform)|^(font_heading_)/', $key ) ) {
+		return 'typography';
+	}
+	if ( str_ends_with( $key, '_color' ) || str_contains( $key, '_background_color' ) || str_contains( $key, '_text_color' ) || str_contains( $key, '_link_color' ) ) {
+		return 'colors';
+	}
+	if ( preg_match( '/^(container_|content_|layout_|blog_layout_|single_layout_|header_|nav_|footer_|top_bar_|sidebar_|mobile_header|back_to_top)/', $key ) ) {
+		return 'layout';
+	}
+	if ( preg_match( '/(padding|spacing|margin|separator|_top$|_right$|_bottom$|_left$|_height$)/', $key ) ) {
+		return 'spacing';
+	}
+	if ( str_starts_with( $key, 'form_button_' ) || str_starts_with( $key, 'button_' ) ) {
+		return 'buttons';
+	}
+	if ( in_array( $key, array( 'hide_title', 'hide_tagline', 'logo', 'retina_logo', 'custom_logo', 'logo_width' ), true ) ) {
+		return 'site_identity';
+	}
+
+	return 'other';
+}
+
+/**
+ * Allowed theme mods that affect GeneratePress/customizer-owned rendering.
+ */
+function mcp_abilities_generatepress_allowed_theme_mod_key( string $key ): bool {
+	if ( in_array( $key, array( 'custom_logo', 'nav_menu_locations' ), true ) ) {
+		return true;
+	}
+
+	return str_starts_with( $key, 'generate_' ) || str_starts_with( $key, 'gp_' );
+}
+
+/**
+ * Get registered image sizes with dimensions.
+ */
+function mcp_abilities_generatepress_image_sizes(): array {
+	$sizes  = array();
+	$names  = get_intermediate_image_sizes();
+	$names[] = 'full';
+	$names  = array_values( array_unique( $names ) );
+
+	foreach ( $names as $name ) {
+		if ( 'full' === $name ) {
+			$sizes[ $name ] = array(
+				'width'  => 0,
+				'height' => 0,
+				'crop'   => false,
+			);
+			continue;
+		}
+		$sizes[ $name ] = array(
+			'width'  => (int) get_option( "{$name}_size_w", 0 ),
+			'height' => (int) get_option( "{$name}_size_h", 0 ),
+			'crop'   => (bool) get_option( "{$name}_crop", false ),
+		);
+	}
+
+	return $sizes;
+}
+
+/**
+ * Audit one attachment for generated image sizes.
+ */
+function mcp_abilities_generatepress_audit_attachment_image_sizes( int $attachment_id, array $size_names ): array {
+	$metadata = wp_get_attachment_metadata( $attachment_id );
+	$metadata = is_array( $metadata ) ? $metadata : array();
+	$files    = isset( $metadata['sizes'] ) && is_array( $metadata['sizes'] ) ? $metadata['sizes'] : array();
+	$result   = array();
+
+	foreach ( $size_names as $size_name ) {
+		if ( 'full' === $size_name ) {
+			$src = wp_get_attachment_image_src( $attachment_id, 'full' );
+			$result[ $size_name ] = array(
+				'exists' => (bool) $src,
+				'url'    => $src ? $src[0] : '',
+				'width'  => $src ? (int) $src[1] : 0,
+				'height' => $src ? (int) $src[2] : 0,
+			);
+			continue;
+		}
+
+		$src = wp_get_attachment_image_src( $attachment_id, $size_name );
+		$result[ $size_name ] = array(
+			'exists'   => isset( $files[ $size_name ] ) && is_array( $files[ $size_name ] ),
+			'fallback' => $src && empty( $files[ $size_name ] ),
+			'url'      => $src ? $src[0] : '',
+			'width'    => $src ? (int) $src[1] : 0,
+			'height'   => $src ? (int) $src[2] : 0,
+		);
+	}
+
+	return $result;
 }
 
 /**
@@ -1112,6 +1414,264 @@ function mcp_abilities_generatepress_register_abilities(): void {
 	);
 
 	// =========================================================================
+	// GENERATEPRESS - List Setting Keys
+	// =========================================================================
+	wp_register_ability(
+		'generatepress/list-setting-keys',
+		array(
+			'label'               => 'List GeneratePress Setting Keys',
+			'description'         => 'Discovers the live GeneratePress setting keys, classifies them, and returns module/theme-mod control surfaces so MCP clients can avoid guessing.',
+			'category'            => 'site',
+			'input_schema'        => array(
+				'type'                 => 'object',
+				'properties'           => array(
+					'include_values' => array(
+						'type'        => 'boolean',
+						'default'     => false,
+						'description' => 'Include current values for every discovered key.',
+					),
+					'include_known_absent' => array(
+						'type'        => 'boolean',
+						'default'     => true,
+						'description' => 'Include known GeneratePress setting keys that are not currently stored.',
+					),
+				),
+				'additionalProperties' => false,
+			),
+			'output_schema'       => array(
+				'type'       => 'object',
+				'properties' => array(
+					'success'       => array( 'type' => 'boolean' ),
+					'setting_count' => array( 'type' => 'integer' ),
+					'groups'        => array( 'type' => 'object' ),
+					'keys'          => array( 'type' => 'array' ),
+					'module_options' => array( 'type' => 'object' ),
+					'theme_mods'    => array( 'type' => 'array' ),
+					'image_sizes'   => array( 'type' => 'object' ),
+					'message'       => array( 'type' => 'string' ),
+				),
+			),
+			'execute_callback'    => function ( array $input = array() ): array {
+				$settings             = get_option( 'generate_settings', array() );
+				$settings             = is_array( $settings ) ? $settings : array();
+				$include_values       = ! empty( $input['include_values'] );
+				$include_known_absent = ! array_key_exists( 'include_known_absent', $input ) || (bool) $input['include_known_absent'];
+				$known_groups         = mcp_abilities_generatepress_setting_groups();
+				$grouped              = array();
+				$keys                 = array();
+
+				foreach ( $settings as $key => $value ) {
+					if ( ! is_string( $key ) ) {
+						continue;
+					}
+					$group = mcp_abilities_generatepress_classify_setting_key( $key );
+					if ( ! isset( $grouped[ $group ] ) ) {
+						$grouped[ $group ] = array();
+					}
+					$item = array(
+						'key'     => $key,
+						'present' => true,
+						'type'    => gettype( $value ),
+					);
+					if ( $include_values ) {
+						$item['value'] = $value;
+					}
+					$grouped[ $group ][] = $item;
+					$keys[]              = $item;
+				}
+
+				if ( $include_known_absent ) {
+					foreach ( $known_groups as $group => $known_keys ) {
+						foreach ( $known_keys as $key ) {
+							if ( array_key_exists( $key, $settings ) ) {
+								continue;
+							}
+							if ( ! isset( $grouped[ $group ] ) ) {
+								$grouped[ $group ] = array();
+							}
+							$item = array(
+								'key'     => $key,
+								'present' => false,
+								'type'    => 'missing',
+							);
+							$grouped[ $group ][] = $item;
+							$keys[]              = $item;
+						}
+					}
+				}
+
+				$module_options = array();
+				foreach ( mcp_abilities_generatepress_module_settings_map() as $module => $option_name ) {
+					$value = get_option( $option_name, array() );
+					$module_options[ $module ] = array(
+						'option_name' => $option_name,
+						'active'      => ( 'activated' === get_option( 'generate_package_' . $module, '' ) ),
+						'keys'        => is_array( $value ) ? array_values( array_map( 'strval', array_keys( $value ) ) ) : array(),
+					);
+				}
+
+				$theme_mods      = get_theme_mods();
+				$theme_mod_items = array();
+				foreach ( is_array( $theme_mods ) ? $theme_mods : array() as $key => $value ) {
+					if ( is_string( $key ) && mcp_abilities_generatepress_allowed_theme_mod_key( $key ) ) {
+						$item = array(
+							'key'  => $key,
+							'type' => gettype( $value ),
+						);
+						if ( $include_values ) {
+							$item['value'] = $value;
+						}
+						$theme_mod_items[] = $item;
+					}
+				}
+
+				return array(
+					'success'        => true,
+					'setting_count'  => count( $settings ),
+					'groups'         => $grouped,
+					'keys'           => $keys,
+					'module_options' => $module_options,
+					'theme_mods'     => $theme_mod_items,
+					'image_sizes'    => mcp_abilities_generatepress_image_sizes(),
+					'message'        => 'GeneratePress control surface discovered successfully.',
+				);
+			},
+			'permission_callback' => function (): bool {
+				return current_user_can( 'edit_theme_options' );
+			},
+			'meta'                => array(
+				'annotations' => array(
+					'readonly'    => true,
+					'destructive' => false,
+					'idempotent'  => true,
+				),
+			),
+		)
+	);
+
+	// =========================================================================
+	// GENERATEPRESS - Theme Mods
+	// =========================================================================
+	wp_register_ability(
+		'generatepress/get-theme-mods',
+		array(
+			'label'               => 'Get GeneratePress Theme Mods',
+			'description'         => 'Gets GeneratePress-relevant theme mods such as custom_logo and GP-prefixed mods.',
+			'category'            => 'site',
+			'input_schema'        => array(
+				'type'                 => 'object',
+				'additionalProperties' => false,
+			),
+			'output_schema'       => array(
+				'type'       => 'object',
+				'properties' => array(
+					'success' => array( 'type' => 'boolean' ),
+					'mods'    => array( 'type' => 'object' ),
+					'message' => array( 'type' => 'string' ),
+				),
+			),
+			'execute_callback'    => function (): array {
+				$mods   = get_theme_mods();
+				$result = array();
+				foreach ( is_array( $mods ) ? $mods : array() as $key => $value ) {
+					if ( is_string( $key ) && mcp_abilities_generatepress_allowed_theme_mod_key( $key ) ) {
+						$result[ $key ] = $value;
+					}
+				}
+				return array(
+					'success' => true,
+					'mods'    => $result,
+					'message' => 'Theme mods retrieved successfully.',
+				);
+			},
+			'permission_callback' => function (): bool {
+				return current_user_can( 'edit_theme_options' );
+			},
+			'meta'                => array(
+				'annotations' => array(
+					'readonly'    => true,
+					'destructive' => false,
+					'idempotent'  => true,
+				),
+			),
+		)
+	);
+
+	wp_register_ability(
+		'generatepress/update-theme-mods',
+		array(
+			'label'               => 'Update GeneratePress Theme Mods',
+			'description'         => 'Updates GeneratePress-relevant theme mods. Use null to remove a mod.',
+			'category'            => 'site',
+			'input_schema'        => array(
+				'type'                 => 'object',
+				'required'             => array( 'mods' ),
+				'properties'           => array(
+					'mods' => array(
+						'type'        => 'object',
+						'description' => 'Map of allowed theme mod keys to values. Use null to remove.',
+					),
+				),
+				'additionalProperties' => false,
+			),
+			'output_schema'       => array(
+				'type'       => 'object',
+				'properties' => array(
+					'success'  => array( 'type' => 'boolean' ),
+					'updated'  => array( 'type' => 'array' ),
+					'removed'  => array( 'type' => 'array' ),
+					'rejected' => array( 'type' => 'array' ),
+					'message'  => array( 'type' => 'string' ),
+				),
+			),
+			'execute_callback'    => function ( array $input = array() ): array {
+				$mods = isset( $input['mods'] ) && is_array( $input['mods'] ) ? $input['mods'] : array();
+				if ( empty( $mods ) ) {
+					return array( 'success' => false, 'message' => 'No theme mods provided.' );
+				}
+
+				$updated  = array();
+				$removed  = array();
+				$rejected = array();
+
+				foreach ( $mods as $key => $value ) {
+					if ( ! is_string( $key ) || ! mcp_abilities_generatepress_allowed_theme_mod_key( $key ) ) {
+						$rejected[] = (string) $key;
+						continue;
+					}
+					if ( null === $value ) {
+						remove_theme_mod( $key );
+						$removed[] = $key;
+					} else {
+						set_theme_mod( $key, $value );
+						$updated[] = $key;
+					}
+				}
+
+				mcp_abilities_generatepress_clear_dynamic_css_cache();
+
+				return array(
+					'success'  => true,
+					'updated'  => $updated,
+					'removed'  => $removed,
+					'rejected' => $rejected,
+					'message'  => 'Theme mods updated successfully.',
+				);
+			},
+			'permission_callback' => function (): bool {
+				return current_user_can( 'edit_theme_options' );
+			},
+			'meta'                => array(
+				'annotations' => array(
+					'readonly'    => false,
+					'destructive' => false,
+					'idempotent'  => true,
+				),
+			),
+		)
+	);
+
+	// =========================================================================
 	// GENERATEPRESS - Update Settings
 	// =========================================================================
 	wp_register_ability(
@@ -1228,6 +1788,7 @@ function mcp_abilities_generatepress_register_abilities(): void {
 					'typography'   => array( 'type' => 'object' ),
 					'colors'       => array( 'type' => 'object' ),
 					'layout'       => array( 'type' => 'object' ),
+					'spacing'      => array( 'type' => 'object' ),
 					'buttons'      => array( 'type' => 'object' ),
 					'site_identity' => array( 'type' => 'object' ),
 					'settings'     => array(
@@ -1260,37 +1821,7 @@ function mcp_abilities_generatepress_register_abilities(): void {
 					$rules = array();
 				}
 
-				$allowed = array(
-					'colors'        => array(
-						'global_colors', 'background_color', 'text_color', 'link_color', 'link_color_hover', 'link_color_visited',
-						'header_background_color', 'header_text_color', 'header_link_color',
-						'navigation_background_color', 'navigation_text_color', 'navigation_background_hover_color', 'navigation_text_hover_color', 'navigation_background_current_color', 'navigation_text_current_color',
-						'subnavigation_background_color', 'subnavigation_text_color', 'subnavigation_background_hover_color', 'subnavigation_text_hover_color', 'subnavigation_background_current_color', 'subnavigation_text_current_color',
-						'content_background_color', 'content_text_color', 'content_link_color', 'content_link_hover_color',
-						'sidebar_widget_background_color', 'sidebar_widget_title_color', 'sidebar_widget_text_color',
-						'footer_widget_background_color', 'footer_widget_title_color', 'footer_widget_text_color', 'footer_widget_link_color',
-						'footer_background_color', 'footer_text_color', 'footer_link_color', 'footer_link_hover_color',
-						'entry_meta_text_color', 'entry_meta_link_color', 'entry_meta_link_color_hover',
-						'form_background_color', 'form_text_color', 'form_background_color_focus', 'form_text_color_focus', 'form_border_color', 'form_border_color_focus',
-						'top_bar_background_color', 'navigation_search_background_color', 'navigation_search_text_color',
-					),
-					'layout'        => array(
-						'container_width', 'container_alignment', 'content_layout_setting', 'content_width', 'layout_setting', 'blog_layout_setting', 'single_layout_setting',
-						'header_layout_setting', 'header_inner_width', 'header_alignment_setting',
-						'nav_layout_setting', 'nav_inner_width', 'nav_alignment_setting', 'nav_position_setting', 'nav_drop_point', 'nav_dropdown_type', 'nav_dropdown_direction', 'nav_search',
-						'footer_layout_setting', 'footer_inner_width', 'footer_widget_setting', 'footer_bar_alignment',
-						'top_bar_width', 'top_bar_inner_width', 'top_bar_alignment', 'back_to_top',
-					),
-					'buttons'       => array(
-						'font_buttons', 'buttons_font_weight', 'buttons_font_size', 'buttons_font_transform',
-						'form_button_background_color', 'form_button_background_color_hover', 'form_button_text_color', 'form_button_text_color_hover', 'form_button_border_radius',
-					),
-					'site_identity' => array(
-						'hide_title', 'hide_tagline', 'logo', 'retina_logo', 'logo_width', 'inline_logo_site_branding', 'custom_logo',
-						'font_site_title', 'site_title_font_size', 'mobile_site_title_font_size', 'site_title_font_weight', 'site_title_font_transform', 'site_title_color',
-						'font_site_tagline', 'site_tagline_font_size', 'site_tagline_color',
-					),
-				);
+				$allowed = mcp_abilities_generatepress_setting_groups();
 
 				$updated_sections = array();
 				$updated_keys     = array();
@@ -1702,6 +2233,217 @@ function mcp_abilities_generatepress_register_abilities(): void {
 	);
 
 	// =========================================================================
+	// GENERATEPRESS - Blog Archive Settings
+	// =========================================================================
+	wp_register_ability(
+		'generatepress/get-blog-archive-settings',
+		array(
+			'label'               => 'Get GeneratePress Blog Archive Settings',
+			'description'         => 'Gets native WordPress reading settings and GeneratePress blog/layout settings that control the posts archive.',
+			'category'            => 'site',
+			'input_schema'        => array(
+				'type'                 => 'object',
+				'additionalProperties' => false,
+			),
+			'output_schema'       => array(
+				'type'       => 'object',
+				'properties' => array(
+					'success'          => array( 'type' => 'boolean' ),
+					'reading_settings' => array( 'type' => 'object' ),
+					'generate_settings' => array( 'type' => 'object' ),
+					'blog_settings'    => array( 'type' => 'object' ),
+					'posts_page'       => array( 'type' => 'object' ),
+					'message'          => array( 'type' => 'string' ),
+				),
+			),
+			'execute_callback'    => function (): array {
+				$page_for_posts = (int) get_option( 'page_for_posts', 0 );
+				$page_on_front  = (int) get_option( 'page_on_front', 0 );
+				$posts_page     = $page_for_posts ? get_post( $page_for_posts ) : null;
+				$settings       = get_option( 'generate_settings', array() );
+				$settings       = is_array( $settings ) ? $settings : array();
+				$blog_settings  = get_option( 'generate_blog_settings', array() );
+				$blog_settings  = is_array( $blog_settings ) ? $blog_settings : array();
+				$gp_keys        = array(
+					'blog_layout_setting',
+					'single_layout_setting',
+					'layout_setting',
+					'content_layout_setting',
+					'container_width',
+					'content_width',
+				);
+				$gp_values      = array();
+				foreach ( $gp_keys as $key ) {
+					if ( array_key_exists( $key, $settings ) ) {
+						$gp_values[ $key ] = $settings[ $key ];
+					}
+				}
+
+				return array(
+					'success'           => true,
+					'reading_settings'  => array(
+						'show_on_front'  => get_option( 'show_on_front', 'posts' ),
+						'page_on_front'  => $page_on_front,
+						'page_for_posts' => $page_for_posts,
+						'posts_per_page' => (int) get_option( 'posts_per_page', 10 ),
+					),
+					'generate_settings' => $gp_values,
+					'blog_settings'     => $blog_settings,
+					'posts_page'        => $posts_page ? array(
+						'id'        => $posts_page->ID,
+						'title'     => get_the_title( $posts_page ),
+						'status'    => $posts_page->post_status,
+						'permalink' => get_permalink( $posts_page ),
+					) : array(),
+					'message'           => 'Blog archive settings retrieved successfully.',
+				);
+			},
+			'permission_callback' => function (): bool {
+				return current_user_can( 'edit_theme_options' );
+			},
+			'meta'                => array(
+				'annotations' => array(
+					'readonly'    => true,
+					'destructive' => false,
+					'idempotent'  => true,
+				),
+			),
+		)
+	);
+
+	wp_register_ability(
+		'generatepress/update-blog-archive-settings',
+		array(
+			'label'               => 'Update GeneratePress Blog Archive Settings',
+			'description'         => 'Updates native blog archive controls: reading options, GP archive layout keys, and GP Premium blog module settings.',
+			'category'            => 'site',
+			'input_schema'        => array(
+				'type'                 => 'object',
+				'properties'           => array(
+					'reading_settings' => array(
+						'type'        => 'object',
+						'description' => 'Allowed keys: show_on_front, page_on_front, page_for_posts, posts_per_page.',
+					),
+					'generate_settings' => array(
+						'type'        => 'object',
+						'description' => 'Allowed GP layout keys for archives.',
+					),
+					'blog_settings' => array(
+						'type'        => 'object',
+						'description' => 'GeneratePress Premium blog module settings such as post_image, post_image_size, masonry, date, author, categories, read_more_button.',
+					),
+				),
+				'additionalProperties' => false,
+			),
+			'output_schema'       => array(
+				'type'       => 'object',
+				'properties' => array(
+					'success'  => array( 'type' => 'boolean' ),
+					'updated'  => array( 'type' => 'array' ),
+					'rejected' => array( 'type' => 'array' ),
+					'message'  => array( 'type' => 'string' ),
+				),
+			),
+			'execute_callback'    => function ( array $input = array() ): array {
+				$updated  = array();
+				$rejected = array();
+
+				if ( isset( $input['reading_settings'] ) && is_array( $input['reading_settings'] ) ) {
+					$allowed_reading = array(
+						'show_on_front',
+						'page_on_front',
+						'page_for_posts',
+						'posts_per_page',
+					);
+					foreach ( $input['reading_settings'] as $key => $value ) {
+						if ( ! is_string( $key ) || ! in_array( $key, $allowed_reading, true ) ) {
+							$rejected[] = 'reading_settings.' . (string) $key;
+							continue;
+						}
+						if ( 'show_on_front' === $key ) {
+							if ( ! in_array( $value, array( 'posts', 'page' ), true ) ) {
+								$rejected[] = 'reading_settings.show_on_front';
+								continue;
+							}
+							update_option( $key, $value );
+						} else {
+							update_option( $key, max( 0, (int) $value ) );
+						}
+						$updated[] = 'reading_settings.' . $key;
+					}
+				}
+
+				if ( isset( $input['generate_settings'] ) && is_array( $input['generate_settings'] ) ) {
+					$allowed_gp = array(
+						'blog_layout_setting',
+						'single_layout_setting',
+						'layout_setting',
+						'content_layout_setting',
+						'container_width',
+						'content_width',
+					);
+					$settings   = get_option( 'generate_settings', array() );
+					$settings   = is_array( $settings ) ? $settings : array();
+					foreach ( $input['generate_settings'] as $key => $value ) {
+						if ( ! is_string( $key ) || ! in_array( $key, $allowed_gp, true ) || ! mcp_abilities_generatepress_is_flat_setting_value( $value ) ) {
+							$rejected[] = 'generate_settings.' . (string) $key;
+							continue;
+						}
+						if ( null === $value || '' === $value ) {
+							unset( $settings[ $key ] );
+						} else {
+							$settings[ $key ] = $value;
+						}
+						$updated[] = 'generate_settings.' . $key;
+					}
+					update_option( 'generate_settings', $settings );
+				}
+
+				if ( isset( $input['blog_settings'] ) && is_array( $input['blog_settings'] ) ) {
+					$blog_settings = get_option( 'generate_blog_settings', array() );
+					$blog_settings = is_array( $blog_settings ) ? $blog_settings : array();
+					foreach ( $input['blog_settings'] as $key => $value ) {
+						if ( ! is_string( $key ) || ! mcp_abilities_generatepress_is_flat_setting_value( $value ) ) {
+							$rejected[] = 'blog_settings.' . (string) $key;
+							continue;
+						}
+						if ( null === $value || '' === $value ) {
+							unset( $blog_settings[ $key ] );
+						} else {
+							$blog_settings[ $key ] = $value;
+						}
+						$updated[] = 'blog_settings.' . $key;
+					}
+					update_option( 'generate_blog_settings', $blog_settings );
+				}
+
+				if ( empty( $updated ) && empty( $rejected ) ) {
+					return array( 'success' => false, 'message' => 'No archive settings provided.' );
+				}
+
+				mcp_abilities_generatepress_clear_dynamic_css_cache();
+
+				return array(
+					'success'  => true,
+					'updated'  => $updated,
+					'rejected' => $rejected,
+					'message'  => 'Blog archive settings updated successfully.',
+				);
+			},
+			'permission_callback' => function (): bool {
+				return current_user_can( 'edit_theme_options' );
+			},
+			'meta'                => array(
+				'annotations' => array(
+					'readonly'    => false,
+					'destructive' => false,
+					'idempotent'  => true,
+				),
+			),
+		)
+	);
+
+	// =========================================================================
 	// GENERATEPRESS - Get Typography
 	// =========================================================================
 	wp_register_ability(
@@ -2062,6 +2804,113 @@ function mcp_abilities_generatepress_register_abilities(): void {
 						'idempotent'  => true,
 					),
 				),
+		)
+	);
+
+	// =========================================================================
+	// GENERATEBLOCKS - Control Surface
+	// =========================================================================
+	wp_register_ability(
+		'generateblocks/list-control-surface',
+		array(
+			'label'               => 'List GenerateBlocks Control Surface',
+			'description'         => 'Discovers GenerateBlocks global styles, defaults, plugin settings, dynamic CSS posts, and generated CSS file status.',
+			'category'            => 'site',
+			'input_schema'        => array(
+				'type'                 => 'object',
+				'properties'           => array(
+					'include_values' => array(
+						'type'        => 'boolean',
+						'default'     => false,
+						'description' => 'Include full option values.',
+					),
+					'post_ids' => array(
+						'type'        => 'array',
+						'items'       => array( 'type' => 'integer' ),
+						'description' => 'Optional post IDs for CSS file status. Defaults to known dynamic CSS posts.',
+					),
+					'limit' => array(
+						'type'        => 'integer',
+						'default'     => 100,
+						'minimum'     => 1,
+						'maximum'     => 500,
+						'description' => 'Maximum CSS posts to report.',
+					),
+				),
+				'additionalProperties' => false,
+			),
+			'output_schema'       => array(
+				'type'       => 'object',
+				'properties' => array(
+					'success'       => array( 'type' => 'boolean' ),
+					'options'       => array( 'type' => 'object' ),
+					'css_posts'     => array( 'type' => 'array' ),
+					'css_directory' => array( 'type' => 'string' ),
+					'message'       => array( 'type' => 'string' ),
+				),
+			),
+			'execute_callback'    => function ( array $input = array() ): array {
+				$include_values = ! empty( $input['include_values'] );
+				$options        = array(
+					'generateblocks_global_styles' => get_option( 'generateblocks_global_styles', array() ),
+					'generateblocks_defaults'      => get_option( 'generateblocks_defaults', array() ),
+					'generateblocks'               => get_option( 'generateblocks', array() ),
+					'generateblocks_dynamic_css_posts' => get_option( 'generateblocks_dynamic_css_posts', array() ),
+					'generateblocks_css_version'   => get_option( 'generateblocks_css_version', '' ),
+					'generateblocks_dynamic_css_time' => get_option( 'generateblocks_dynamic_css_time', '' ),
+				);
+				$summary = array();
+				foreach ( $options as $name => $value ) {
+					$item = array(
+						'type'  => gettype( $value ),
+						'count' => is_array( $value ) ? count( $value ) : 0,
+					);
+					if ( $include_values ) {
+						$item['value'] = $value;
+					} elseif ( is_array( $value ) ) {
+						$item['keys'] = array_values( array_map( 'strval', array_keys( $value ) ) );
+					}
+					$summary[ $name ] = $item;
+				}
+
+				$known_posts = get_option( 'generateblocks_dynamic_css_posts', array() );
+				$post_ids    = isset( $input['post_ids'] ) && is_array( $input['post_ids'] )
+					? array_values( array_unique( array_filter( array_map( 'intval', $input['post_ids'] ) ) ) )
+					: array_values( array_unique( array_filter( array_map( 'intval', array_keys( is_array( $known_posts ) ? $known_posts : array() ) ) ) ) );
+				$limit       = isset( $input['limit'] ) ? max( 1, min( 500, (int) $input['limit'] ) ) : 100;
+				$css_posts   = array();
+				foreach ( array_slice( $post_ids, 0, $limit ) as $post_id ) {
+					$path        = mcp_abilities_generatepress_generateblocks_css_path( $post_id );
+					$css_posts[] = array(
+						'post_id'   => $post_id,
+						'title'     => get_the_title( $post_id ),
+						'permalink' => get_permalink( $post_id ),
+						'path'      => $path,
+						'exists'    => file_exists( $path ),
+						'bytes'     => file_exists( $path ) ? (int) filesize( $path ) : 0,
+					);
+				}
+
+				$upload_dir = wp_get_upload_dir();
+
+				return array(
+					'success'       => true,
+					'options'       => $summary,
+					'css_posts'     => $css_posts,
+					'css_directory' => trailingslashit( $upload_dir['basedir'] ) . 'generateblocks/',
+					'message'       => 'GenerateBlocks control surface discovered successfully.',
+				);
+			},
+			'permission_callback' => function (): bool {
+				return current_user_can( 'edit_theme_options' );
+			},
+			'meta'                => array(
+				'annotations' => array(
+					'readonly'    => true,
+					'destructive' => false,
+					'idempotent'  => true,
+				),
+			),
 		)
 	);
 
@@ -3149,6 +3998,305 @@ function mcp_abilities_generatepress_register_abilities(): void {
 			},
 			'permission_callback' => function (): bool {
 				return current_user_can( 'edit_theme_options' );
+			},
+			'meta'                => array(
+				'annotations' => array(
+					'readonly'    => false,
+					'destructive' => false,
+					'idempotent'  => false,
+				),
+			),
+		)
+	);
+
+	// =========================================================================
+	// GENERATEPRESS - Featured Image Size Audit
+	// =========================================================================
+	wp_register_ability(
+		'generatepress/audit-featured-image-sizes',
+		array(
+			'label'               => 'Audit Featured Image Sizes',
+			'description'         => 'Audits posts for missing featured images and missing generated image sizes so native GeneratePress archive images can be trusted.',
+			'category'            => 'media',
+			'input_schema'        => array(
+				'type'                 => 'object',
+				'properties'           => array(
+					'post_type' => array(
+						'type'        => 'array',
+						'items'       => array( 'type' => 'string' ),
+						'description' => 'Post types to audit. Defaults to post.',
+					),
+					'post_status' => array(
+						'type'        => 'array',
+						'items'       => array( 'type' => 'string' ),
+						'description' => 'Post statuses to audit. Defaults to publish.',
+					),
+					'sizes' => array(
+						'type'        => 'array',
+						'items'       => array( 'type' => 'string' ),
+						'description' => 'Image sizes to require. Defaults to thumbnail, medium, medium_large, large.',
+					),
+					'limit' => array(
+						'type'        => 'integer',
+						'default'     => 100,
+						'minimum'     => 1,
+						'maximum'     => 500,
+						'description' => 'Maximum posts to audit.',
+					),
+					'page' => array(
+						'type'        => 'integer',
+						'default'     => 1,
+						'minimum'     => 1,
+						'description' => 'Result page.',
+					),
+					'only_problematic' => array(
+						'type'        => 'boolean',
+						'default'     => true,
+						'description' => 'Only return posts with missing featured image or missing requested sizes.',
+					),
+				),
+				'additionalProperties' => false,
+			),
+			'output_schema'       => array(
+				'type'       => 'object',
+				'properties' => array(
+					'success'       => array( 'type' => 'boolean' ),
+					'image_sizes'   => array( 'type' => 'object' ),
+					'audited'       => array( 'type' => 'integer' ),
+					'problem_count' => array( 'type' => 'integer' ),
+					'items'         => array( 'type' => 'array' ),
+					'message'       => array( 'type' => 'string' ),
+				),
+			),
+			'execute_callback'    => function ( array $input = array() ): array {
+				$post_types       = isset( $input['post_type'] ) && is_array( $input['post_type'] ) ? array_map( 'sanitize_key', $input['post_type'] ) : array( 'post' );
+				$post_status      = isset( $input['post_status'] ) && is_array( $input['post_status'] ) ? array_map( 'sanitize_key', $input['post_status'] ) : array( 'publish' );
+				$sizes            = isset( $input['sizes'] ) && is_array( $input['sizes'] ) ? array_values( array_filter( array_map( 'sanitize_key', $input['sizes'] ) ) ) : array( 'thumbnail', 'medium', 'medium_large', 'large' );
+				$limit            = isset( $input['limit'] ) ? max( 1, min( 500, (int) $input['limit'] ) ) : 100;
+				$page             = isset( $input['page'] ) ? max( 1, (int) $input['page'] ) : 1;
+				$only_problematic = ! array_key_exists( 'only_problematic', $input ) || (bool) $input['only_problematic'];
+
+				$query = new WP_Query(
+					array(
+						'post_type'      => $post_types,
+						'post_status'    => $post_status,
+						'posts_per_page' => $limit,
+						'paged'          => $page,
+						'orderby'        => 'date',
+						'order'          => 'DESC',
+						'fields'         => 'ids',
+					)
+				);
+
+				$items         = array();
+				$problem_count = 0;
+
+				foreach ( $query->posts as $post_id ) {
+					$post_id       = (int) $post_id;
+					$thumbnail_id  = (int) get_post_thumbnail_id( $post_id );
+					$missing_sizes = array();
+					$size_audit    = array();
+
+					if ( $thumbnail_id > 0 ) {
+						$size_audit = mcp_abilities_generatepress_audit_attachment_image_sizes( $thumbnail_id, $sizes );
+						foreach ( $size_audit as $size_name => $details ) {
+							if ( empty( $details['exists'] ) ) {
+								$missing_sizes[] = $size_name;
+							}
+						}
+					}
+
+					$problem = ( $thumbnail_id <= 0 || ! empty( $missing_sizes ) );
+					if ( $problem ) {
+						$problem_count++;
+					}
+					if ( $only_problematic && ! $problem ) {
+						continue;
+					}
+
+					$items[] = array(
+						'post_id'       => $post_id,
+						'post_type'     => get_post_type( $post_id ),
+						'title'         => get_the_title( $post_id ),
+						'permalink'     => get_permalink( $post_id ),
+						'thumbnail_id'  => $thumbnail_id,
+						'missing_image' => ( $thumbnail_id <= 0 ),
+						'missing_sizes' => $missing_sizes,
+						'sizes'         => $size_audit,
+					);
+				}
+
+				return array(
+					'success'       => true,
+					'image_sizes'   => mcp_abilities_generatepress_image_sizes(),
+					'audited'       => count( $query->posts ),
+					'problem_count' => $problem_count,
+					'items'         => $items,
+					'message'       => 'Featured image sizes audited successfully.',
+				);
+			},
+			'permission_callback' => function (): bool {
+				return current_user_can( 'upload_files' );
+			},
+			'meta'                => array(
+				'annotations' => array(
+					'readonly'    => true,
+					'destructive' => false,
+					'idempotent'  => true,
+				),
+			),
+		)
+	);
+
+	wp_register_ability(
+		'generatepress/regenerate-featured-image-sizes',
+		array(
+			'label'               => 'Regenerate Featured Image Sizes',
+			'description'         => 'Regenerates attachment metadata for featured images on selected posts or recent posts, then reports remaining missing sizes.',
+			'category'            => 'media',
+			'input_schema'        => array(
+				'type'                 => 'object',
+				'properties'           => array(
+					'post_ids' => array(
+						'type'        => 'array',
+						'items'       => array( 'type' => 'integer' ),
+						'description' => 'Specific post IDs whose featured image sizes should be regenerated.',
+					),
+					'post_type' => array(
+						'type'        => 'array',
+						'items'       => array( 'type' => 'string' ),
+						'description' => 'Post types to scan when post_ids is omitted. Defaults to post.',
+					),
+					'post_status' => array(
+						'type'        => 'array',
+						'items'       => array( 'type' => 'string' ),
+						'description' => 'Statuses to scan when post_ids is omitted. Defaults to publish.',
+					),
+					'sizes' => array(
+						'type'        => 'array',
+						'items'       => array( 'type' => 'string' ),
+						'description' => 'Sizes to verify after regeneration.',
+					),
+					'limit' => array(
+						'type'        => 'integer',
+						'default'     => 25,
+						'minimum'     => 1,
+						'maximum'     => 100,
+						'description' => 'Maximum posts to process when post_ids is omitted.',
+					),
+					'confirm' => array(
+						'type'        => 'boolean',
+						'default'     => false,
+						'description' => 'Must be true because this rewrites attachment metadata.',
+					),
+				),
+				'additionalProperties' => false,
+			),
+			'output_schema'       => array(
+				'type'       => 'object',
+				'properties' => array(
+					'success'      => array( 'type' => 'boolean' ),
+					'processed'    => array( 'type' => 'array' ),
+					'failed'       => array( 'type' => 'object' ),
+					'still_missing' => array( 'type' => 'array' ),
+					'message'      => array( 'type' => 'string' ),
+				),
+			),
+			'execute_callback'    => function ( array $input = array() ): array {
+				if ( empty( $input['confirm'] ) ) {
+					return array(
+						'success' => false,
+						'message' => 'confirm=true is required before regenerating image metadata.',
+					);
+				}
+
+				if ( ! function_exists( 'wp_generate_attachment_metadata' ) ) {
+					require_once ABSPATH . 'wp-admin/includes/image.php';
+				}
+
+				$post_ids = isset( $input['post_ids'] ) && is_array( $input['post_ids'] )
+					? array_values( array_unique( array_filter( array_map( 'intval', $input['post_ids'] ) ) ) )
+					: array();
+				if ( empty( $post_ids ) ) {
+					$post_types  = isset( $input['post_type'] ) && is_array( $input['post_type'] ) ? array_map( 'sanitize_key', $input['post_type'] ) : array( 'post' );
+					$post_status = isset( $input['post_status'] ) && is_array( $input['post_status'] ) ? array_map( 'sanitize_key', $input['post_status'] ) : array( 'publish' );
+					$limit       = isset( $input['limit'] ) ? max( 1, min( 100, (int) $input['limit'] ) ) : 25;
+					$scan_limit  = min( 500, max( $limit * 4, $limit ) );
+					$query       = new WP_Query(
+						array(
+							'post_type'      => $post_types,
+							'post_status'    => $post_status,
+							'posts_per_page' => $scan_limit,
+							'orderby'        => 'date',
+							'order'          => 'DESC',
+							'fields'         => 'ids',
+						)
+					);
+					foreach ( array_map( 'intval', $query->posts ) as $candidate_id ) {
+						if ( (int) get_post_thumbnail_id( $candidate_id ) <= 0 ) {
+							continue;
+						}
+						$post_ids[] = $candidate_id;
+						if ( count( $post_ids ) >= $limit ) {
+							break;
+						}
+					}
+				}
+
+				$sizes         = isset( $input['sizes'] ) && is_array( $input['sizes'] ) ? array_values( array_filter( array_map( 'sanitize_key', $input['sizes'] ) ) ) : array( 'thumbnail', 'medium', 'medium_large', 'large' );
+				$processed     = array();
+				$failed        = array();
+				$still_missing = array();
+
+				foreach ( $post_ids as $post_id ) {
+					$attachment_id = (int) get_post_thumbnail_id( $post_id );
+					if ( $attachment_id <= 0 ) {
+						$failed[ $post_id ] = 'Post has no featured image.';
+						continue;
+					}
+					$file = get_attached_file( $attachment_id );
+					if ( ! is_string( $file ) || '' === $file || ! file_exists( $file ) ) {
+						$failed[ $post_id ] = 'Original attachment file is missing.';
+						continue;
+					}
+
+					$metadata = wp_generate_attachment_metadata( $attachment_id, $file );
+					if ( empty( $metadata ) || ! is_array( $metadata ) ) {
+						$failed[ $post_id ] = 'Attachment metadata regeneration failed.';
+						continue;
+					}
+					wp_update_attachment_metadata( $attachment_id, $metadata );
+
+					$audit   = mcp_abilities_generatepress_audit_attachment_image_sizes( $attachment_id, $sizes );
+					$missing = array();
+					foreach ( $audit as $size_name => $details ) {
+						if ( empty( $details['exists'] ) ) {
+							$missing[] = $size_name;
+						}
+					}
+					if ( ! empty( $missing ) ) {
+						$still_missing[] = array(
+							'post_id'       => $post_id,
+							'thumbnail_id'  => $attachment_id,
+							'missing_sizes' => $missing,
+						);
+					}
+					$processed[] = array(
+						'post_id'      => $post_id,
+						'thumbnail_id' => $attachment_id,
+					);
+				}
+
+				return array(
+					'success'       => true,
+					'processed'     => $processed,
+					'failed'        => $failed,
+					'still_missing' => $still_missing,
+					'message'       => 'Featured image metadata regeneration completed.',
+				);
+			},
+			'permission_callback' => function (): bool {
+				return current_user_can( 'upload_files' );
 			},
 			'meta'                => array(
 				'annotations' => array(

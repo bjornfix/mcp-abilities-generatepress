@@ -6,7 +6,7 @@ GeneratePress theme management for WordPress via MCP.
 [![License: GPL v2](https://img.shields.io/badge/License-GPL%20v2-blue.svg)](https://www.gnu.org/licenses/gpl-2.0)
 
 **Tested up to:** 6.9
-**Stable tag:** 1.1.11
+**Stable tag:** 1.1.12
 **License:** GPLv2 or later
 **License URI:** https://www.gnu.org/licenses/gpl-2.0.html
 
@@ -49,7 +49,7 @@ With this add-on, you can ask Codex or Claude to inspect the current setup, chan
 3. Upload via WordPress Admin → Plugins → Add New → Upload Plugin
 4. Activate the plugin
 
-## Abilities (27)
+## Abilities (35)
 
 | Ability | Description |
 |---------|-------------|
@@ -58,14 +58,19 @@ With this add-on, you can ask Codex or Claude to inspect the current setup, chan
 | `generatepress/get-options` | Get specific GeneratePress/GenerateBlocks options |
 | `generatepress/update-options` | Update or delete GeneratePress/GenerateBlocks options |
 | `generatepress/get-settings` | Get theme settings (colors, typography, layout) |
+| `generatepress/list-setting-keys` | Discover live GeneratePress setting keys and classify the full control surface |
 | `generatepress/update-settings` | Update theme settings |
-| `generatepress/update-global-design-settings` | Update global GeneratePress design settings for typography, colors, layout, buttons, and site identity |
+| `generatepress/update-global-design-settings` | Update global GeneratePress design settings for typography, colors, layout, spacing, buttons, and site identity |
+| `generatepress/get-theme-mods` | Get GeneratePress-relevant theme mods |
+| `generatepress/update-theme-mods` | Update GeneratePress-relevant theme mods |
 | `generatepress/get-typography` | Get typography rules and font manager entries |
 | `generatepress/update-typography` | Update typography rules and font manager entries |
 | `generatepress/list-modules` | List GeneratePress Premium module statuses |
 | `generatepress/update-modules` | Activate or deactivate GeneratePress modules |
 | `generatepress/get-module-settings` | Get settings for a GeneratePress module |
 | `generatepress/update-module-settings` | Update settings for a GeneratePress module |
+| `generatepress/get-blog-archive-settings` | Get native WordPress and GeneratePress blog archive controls |
+| `generatepress/update-blog-archive-settings` | Update native blog archive and GP blog module controls |
 | `generatepress/get-site-library-cache` | Inspect Starter Site cache metadata |
 | `generatepress/clear-site-library-cache` | Clear Starter Site cache |
 | `generatepress/clear-cache` | Clear GeneratePress dynamic CSS cache |
@@ -77,8 +82,11 @@ With this add-on, you can ask Codex or Claude to inspect the current setup, chan
 | `generatepress/update-element` | Update a GeneratePress Element |
 | `generatepress/delete-element` | Delete a GeneratePress Element |
 | `generatepress/restore-element` | Restore a trashed GeneratePress Element |
+| `generatepress/audit-featured-image-sizes` | Audit posts for missing featured-image sizes |
+| `generatepress/regenerate-featured-image-sizes` | Regenerate featured-image attachment metadata |
 | `generateblocks/get-global-styles` | Get GenerateBlocks global styles |
 | `generateblocks/update-global-styles` | Update GenerateBlocks global styles |
+| `generateblocks/list-control-surface` | Discover GenerateBlocks options, CSS posts, and generated CSS status |
 | `generateblocks/clear-cache` | Clear GenerateBlocks CSS cache |
 
 ## Usage Examples
@@ -141,7 +149,7 @@ Modules: `blog`, `spacing`, `menu_plus`, `secondary_nav`, `woocommerce`. Use `ge
 
 ### Update global design settings
 
-Use this ability for site-wide design decisions instead of page/block-level styling. Named sections cover common changes; use `settings` for any other flat GeneratePress setting key.
+Use this ability for site-wide design decisions instead of page/block-level styling. Named sections cover common changes; use `settings` for any other flat GeneratePress setting key. Use `generatepress/list-setting-keys` first when you need exact live keys instead of guessing.
 
 ```json
 {
@@ -165,6 +173,9 @@ Use this ability for site-wide design decisions instead of page/block-level styl
     },
     "layout": {
       "container_width": 1140
+    },
+    "spacing": {
+      "content_top": "80"
     },
     "settings": {
       "paragraph_margin": "1.5",
@@ -201,6 +212,51 @@ Use this ability for site-wide design decisions instead of page/block-level styl
 }
 ```
 
+### Discover the full control surface
+
+```json
+{
+  "ability_name": "generatepress/list-setting-keys",
+  "parameters": {
+    "include_values": false,
+    "include_known_absent": true
+  }
+}
+```
+
+```json
+{
+  "ability_name": "generateblocks/list-control-surface",
+  "parameters": {
+    "include_values": false,
+    "limit": 100
+  }
+}
+```
+
+### Control native blog archives
+
+```json
+{
+  "ability_name": "generatepress/update-blog-archive-settings",
+  "parameters": {
+    "reading_settings": {
+      "page_for_posts": 6744,
+      "posts_per_page": 12
+    },
+    "generate_settings": {
+      "blog_layout_setting": "no-sidebar"
+    },
+    "blog_settings": {
+      "post_image": true,
+      "post_image_size": "medium_large",
+      "date": true,
+      "author": false
+    }
+  }
+}
+```
+
 ### Clear CSS cache
 
 ```json
@@ -215,6 +271,11 @@ Use this ability for site-wide design decisions instead of page/block-level styl
 `generateblocks/clear-cache` preserves existing generated CSS files by default and only clears cache metadata. Use `{"delete_files": true}` only for destructive file clearing; warming then verifies that the expected per-page CSS file was actually regenerated. You can also pass `post_ids` and `limit` to restrict warming.
 
 ## Changelog
+
+### 1.1.12
+- Added `generatepress/list-setting-keys` to discover live GeneratePress settings, classify keys, and expose module/theme-mod/image-size control surfaces.
+- Added theme-mod, native blog archive, featured-image size audit/regeneration, and GenerateBlocks control-surface abilities.
+- Expanded `generatepress/update-global-design-settings` with the spacing group so global spacing belongs in GeneratePress settings too.
 
 ### 1.1.11
 - Added `letterSpacing` support to `generatepress/update-global-design-settings` typography groups.
