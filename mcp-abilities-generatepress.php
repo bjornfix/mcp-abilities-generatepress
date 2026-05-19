@@ -3,7 +3,7 @@
  * Plugin Name: MCP Abilities - GeneratePress
  * Plugin URI: https://github.com/bjornfix/mcp-abilities-generatepress
  * Description: GeneratePress and GenerateBlocks abilities for MCP. Manage theme settings, elements, global styles, page meta, and caches.
- * Version: 1.1.14
+ * Version: 1.1.15
  * Author: Devenia
  * Author URI: https://devenia.com
  * License: GPL-2.0+
@@ -3924,7 +3924,7 @@ function mcp_abilities_generatepress_register_abilities(): void {
 		'generatepress/upsert-archive-hook-element',
 		array(
 			'label'               => 'Upsert Archive Hook Element',
-			'description'         => 'Creates or updates a GeneratePress hook Element for archive-like contexts such as the posts page. Use this for GenerateBlocks hero/CTA bands while keeping the native GeneratePress loop.',
+			'description'         => 'Creates or updates a GeneratePress Block Element of type hook for archive-like contexts such as the posts page. Use this for GenerateBlocks hero/CTA bands while keeping the native GeneratePress loop.',
 			'category'            => 'site',
 			'input_schema'        => array(
 				'type'                 => 'object',
@@ -4033,8 +4033,9 @@ function mcp_abilities_generatepress_register_abilities(): void {
 					return array( 'success' => false, 'message' => $post_id->get_error_message() );
 				}
 
-				update_post_meta( (int) $post_id, '_generate_element_type', 'hook' );
+				update_post_meta( (int) $post_id, '_generate_element_type', 'block' );
 				update_post_meta( (int) $post_id, '_generate_element_content', $content );
+				update_post_meta( (int) $post_id, '_generate_block_type', 'hook' );
 				update_post_meta( (int) $post_id, '_generate_hook_type', 'hook' );
 				update_post_meta( (int) $post_id, '_generate_hook', $hook );
 				update_post_meta( (int) $post_id, '_generate_hook_priority', $priority );

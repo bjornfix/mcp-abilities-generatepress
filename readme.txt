@@ -3,7 +3,7 @@ Contributors: devenia
 Tags: mcp, generatepress, theme, ai, automation
 Requires at least: 6.9
 Tested up to: 6.9
-Stable tag: 1.1.14
+Stable tag: 1.1.15
 Requires PHP: 8.0
 License: GPLv2 or later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
@@ -41,6 +41,9 @@ Part of the MCP Expose Abilities ecosystem.
 4. Activate the plugin
 
 == Changelog ==
+
+= 1.1.15 =
+* Fixed: `generatepress/upsert-archive-hook-element` now creates GeneratePress Block Elements of type hook so GenerateBlocks markup renders with its containers and generated CSS.
 
 = 1.1.14 =
 * Added: `generatepress/upsert-archive-hook-element` for posts-page/archive hero and CTA Elements using GenerateBlocks while preserving native GeneratePress loops.
