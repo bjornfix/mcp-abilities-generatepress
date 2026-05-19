@@ -6,7 +6,7 @@ GeneratePress theme management for WordPress via MCP.
 [![License: GPL v2](https://img.shields.io/badge/License-GPL%20v2-blue.svg)](https://www.gnu.org/licenses/gpl-2.0)
 
 **Tested up to:** 6.9
-**Stable tag:** 1.1.5
+**Stable tag:** 1.1.6
 **License:** GPLv2 or later
 **License URI:** https://www.gnu.org/licenses/gpl-2.0.html
 
@@ -177,6 +177,9 @@ Modules: `blog`, `spacing`, `menu_plus`, `secondary_nav`, `woocommerce`. Use `ge
 `generatepress/clear-cache` and `generateblocks/clear-cache` also accept `{"force": true}` as a compatibility alias for `{"confirm": true}`.
 
 ## Changelog
+
+### 1.1.6
+- Fixed page meta updates for GeneratePress full-width content so `content_area=full-width-content` writes the actual full-width content flag used by the theme.
 
 ### 1.1.5
 - Fixed zero-parameter ability schemas so MCP Adapter 0.4.x clients do not receive invalid `properties: []` JSON

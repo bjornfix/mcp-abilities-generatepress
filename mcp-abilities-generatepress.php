@@ -3,7 +3,7 @@
  * Plugin Name: MCP Abilities - GeneratePress
  * Plugin URI: https://github.com/bjornfix/mcp-abilities-generatepress
  * Description: GeneratePress and GenerateBlocks abilities for MCP. Manage theme settings, elements, global styles, page meta, and caches.
- * Version: 1.1.5
+ * Version: 1.1.6
  * Author: Devenia
  * Author URI: https://devenia.com
  * License: GPL-2.0+
@@ -161,7 +161,7 @@ function mcp_abilities_generatepress_page_meta_map(): array {
 		'disable_footer'         => '_generate-disable-footer',
 		'disable_footer_widgets' => '_generate-disable-footer-widgets',
 		'sidebar_layout'         => '_generate-sidebar-layout-meta',
-		'content_area'           => '_generate-content-area-meta',
+		'content_area'           => '_generate-full-width-content',
 		'transparent_header'     => '_generate-transparent-header',
 		'sticky_header'          => '_generate-sticky-navigation-meta',
 	);
@@ -1711,6 +1711,20 @@ function mcp_abilities_generatepress_register_abilities(): void {
 				foreach ( $meta_map as $input_key => $meta_key ) {
 					if ( isset( $input[ $input_key ] ) ) {
 						$value = $input[ $input_key ];
+
+						if ( 'content_area' === $input_key ) {
+							if ( '' === $value ) {
+								delete_post_meta( $post_id, $meta_key );
+								$updated[] = "{$input_key} = '' (removed)";
+							} elseif ( 'full-width' === $value || 'full-width-content' === $value ) {
+								update_post_meta( $post_id, $meta_key, 'true' );
+								$updated[] = "{$input_key} = full-width";
+							} elseif ( 'contained' === $value ) {
+								update_post_meta( $post_id, $meta_key, 'contained' );
+								$updated[] = "{$input_key} = contained";
+							}
+							continue;
+						}
 
 						// Boolean fields: store 'true' string or delete.
 						if ( is_bool( $value ) ) {
