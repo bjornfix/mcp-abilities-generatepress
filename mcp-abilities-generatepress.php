@@ -3,7 +3,7 @@
  * Plugin Name: MCP Abilities - GeneratePress
  * Plugin URI: https://github.com/bjornfix/mcp-abilities-generatepress
  * Description: GeneratePress and GenerateBlocks abilities for MCP. Manage theme settings, elements, global styles, page meta, and caches.
- * Version: 1.1.15
+ * Version: 1.1.16
  * Author: Devenia
  * Author URI: https://devenia.com
  * License: GPL-2.0+
@@ -190,6 +190,103 @@ function mcp_abilities_generatepress_archive_element_guidance( string $target ):
 
 	return $guidance;
 }
+
+/**
+ * Get context rules matching the current frontend request.
+ */
+function mcp_abilities_generatepress_current_display_rules(): array {
+	$rules = array( 'general:site' );
+
+	if ( is_front_page() ) {
+		$rules[] = 'general:front_page';
+	}
+	if ( is_home() ) {
+		$rules[] = 'general:blog';
+	}
+	if ( is_archive() ) {
+		$rules[] = 'general:archive';
+	}
+	if ( is_search() ) {
+		$rules[] = 'general:search';
+	}
+	if ( is_404() ) {
+		$rules[] = 'general:404';
+	}
+
+	return array_values( array_unique( $rules ) );
+}
+
+/**
+ * Check if a GeneratePress Element condition set matches the current request.
+ */
+function mcp_abilities_generatepress_conditions_match_current_request( $conditions ): bool {
+	if ( ! is_array( $conditions ) || empty( $conditions ) ) {
+		return false;
+	}
+
+	$current_rules = mcp_abilities_generatepress_current_display_rules();
+
+	foreach ( $conditions as $condition ) {
+		if ( ! is_array( $condition ) || empty( $condition['rule'] ) ) {
+			continue;
+		}
+
+		if ( in_array( (string) $condition['rule'], $current_rules, true ) ) {
+			return true;
+		}
+	}
+
+	return false;
+}
+
+/**
+ * Include matching GeneratePress Block Element content when GenerateBlocks builds CSS for archive pages.
+ */
+function mcp_abilities_generatepress_append_matching_element_content_for_generateblocks( string $content ): string {
+	if ( is_admin() || ! function_exists( 'generateblocks_get_dynamic_css' ) || ! post_type_exists( 'gp_elements' ) ) {
+		return $content;
+	}
+
+	$element_ids = get_posts(
+		array(
+			'post_type'              => 'gp_elements',
+			'post_status'            => 'publish',
+			'fields'                 => 'ids',
+			'posts_per_page'         => 50,
+			'no_found_rows'          => true,
+			'update_post_meta_cache' => false,
+			'update_post_term_cache' => false,
+		)
+	);
+
+	foreach ( $element_ids as $element_id ) {
+		$element_id = (int) $element_id;
+		$element    = get_post( $element_id );
+
+		if (
+			! $element instanceof WP_Post
+			|| 'block' !== get_post_meta( $element_id, '_generate_element_type', true )
+			|| false === strpos( $element->post_content, 'wp:generateblocks/' )
+		) {
+			continue;
+		}
+
+		$display_conditions = get_post_meta( $element_id, '_generate_element_display_conditions', true );
+		$exclude_conditions = get_post_meta( $element_id, '_generate_element_exclude_conditions', true );
+
+		if (
+			! mcp_abilities_generatepress_conditions_match_current_request( $display_conditions )
+			|| mcp_abilities_generatepress_conditions_match_current_request( $exclude_conditions )
+		) {
+			continue;
+		}
+
+		$content .= "\n" . $element->post_content;
+	}
+
+	return $content;
+}
+add_filter( 'generateblocks_do_content', 'mcp_abilities_generatepress_append_matching_element_content_for_generateblocks', 20 );
 
 /**
  * Clear GeneratePress dynamic CSS cache.
@@ -4043,6 +4140,18 @@ function mcp_abilities_generatepress_register_abilities(): void {
 				update_post_meta( (int) $post_id, '_generate_element_display_conditions', $display_conditions );
 				update_post_meta( (int) $post_id, '_generate_element_exclude_conditions', array() );
 				update_post_meta( (int) $post_id, '_generate_element_user_conditions', array() );
+
+				if ( 'blog' === $target ) {
+					$page_for_posts = (int) get_option( 'page_for_posts' );
+					if ( $page_for_posts > 0 && false !== strpos( $content, 'wp:generateblocks/' ) && defined( 'GENERATEBLOCKS_VERSION' ) ) {
+						update_post_meta( $page_for_posts, '_generateblocks_dynamic_css_version', sanitize_text_field( GENERATEBLOCKS_VERSION ) );
+						$known_posts                         = get_option( 'generateblocks_dynamic_css_posts', array() );
+						$known_posts                         = is_array( $known_posts ) ? $known_posts : array();
+						$known_posts[ $page_for_posts ]      = false;
+						update_option( 'generateblocks_dynamic_css_posts', $known_posts );
+						update_option( 'generateblocks_dynamic_css_time', 0, false );
+					}
+				}
 
 				return array(
 					'success'            => true,
