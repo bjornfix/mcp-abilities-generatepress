@@ -3,7 +3,7 @@
  * Plugin Name: MCP Abilities - GeneratePress
  * Plugin URI: https://github.com/bjornfix/mcp-abilities-generatepress
  * Description: GeneratePress and GenerateBlocks abilities for MCP. Manage theme settings, elements, global styles, page meta, and caches.
- * Version: 1.1.8
+ * Version: 1.1.9
  * Author: Devenia
  * Author URI: https://devenia.com
  * License: GPL-2.0+
@@ -2798,12 +2798,22 @@ function mcp_abilities_generatepress_register_abilities(): void {
 				$css_dir      = $upload_dir['basedir'] . '/generateblocks/';
 				$deleted      = 0;
 				$delete_files = isset( $input['delete_files'] ) && (bool) $input['delete_files'];
+				$has_post_ids = isset( $input['post_ids'] ) && is_array( $input['post_ids'] ) && ! empty( $input['post_ids'] );
+				$post_ids     = $has_post_ids ? array_values( array_unique( array_filter( array_map( 'intval', $input['post_ids'] ) ) ) ) : null;
 
 				if ( $delete_files && is_dir( $css_dir ) ) {
-					$files = glob( $css_dir . '*.css' );
+					$files = array();
+					if ( null !== $post_ids ) {
+						foreach ( $post_ids as $post_id ) {
+							$files[] = mcp_abilities_generatepress_generateblocks_css_path( $post_id );
+						}
+					} else {
+						$files = glob( $css_dir . '*.css' );
+					}
+
 					if ( $files ) {
 						foreach ( $files as $file ) {
-							if ( wp_delete_file( $file ) ) {
+							if ( is_string( $file ) && file_exists( $file ) && wp_delete_file( $file ) ) {
 								$deleted++;
 							}
 						}
@@ -2818,13 +2828,9 @@ function mcp_abilities_generatepress_register_abilities(): void {
 					'failed'  => array(),
 					'skipped' => 0,
 				);
-				$has_post_ids = isset( $input['post_ids'] ) && is_array( $input['post_ids'] ) && ! empty( $input['post_ids'] );
 				$warm         = isset( $input['warm'] ) ? (bool) $input['warm'] : ( $delete_files || $has_post_ids );
 
 				if ( $warm ) {
-					$post_ids    = isset( $input['post_ids'] ) && is_array( $input['post_ids'] )
-						? array_map( 'intval', $input['post_ids'] )
-						: null;
 					$limit       = isset( $input['limit'] ) ? max( 1, min( 500, (int) $input['limit'] ) ) : 100;
 					$warm_result = mcp_abilities_generatepress_warm_generateblocks_css( $post_ids, $limit );
 				}
