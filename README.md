@@ -6,7 +6,7 @@ GeneratePress theme management for WordPress via MCP.
 [![License: GPL v2](https://img.shields.io/badge/License-GPL%20v2-blue.svg)](https://www.gnu.org/licenses/gpl-2.0)
 
 **Tested up to:** 6.9
-**Stable tag:** 1.1.9
+**Stable tag:** 1.1.10
 **License:** GPLv2 or later
 **License URI:** https://www.gnu.org/licenses/gpl-2.0.html
 
@@ -49,7 +49,7 @@ With this add-on, you can ask Codex or Claude to inspect the current setup, chan
 3. Upload via WordPress Admin → Plugins → Add New → Upload Plugin
 4. Activate the plugin
 
-## Abilities (26)
+## Abilities (27)
 
 | Ability | Description |
 |---------|-------------|
@@ -59,6 +59,7 @@ With this add-on, you can ask Codex or Claude to inspect the current setup, chan
 | `generatepress/update-options` | Update or delete GeneratePress/GenerateBlocks options |
 | `generatepress/get-settings` | Get theme settings (colors, typography, layout) |
 | `generatepress/update-settings` | Update theme settings |
+| `generatepress/update-global-design-settings` | Update global GeneratePress design settings for typography, colors, layout, buttons, and site identity |
 | `generatepress/get-typography` | Get typography rules and font manager entries |
 | `generatepress/update-typography` | Update typography rules and font manager entries |
 | `generatepress/list-modules` | List GeneratePress Premium module statuses |
@@ -138,7 +139,37 @@ Sections: `all`, `colors`, `typography`, `layout`, `buttons`, `site_identity`
 
 Modules: `blog`, `spacing`, `menu_plus`, `secondary_nav`, `woocommerce`. Use `generatepress/list-modules` to inspect status.
 
-### Update typography (Local Font Library)
+### Update global design settings
+
+Use this ability for site-wide design decisions instead of page/block-level styling.
+
+```json
+{
+  "ability_name": "generatepress/update-global-design-settings",
+  "parameters": {
+    "typography": {
+      "h1": {
+        "fontFamily": "Fraunces",
+        "fontWeight": "300",
+        "fontSize": "64",
+        "fontSizeMobile": "42",
+        "lineHeight": "1.05",
+        "textTransform": "none"
+      },
+      "body": {
+        "fontFamily": "Manrope",
+        "fontSize": "20",
+        "lineHeight": "1.5"
+      }
+    },
+    "layout": {
+      "container_width": 1140
+    }
+  }
+}
+```
+
+### Update typography rules (Local Font Library)
 
 ```json
 {
@@ -179,6 +210,10 @@ Modules: `blog`, `spacing`, `menu_plus`, `secondary_nav`, `woocommerce`. Use `ge
 `generateblocks/clear-cache` preserves existing generated CSS files by default and only clears cache metadata. Use `{"delete_files": true}` only for destructive file clearing; warming then verifies that the expected per-page CSS file was actually regenerated. You can also pass `post_ids` and `limit` to restrict warming.
 
 ## Changelog
+
+### 1.1.10
+- Added `generatepress/update-global-design-settings` for site-wide typography, colors, layout, buttons, and site identity changes.
+- Hardened `generatepress/update-settings` so global design keys and nested design-section objects are rejected instead of bypassing the global design-settings workflow.
 
 ### 1.1.9
 - Fixed targeted destructive GenerateBlocks cache clears so `delete_files=true` with `post_ids` deletes only those posts' expected CSS files.

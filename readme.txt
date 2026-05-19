@@ -3,7 +3,7 @@ Contributors: devenia
 Tags: mcp, generatepress, theme, ai, automation
 Requires at least: 6.9
 Tested up to: 6.9
-Stable tag: 1.1.9
+Stable tag: 1.1.10
 Requires PHP: 8.0
 License: GPLv2 or later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
@@ -17,6 +17,7 @@ This add-on plugin exposes GeneratePress theme settings, elements, and GenerateB
 == Abilities ==
 
 * Theme settings (colors, typography, layout, buttons)
+* Global design settings updates for typography, colors, layout, buttons, and site identity
 * Typography rules and font manager (Local Font Library)
 * Module status management and module settings access
 * GeneratePress options (read/write)
@@ -37,6 +38,10 @@ Part of the MCP Expose Abilities ecosystem.
 4. Activate the plugin
 
 == Changelog ==
+
+= 1.1.10 =
+* Added: `generatepress/update-global-design-settings` for site-wide typography, colors, layout, buttons, and site identity changes.
+* Fixed: `generatepress/update-settings` now rejects global design keys and nested design-section objects instead of bypassing the global design-settings workflow.
 
 = 1.1.9 =
 * Fixed: targeted destructive GenerateBlocks cache clears now delete only the expected CSS files for the provided `post_ids`.

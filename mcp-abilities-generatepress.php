@@ -3,7 +3,7 @@
  * Plugin Name: MCP Abilities - GeneratePress
  * Plugin URI: https://github.com/bjornfix/mcp-abilities-generatepress
  * Description: GeneratePress and GenerateBlocks abilities for MCP. Manage theme settings, elements, global styles, page meta, and caches.
- * Version: 1.1.9
+ * Version: 1.1.10
  * Author: Devenia
  * Author URI: https://devenia.com
  * License: GPL-2.0+
@@ -271,6 +271,210 @@ function mcp_abilities_generatepress_module_settings_map(): array {
 		'secondary_nav' => 'generate_secondary_nav_settings',
 		'woocommerce'   => 'generate_woocommerce_settings',
 	);
+}
+
+/**
+ * Convert a font family name into the GeneratePress dynamic typography value.
+ */
+function mcp_abilities_generatepress_font_family_value( string $font_family ): string {
+	$font_family = trim( $font_family );
+	if ( '' === $font_family || str_starts_with( $font_family, 'var(' ) ) {
+		return $font_family;
+	}
+
+	$slug = strtolower( $font_family );
+	$slug = preg_replace( '/[^a-z0-9]+/', '-', $slug );
+	$slug = trim( (string) $slug, '-' );
+
+	return '' === $slug ? $font_family : 'var(--gp-font--' . $slug . ')';
+}
+
+/**
+ * Find an existing GeneratePress typography rule by selector or append a new one.
+ */
+function mcp_abilities_generatepress_upsert_typography_rule( array &$rules, string $selector, array $updates, string $group = 'content' ): void {
+	$index = null;
+	foreach ( $rules as $rule_index => $rule ) {
+		if ( is_array( $rule ) && isset( $rule['selector'] ) && $selector === $rule['selector'] ) {
+			$index = $rule_index;
+			break;
+		}
+	}
+
+	if ( null === $index ) {
+		$rules[] = array(
+			'selector' => $selector,
+			'module'   => 'core',
+			'group'    => $group,
+		);
+		$index = array_key_last( $rules );
+	}
+
+	foreach ( $updates as $key => $value ) {
+		if ( null === $value ) {
+			unset( $rules[ $index ][ $key ] );
+			continue;
+		}
+		$rules[ $index ][ $key ] = $value;
+	}
+}
+
+/**
+ * Apply a typography group to GeneratePress legacy and dynamic typography settings.
+ */
+function mcp_abilities_generatepress_apply_typography_group( array &$settings, array &$rules, string $group, array $values ): array {
+	$changed = array();
+
+	$map = array(
+		'body'       => array(
+			'selector' => 'body',
+			'rule_group' => 'base',
+			'keys'     => array(
+				'fontFamily'    => 'font_body',
+				'fontWeight'    => 'body_font_weight',
+				'fontSize'      => 'body_font_size',
+				'lineHeight'    => 'body_line_height',
+				'textTransform' => 'body_font_transform',
+			),
+		),
+		'navigation' => array(
+			'selector' => 'primary-menu-items',
+			'rule_group' => 'primaryNavigation',
+			'keys'     => array(
+				'fontFamily'    => 'font_navigation',
+				'fontWeight'    => 'navigation_font_weight',
+				'fontSize'      => 'navigation_font_size',
+				'textTransform' => 'navigation_font_transform',
+			),
+		),
+		'buttons'    => array(
+			'selector' => 'buttons',
+			'rule_group' => 'content',
+			'keys'     => array(
+				'fontFamily'    => 'font_buttons',
+				'fontWeight'    => 'buttons_font_weight',
+				'fontSize'      => 'buttons_font_size',
+				'textTransform' => 'buttons_font_transform',
+			),
+		),
+	);
+
+	for ( $level = 1; $level <= 6; $level++ ) {
+		$map[ 'h' . $level ] = array(
+			'selector' => 'h' . $level,
+			'rule_group' => 'content',
+			'keys'     => array(
+				'fontFamily'     => 'font_heading_' . $level,
+				'fontWeight'     => 'heading_' . $level . '_weight',
+				'fontSize'       => 'heading_' . $level . '_font_size',
+				'fontSizeMobile' => 'mobile_heading_' . $level . '_font_size',
+				'lineHeight'     => 'heading_' . $level . '_line_height',
+				'textTransform'  => 'heading_' . $level . '_transform',
+			),
+		);
+	}
+
+	if ( empty( $map[ $group ] ) ) {
+		return $changed;
+	}
+
+	$config       = $map[ $group ];
+	$rule_updates = array();
+
+	foreach ( $config['keys'] as $input_key => $setting_key ) {
+		if ( ! array_key_exists( $input_key, $values ) ) {
+			continue;
+		}
+
+		$value = is_string( $values[ $input_key ] ) ? trim( $values[ $input_key ] ) : $values[ $input_key ];
+		if ( '' === $value || null === $value ) {
+			unset( $settings[ $setting_key ] );
+			$rule_updates[ $input_key ] = null;
+			$changed[] = $setting_key;
+			continue;
+		}
+
+		$settings[ $setting_key ] = $value;
+		$changed[] = $setting_key;
+
+		if ( 'fontFamily' === $input_key ) {
+			$rule_updates['fontFamily'] = mcp_abilities_generatepress_font_family_value( (string) $value );
+			continue;
+		}
+
+		if ( 'fontSize' === $input_key || 'fontSizeMobile' === $input_key ) {
+			$rule_updates[ $input_key ] = (string) $value;
+			if ( 'fontSize' === $input_key && ! isset( $values['fontSizeUnit'] ) ) {
+				$rule_updates['fontSizeUnit'] = 'px';
+			}
+			continue;
+		}
+
+		$rule_updates[ $input_key ] = (string) $value;
+	}
+
+	if ( array_key_exists( 'fontSizeUnit', $values ) ) {
+		$rule_updates['fontSizeUnit'] = (string) $values['fontSizeUnit'];
+	}
+
+	if ( ! empty( $rule_updates ) ) {
+		mcp_abilities_generatepress_upsert_typography_rule( $rules, $config['selector'], $rule_updates, $config['rule_group'] );
+	}
+
+	return array_values( array_unique( $changed ) );
+}
+
+/**
+ * Check if a GeneratePress setting key is a global design setting.
+ */
+function mcp_abilities_generatepress_is_global_design_setting_key( string $key ): bool {
+	$exact_keys = array(
+		'global_colors',
+		'hide_title',
+		'hide_tagline',
+		'logo',
+		'retina_logo',
+		'logo_width',
+		'inline_logo_site_branding',
+		'custom_logo',
+		'back_to_top',
+	);
+
+	if ( in_array( $key, $exact_keys, true ) ) {
+		return true;
+	}
+
+	$prefixes = array(
+		'font_',
+		'body_',
+		'heading_',
+		'mobile_heading_',
+		'buttons_',
+		'navigation_',
+		'subnavigation_',
+		'container_',
+		'content_',
+		'layout_',
+		'blog_layout_',
+		'single_layout_',
+		'header_',
+		'nav_',
+		'footer_',
+		'top_bar_',
+		'sidebar_',
+		'form_',
+		'entry_meta_',
+		'site_title_',
+		'site_tagline_',
+	);
+
+	foreach ( $prefixes as $prefix ) {
+		if ( str_starts_with( $key, $prefix ) ) {
+			return true;
+		}
+	}
+
+	return str_ends_with( $key, '_color' ) || str_contains( $key, '_background_color' );
 }
 
 /**
@@ -764,11 +968,15 @@ function mcp_abilities_generatepress_register_abilities(): void {
 
 				// Typography keys.
 				$typo_keys = array(
-					'font_body', 'body_font_weight', 'body_font_size', 'body_line_height',
-					'font_heading_1', 'heading_1_weight', 'heading_1_font_size',
-					'font_heading_2', 'heading_2_weight', 'heading_2_font_size',
-					'font_heading_3', 'heading_3_weight', 'heading_3_font_size',
-					'font_buttons', 'buttons_font_weight', 'buttons_font_size',
+					'font_body', 'body_font_weight', 'body_font_transform', 'body_font_size', 'body_line_height',
+					'font_heading_1', 'heading_1_weight', 'heading_1_transform', 'heading_1_font_size', 'mobile_heading_1_font_size', 'heading_1_line_height',
+					'font_heading_2', 'heading_2_weight', 'heading_2_transform', 'heading_2_font_size', 'mobile_heading_2_font_size', 'heading_2_line_height',
+					'font_heading_3', 'heading_3_weight', 'heading_3_transform', 'heading_3_font_size', 'mobile_heading_3_font_size', 'heading_3_line_height',
+					'font_heading_4', 'heading_4_weight', 'heading_4_transform', 'heading_4_font_size', 'mobile_heading_4_font_size', 'heading_4_line_height',
+					'font_heading_5', 'heading_5_weight', 'heading_5_transform', 'heading_5_font_size', 'mobile_heading_5_font_size', 'heading_5_line_height',
+					'font_heading_6', 'heading_6_weight', 'heading_6_transform', 'heading_6_font_size', 'mobile_heading_6_font_size', 'heading_6_line_height',
+					'font_navigation', 'navigation_font_weight', 'navigation_font_transform', 'navigation_font_size',
+					'font_buttons', 'buttons_font_weight', 'buttons_font_transform', 'buttons_font_size',
 				);
 
 				// Layout keys.
@@ -907,6 +1115,35 @@ function mcp_abilities_generatepress_register_abilities(): void {
 				}
 
 				if ( ! empty( $input['settings'] ) ) {
+					foreach ( array( 'colors', 'layout', 'buttons', 'site_identity' ) as $section_key ) {
+						if ( isset( $input['settings'][ $section_key ] ) && is_array( $input['settings'][ $section_key ] ) ) {
+							return array(
+								'success' => false,
+								'message' => 'Refusing nested global design section "' . $section_key . '". Use generatepress/update-global-design-settings.',
+							);
+						}
+					}
+					if ( isset( $input['settings']['typography'] ) && ! is_array( $input['settings']['typography'] ) ) {
+						return array(
+							'success' => false,
+							'message' => 'Invalid typography setting. Use generatepress/update-global-design-settings for global font settings.',
+						);
+					}
+					if ( isset( $input['settings']['typography'] ) && is_array( $input['settings']['typography'] ) && array_keys( $input['settings']['typography'] ) !== range( 0, count( $input['settings']['typography'] ) - 1 ) ) {
+						return array(
+							'success' => false,
+							'message' => 'Refusing nested typography object inside generate_settings. Use generatepress/update-global-design-settings.',
+						);
+					}
+					foreach ( array_keys( $input['settings'] ) as $setting_key ) {
+						if ( is_string( $setting_key ) && mcp_abilities_generatepress_is_global_design_setting_key( $setting_key ) ) {
+							return array(
+								'success' => false,
+								'message' => 'Refusing global design setting "' . $setting_key . '" through generic update-settings. Use generatepress/update-global-design-settings.',
+							);
+						}
+					}
+
 					$current = get_option( 'generate_settings', array() );
 					$updated = array_merge( $current, $input['settings'] );
 					update_option( 'generate_settings', $updated );
@@ -938,6 +1175,146 @@ function mcp_abilities_generatepress_register_abilities(): void {
 						'idempotent'  => true,
 					),
 				),
+		)
+	);
+
+	// =========================================================================
+	// GENERATEPRESS - Update Global Design Settings
+	// =========================================================================
+	wp_register_ability(
+		'generatepress/update-global-design-settings',
+		array(
+			'label'               => 'Update GeneratePress Global Design Settings',
+			'description'         => 'Updates global GeneratePress design settings for typography, colors, layout, buttons, and site identity. Use this instead of page/block-level styling for site-wide design decisions.',
+			'category'            => 'site',
+			'input_schema'        => array(
+				'type'                 => 'object',
+				'properties'           => array(
+					'typography'   => array( 'type' => 'object' ),
+					'colors'       => array( 'type' => 'object' ),
+					'layout'       => array( 'type' => 'object' ),
+					'buttons'      => array( 'type' => 'object' ),
+					'site_identity' => array( 'type' => 'object' ),
+				),
+				'additionalProperties' => false,
+			),
+			'output_schema'       => array(
+				'type'       => 'object',
+				'properties' => array(
+					'success'               => array( 'type' => 'boolean' ),
+					'updated_sections'      => array( 'type' => 'array' ),
+					'updated_keys'          => array( 'type' => 'array' ),
+					'typography_rule_count' => array( 'type' => 'integer' ),
+					'message'               => array( 'type' => 'string' ),
+				),
+			),
+			'execute_callback'    => function ( array $input = array() ): array {
+				$input = is_array( $input ) ? $input : array();
+
+				$settings = get_option( 'generate_settings', array() );
+				if ( ! is_array( $settings ) ) {
+					$settings = array();
+				}
+
+				$rules = isset( $settings['typography'] ) && is_array( $settings['typography'] ) ? $settings['typography'] : array();
+				if ( array_keys( $rules ) !== range( 0, count( $rules ) - 1 ) ) {
+					$rules = array();
+				}
+
+				$allowed = array(
+					'colors'        => array(
+						'global_colors', 'background_color', 'text_color', 'link_color', 'link_color_hover', 'link_color_visited',
+						'header_background_color', 'header_text_color', 'header_link_color',
+						'navigation_background_color', 'navigation_text_color', 'navigation_background_hover_color', 'navigation_text_hover_color', 'navigation_background_current_color', 'navigation_text_current_color',
+						'subnavigation_background_color', 'subnavigation_text_color', 'subnavigation_background_hover_color', 'subnavigation_text_hover_color', 'subnavigation_background_current_color', 'subnavigation_text_current_color',
+						'content_background_color', 'content_text_color', 'content_link_color', 'content_link_hover_color',
+						'sidebar_widget_background_color', 'sidebar_widget_title_color', 'sidebar_widget_text_color',
+						'footer_widget_background_color', 'footer_widget_title_color', 'footer_widget_text_color', 'footer_widget_link_color',
+						'footer_background_color', 'footer_text_color', 'footer_link_color', 'footer_link_hover_color',
+						'entry_meta_text_color', 'entry_meta_link_color', 'entry_meta_link_color_hover',
+						'form_background_color', 'form_text_color', 'form_background_color_focus', 'form_text_color_focus', 'form_border_color', 'form_border_color_focus',
+						'top_bar_background_color', 'navigation_search_background_color', 'navigation_search_text_color',
+					),
+					'layout'        => array(
+						'container_width', 'container_alignment', 'content_layout_setting', 'content_width', 'layout_setting', 'blog_layout_setting', 'single_layout_setting',
+						'header_layout_setting', 'header_inner_width', 'header_alignment_setting',
+						'nav_layout_setting', 'nav_inner_width', 'nav_alignment_setting', 'nav_position_setting', 'nav_drop_point', 'nav_dropdown_type', 'nav_dropdown_direction', 'nav_search',
+						'footer_layout_setting', 'footer_inner_width', 'footer_widget_setting', 'footer_bar_alignment',
+						'top_bar_width', 'top_bar_inner_width', 'top_bar_alignment', 'back_to_top',
+					),
+					'buttons'       => array(
+						'font_buttons', 'buttons_font_weight', 'buttons_font_size', 'buttons_font_transform',
+						'form_button_background_color', 'form_button_background_color_hover', 'form_button_text_color', 'form_button_text_color_hover', 'form_button_border_radius',
+					),
+					'site_identity' => array(
+						'hide_title', 'hide_tagline', 'logo', 'retina_logo', 'logo_width', 'inline_logo_site_branding', 'custom_logo',
+						'font_site_title', 'site_title_font_size', 'mobile_site_title_font_size', 'site_title_font_weight', 'site_title_font_transform', 'site_title_color',
+						'font_site_tagline', 'site_tagline_font_size', 'site_tagline_color',
+					),
+				);
+
+				$updated_sections = array();
+				$updated_keys     = array();
+
+				if ( isset( $input['typography'] ) && is_array( $input['typography'] ) ) {
+					foreach ( array( 'body', 'navigation', 'buttons', 'h1', 'h2', 'h3', 'h4', 'h5', 'h6' ) as $group ) {
+						if ( isset( $input['typography'][ $group ] ) && is_array( $input['typography'][ $group ] ) ) {
+							$changed = mcp_abilities_generatepress_apply_typography_group( $settings, $rules, $group, $input['typography'][ $group ] );
+							if ( ! empty( $changed ) ) {
+								$updated_sections[] = 'typography.' . $group;
+								$updated_keys       = array_merge( $updated_keys, $changed );
+							}
+						}
+					}
+				}
+
+				foreach ( $allowed as $section => $keys ) {
+					if ( empty( $input[ $section ] ) || ! is_array( $input[ $section ] ) ) {
+						continue;
+					}
+					foreach ( $input[ $section ] as $key => $value ) {
+						if ( ! is_string( $key ) || ! in_array( $key, $keys, true ) ) {
+							continue;
+						}
+						if ( null === $value || '' === $value ) {
+							unset( $settings[ $key ] );
+						} else {
+							$settings[ $key ] = $value;
+						}
+						$updated_sections[] = $section;
+						$updated_keys[]     = $key;
+					}
+				}
+
+				if ( empty( $updated_keys ) ) {
+					return array(
+						'success' => false,
+						'message' => 'No allowed global GeneratePress design settings provided.',
+					);
+				}
+
+				$settings['typography'] = array_values( $rules );
+				update_option( 'generate_settings', $settings );
+				mcp_abilities_generatepress_clear_dynamic_css_cache();
+
+				return array(
+					'success'               => true,
+					'updated_sections'      => array_values( array_unique( $updated_sections ) ),
+					'updated_keys'          => array_values( array_unique( $updated_keys ) ),
+					'typography_rule_count' => count( $settings['typography'] ),
+					'message'               => 'GeneratePress global design settings updated successfully.',
+				);
+			},
+			'permission_callback' => function (): bool {
+				return current_user_can( 'edit_theme_options' );
+			},
+			'meta'                => array(
+				'annotations' => array(
+					'readonly'    => false,
+					'destructive' => false,
+					'idempotent'  => true,
+				),
+			),
 		)
 	);
 
