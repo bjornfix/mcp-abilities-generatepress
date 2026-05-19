@@ -3,7 +3,7 @@
  * Plugin Name: MCP Abilities - GeneratePress
  * Plugin URI: https://github.com/bjornfix/mcp-abilities-generatepress
  * Description: GeneratePress and GenerateBlocks abilities for MCP. Manage theme settings, elements, global styles, page meta, and caches.
- * Version: 1.1.13
+ * Version: 1.1.14
  * Author: Devenia
  * Author URI: https://devenia.com
  * License: GPL-2.0+
@@ -137,6 +137,58 @@ function mcp_abilities_generatepress_default_element_meta_keys(): array {
 		'_generate_element_exclude_conditions',
 		'_generate_element_user_conditions',
 	);
+}
+
+/**
+ * Get a safe GeneratePress Element display condition for known contexts.
+ */
+function mcp_abilities_generatepress_context_display_condition( string $target ): array {
+	$target = sanitize_key( $target );
+
+	$conditions = array(
+		'blog'         => array( 'rule' => 'general:blog', 'object' => '' ),
+		'front_page'   => array( 'rule' => 'general:front_page', 'object' => '' ),
+		'entire_site'  => array( 'rule' => 'general:site', 'object' => '0' ),
+		'all_archives' => array( 'rule' => 'general:archive', 'object' => '' ),
+		'search'       => array( 'rule' => 'general:search', 'object' => '' ),
+		'not_found'    => array( 'rule' => 'general:404', 'object' => '' ),
+	);
+
+	return $conditions[ $target ] ?? $conditions['blog'];
+}
+
+/**
+ * Return guidance for archive-like design contexts where page content is not reliable.
+ */
+function mcp_abilities_generatepress_archive_element_guidance( string $target ): array {
+	$page_for_posts = (int) get_option( 'page_for_posts' );
+	$page_on_front  = (int) get_option( 'page_on_front' );
+	$show_on_front  = (string) get_option( 'show_on_front' );
+
+	$guidance = array(
+		'use_generatepress_element' => true,
+		'use_generateblocks_markup' => true,
+		'keep_native_loop'          => true,
+		'avoid_page_content'        => true,
+		'avoid_css_hacks'           => true,
+		'font_source'               => 'GeneratePress global typography/settings',
+		'recommended_targets'       => array(
+			'blog'         => 'Use rule general:blog for the posts index. Do not target the posts page as post:page because is_home() resolves to general:blog.',
+			'all_archives' => 'Use rule general:archive for generic archives.',
+			'front_page'   => 'Use rule general:front_page for the front page.',
+		),
+		'reading_settings'          => array(
+			'show_on_front'  => $show_on_front,
+			'page_on_front'  => $page_on_front,
+			'page_for_posts' => $page_for_posts,
+		),
+	);
+
+	if ( 'blog' === sanitize_key( $target ) && $page_for_posts > 0 ) {
+		$guidance['reason'] = 'WordPress ignores normal page content on the posts page; design bands such as hero/CTA should be inserted with GeneratePress Elements while GeneratePress renders the native post loop.';
+	}
+
+	return $guidance;
 }
 
 /**
@@ -3860,6 +3912,154 @@ function mcp_abilities_generatepress_register_abilities(): void {
 					'readonly'    => false,
 					'destructive' => false,
 					'idempotent'  => false,
+				),
+			),
+		)
+	);
+
+	// =========================================================================
+	// GENERATEPRESS - Upsert Archive Hook Element
+	// =========================================================================
+	wp_register_ability(
+		'generatepress/upsert-archive-hook-element',
+		array(
+			'label'               => 'Upsert Archive Hook Element',
+			'description'         => 'Creates or updates a GeneratePress hook Element for archive-like contexts such as the posts page. Use this for GenerateBlocks hero/CTA bands while keeping the native GeneratePress loop.',
+			'category'            => 'site',
+			'input_schema'        => array(
+				'type'                 => 'object',
+				'required'             => array( 'title', 'slug', 'content' ),
+				'properties'           => array(
+					'title' => array(
+						'type'        => 'string',
+						'description' => 'Element title.',
+					),
+					'slug' => array(
+						'type'        => 'string',
+						'description' => 'Stable Element slug used for idempotent updates.',
+					),
+					'content' => array(
+						'type'        => 'string',
+						'description' => 'GenerateBlocks/Gutenberg block markup for the Element.',
+					),
+					'target' => array(
+						'type'        => 'string',
+						'default'     => 'blog',
+						'description' => 'Display target: blog, front_page, entire_site, all_archives, search, not_found.',
+					),
+					'hook' => array(
+						'type'        => 'string',
+						'default'     => 'generate_before_main_content',
+						'description' => 'GeneratePress hook name.',
+					),
+					'priority' => array(
+						'type'        => 'integer',
+						'default'     => 10,
+						'description' => 'Hook priority.',
+					),
+					'status' => array(
+						'type'        => 'string',
+						'default'     => 'publish',
+						'description' => 'Post status (publish or draft).',
+					),
+					'require_generateblocks' => array(
+						'type'        => 'boolean',
+						'default'     => true,
+						'description' => 'Reject content that does not contain GenerateBlocks markup.',
+					),
+				),
+				'additionalProperties' => false,
+			),
+			'output_schema'       => array(
+				'type'       => 'object',
+				'properties' => array(
+					'success'            => array( 'type' => 'boolean' ),
+					'id'                 => array( 'type' => 'integer' ),
+					'action'             => array( 'type' => 'string' ),
+					'display_conditions' => array( 'type' => 'array' ),
+					'guidance'           => array( 'type' => 'object' ),
+					'message'            => array( 'type' => 'string' ),
+				),
+			),
+			'execute_callback'    => function ( array $input = array() ): array {
+				if ( ! post_type_exists( 'gp_elements' ) ) {
+					return array(
+						'success' => false,
+						'message' => 'GeneratePress Elements are not available (gp_elements post type missing).',
+					);
+				}
+
+				$title   = isset( $input['title'] ) ? sanitize_text_field( $input['title'] ) : '';
+				$slug    = isset( $input['slug'] ) ? sanitize_title( $input['slug'] ) : '';
+				$content = isset( $input['content'] ) ? (string) $input['content'] : '';
+				$target  = isset( $input['target'] ) ? sanitize_key( (string) $input['target'] ) : 'blog';
+				$hook    = isset( $input['hook'] ) ? sanitize_text_field( (string) $input['hook'] ) : 'generate_before_main_content';
+				$status  = isset( $input['status'] ) ? sanitize_text_field( (string) $input['status'] ) : 'publish';
+				$priority = isset( $input['priority'] ) ? (int) $input['priority'] : 10;
+				$require_generateblocks = ! array_key_exists( 'require_generateblocks', $input ) || (bool) $input['require_generateblocks'];
+
+				if ( '' === $title || '' === $slug || '' === $content ) {
+					return array( 'success' => false, 'message' => 'title, slug, and content are required.' );
+				}
+
+				if ( $require_generateblocks && false === strpos( $content, 'wp:generateblocks/' ) ) {
+					return array(
+						'success'  => false,
+						'guidance' => mcp_abilities_generatepress_archive_element_guidance( $target ),
+						'message'  => 'Archive hero/CTA Elements should use GenerateBlocks block markup, not Custom HTML or CSS-only snippets.',
+					);
+				}
+
+				$display_conditions = array( mcp_abilities_generatepress_context_display_condition( $target ) );
+				$existing           = get_page_by_path( $slug, OBJECT, 'gp_elements' );
+				$post_data          = array(
+					'post_type'    => 'gp_elements',
+					'post_status'  => in_array( $status, array( 'publish', 'draft' ), true ) ? $status : 'publish',
+					'post_title'   => $title,
+					'post_name'    => $slug,
+					'post_content' => $content,
+				);
+				$action             = 'created';
+
+				if ( $existing instanceof WP_Post ) {
+					$post_data['ID'] = $existing->ID;
+					$post_id         = wp_update_post( $post_data, true );
+					$action          = 'updated';
+				} else {
+					$post_id = wp_insert_post( $post_data, true );
+				}
+
+				if ( is_wp_error( $post_id ) ) {
+					return array( 'success' => false, 'message' => $post_id->get_error_message() );
+				}
+
+				update_post_meta( (int) $post_id, '_generate_element_type', 'hook' );
+				update_post_meta( (int) $post_id, '_generate_element_content', $content );
+				update_post_meta( (int) $post_id, '_generate_hook_type', 'hook' );
+				update_post_meta( (int) $post_id, '_generate_hook', $hook );
+				update_post_meta( (int) $post_id, '_generate_hook_priority', $priority );
+				delete_post_meta( (int) $post_id, '_generate_hook_execute_php' );
+				update_post_meta( (int) $post_id, '_generate_element_display_conditions', $display_conditions );
+				update_post_meta( (int) $post_id, '_generate_element_exclude_conditions', array() );
+				update_post_meta( (int) $post_id, '_generate_element_user_conditions', array() );
+
+				return array(
+					'success'            => true,
+					'id'                 => (int) $post_id,
+					'action'             => $action,
+					'display_conditions' => $display_conditions,
+					'guidance'           => mcp_abilities_generatepress_archive_element_guidance( $target ),
+					'message'            => 'GeneratePress archive hook Element ' . $action . ' successfully.',
+				);
+			},
+			'permission_callback' => function (): bool {
+				return current_user_can( 'edit_theme_options' );
+			},
+			'meta'                => array(
+				'annotations' => array(
+					'readonly'    => false,
+					'destructive' => false,
+					'idempotent'  => true,
 				),
 			),
 		)

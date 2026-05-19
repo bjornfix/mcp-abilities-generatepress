@@ -6,7 +6,7 @@ GeneratePress theme management for WordPress via MCP.
 [![License: GPL v2](https://img.shields.io/badge/License-GPL%20v2-blue.svg)](https://www.gnu.org/licenses/gpl-2.0)
 
 **Tested up to:** 6.9
-**Stable tag:** 1.1.13
+**Stable tag:** 1.1.14
 **License:** GPLv2 or later
 **License URI:** https://www.gnu.org/licenses/gpl-2.0.html
 
@@ -49,7 +49,7 @@ With this add-on, you can ask Codex or Claude to inspect the current setup, chan
 3. Upload via WordPress Admin → Plugins → Add New → Upload Plugin
 4. Activate the plugin
 
-## Abilities (35)
+## Abilities (36)
 
 | Ability | Description |
 |---------|-------------|
@@ -80,6 +80,7 @@ With this add-on, you can ask Codex or Claude to inspect the current setup, chan
 | `generatepress/get-element` | Get a GeneratePress Element by ID |
 | `generatepress/create-element` | Create a GeneratePress Element |
 | `generatepress/update-element` | Update a GeneratePress Element |
+| `generatepress/upsert-archive-hook-element` | Create or update GeneratePress hook Elements for posts-page/archive GenerateBlocks hero/CTA bands |
 | `generatepress/delete-element` | Delete a GeneratePress Element |
 | `generatepress/restore-element` | Restore a trashed GeneratePress Element |
 | `generatepress/audit-featured-image-sizes` | Audit posts for missing featured-image sizes |
@@ -271,6 +272,10 @@ Use this ability for site-wide design decisions instead of page/block-level styl
 `generateblocks/clear-cache` preserves existing generated CSS files by default and only clears cache metadata. Use `{"delete_files": true}` only for destructive file clearing; warming then verifies that the expected per-page CSS file was actually regenerated. You can also pass `post_ids` and `limit` to restrict warming.
 
 ## Changelog
+
+### 1.1.14
+- Added `generatepress/upsert-archive-hook-element` for posts-page/archive hero and CTA Elements using GenerateBlocks while preserving native GeneratePress loops.
+- Added built-in guidance so agents do not put design into ignored posts-page content or solve archive design with CSS hacks.
 
 ### 1.1.13
 - Fixed featured-image audit/regeneration abilities to use the supported `site` ability category so they register reliably.
