@@ -3,7 +3,7 @@
  * Plugin Name: MCP Abilities - GeneratePress
  * Plugin URI: https://github.com/bjornfix/mcp-abilities-generatepress
  * Description: GeneratePress and GenerateBlocks abilities for MCP. Manage theme settings, elements, global styles, page meta, and caches.
- * Version: 1.1.6
+ * Version: 1.1.7
  * Author: Devenia
  * Author URI: https://devenia.com
  * License: GPL-2.0+
@@ -149,6 +149,78 @@ function mcp_abilities_generatepress_clear_dynamic_css_cache(): void {
 	if ( function_exists( 'generate_update_dynamic_css_cache' ) ) {
 		generate_update_dynamic_css_cache();
 	}
+}
+
+/**
+ * Warm GenerateBlocks generated CSS files by requesting pages that use dynamic CSS.
+ *
+ * @param array<int>|null $post_ids Optional list of post IDs to warm. Null warms all known GenerateBlocks posts.
+ * @param int             $limit    Maximum number of posts to warm.
+ * @return array{warmed: array<int>, failed: array<int, string>, skipped: int}
+ */
+function mcp_abilities_generatepress_warm_generateblocks_css( ?array $post_ids = null, int $limit = 100 ): array {
+	$known_posts = get_option( 'generateblocks_dynamic_css_posts', array() );
+	if ( null === $post_ids ) {
+		$post_ids = array_map( 'intval', array_keys( is_array( $known_posts ) ? $known_posts : array() ) );
+	} else {
+		$post_ids = array_map( 'intval', $post_ids );
+	}
+
+	$post_ids = array_values( array_unique( array_filter( $post_ids ) ) );
+	sort( $post_ids );
+
+	$warmed  = array();
+	$failed  = array();
+	$skipped = 0;
+	$count   = 0;
+
+	foreach ( $post_ids as $post_id ) {
+		if ( $count >= $limit ) {
+			$skipped++;
+			continue;
+		}
+
+		$post = get_post( $post_id );
+		if ( ! $post || 'publish' !== $post->post_status ) {
+			$skipped++;
+			continue;
+		}
+
+		$permalink = get_permalink( $post );
+		if ( ! $permalink ) {
+			$skipped++;
+			continue;
+		}
+
+		$count++;
+		$url      = add_query_arg( 'mcp_gb_css_warm', (string) time(), $permalink );
+		$response = wp_remote_get(
+			$url,
+			array(
+				'timeout'     => 15,
+				'redirection' => 3,
+				'user-agent'  => 'MCP GenerateBlocks CSS warmer',
+			)
+		);
+
+		if ( is_wp_error( $response ) ) {
+			$failed[ $post_id ] = $response->get_error_message();
+			continue;
+		}
+
+		$status = (int) wp_remote_retrieve_response_code( $response );
+		if ( $status >= 200 && $status < 400 ) {
+			$warmed[] = $post_id;
+		} else {
+			$failed[ $post_id ] = 'HTTP ' . $status;
+		}
+	}
+
+	return array(
+		'warmed'  => $warmed,
+		'failed'  => $failed,
+		'skipped' => $skipped,
+	);
 }
 
 /**
@@ -2646,6 +2718,23 @@ function mcp_abilities_generatepress_register_abilities(): void {
 						'default'     => true,
 						'description' => 'Alias for confirm; accepted for client compatibility.',
 					),
+					'warm'    => array(
+						'type'        => 'boolean',
+						'default'     => true,
+						'description' => 'Warm regenerated GenerateBlocks CSS files after clearing the cache.',
+					),
+					'post_ids' => array(
+						'type'        => 'array',
+						'items'       => array( 'type' => 'integer' ),
+						'description' => 'Optional post IDs to warm. Defaults to all known GenerateBlocks dynamic CSS posts.',
+					),
+					'limit'   => array(
+						'type'        => 'integer',
+						'default'     => 100,
+						'minimum'     => 1,
+						'maximum'     => 500,
+						'description' => 'Maximum number of posts to warm.',
+					),
 				),
 				'additionalProperties' => false,
 			),
@@ -2654,6 +2743,12 @@ function mcp_abilities_generatepress_register_abilities(): void {
 				'properties' => array(
 					'success' => array( 'type' => 'boolean' ),
 					'deleted' => array( 'type' => 'integer' ),
+					'warmed'  => array(
+						'type'  => 'array',
+						'items' => array( 'type' => 'integer' ),
+					),
+					'failed'  => array( 'type' => 'object' ),
+					'skipped' => array( 'type' => 'integer' ),
 					'message' => array( 'type' => 'string' ),
 				),
 			),
@@ -2690,10 +2785,36 @@ function mcp_abilities_generatepress_register_abilities(): void {
 				// Also delete the CSS version option to force regeneration.
 				delete_option( 'generateblocks_css_version' );
 
+				$warm_result = array(
+					'warmed'  => array(),
+					'failed'  => array(),
+					'skipped' => 0,
+				);
+				$warm        = ! array_key_exists( 'warm', $input ) || (bool) $input['warm'];
+
+				if ( $warm ) {
+					$post_ids    = isset( $input['post_ids'] ) && is_array( $input['post_ids'] )
+						? array_map( 'intval', $input['post_ids'] )
+						: null;
+					$limit       = isset( $input['limit'] ) ? max( 1, min( 500, (int) $input['limit'] ) ) : 100;
+					$warm_result = mcp_abilities_generatepress_warm_generateblocks_css( $post_ids, $limit );
+				}
+
 				return array(
 					'success' => true,
 					'deleted' => $deleted,
-					'message' => "Cleared {$deleted} GenerateBlocks CSS file(s)",
+					'warmed'  => $warm_result['warmed'],
+					'failed'  => $warm_result['failed'],
+					'skipped' => $warm_result['skipped'],
+					'message' => $warm
+						? sprintf(
+							'Cleared %1$d GenerateBlocks CSS file(s); warmed %2$d post(s); %3$d failed; %4$d skipped.',
+							$deleted,
+							count( $warm_result['warmed'] ),
+							count( $warm_result['failed'] ),
+							$warm_result['skipped']
+						)
+						: "Cleared {$deleted} GenerateBlocks CSS file(s)",
 				);
 			},
 			'permission_callback' => function (): bool {

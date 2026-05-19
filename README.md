@@ -6,7 +6,7 @@ GeneratePress theme management for WordPress via MCP.
 [![License: GPL v2](https://img.shields.io/badge/License-GPL%20v2-blue.svg)](https://www.gnu.org/licenses/gpl-2.0)
 
 **Tested up to:** 6.9
-**Stable tag:** 1.1.6
+**Stable tag:** 1.1.7
 **License:** GPLv2 or later
 **License URI:** https://www.gnu.org/licenses/gpl-2.0.html
 
@@ -176,7 +176,12 @@ Modules: `blog`, `spacing`, `menu_plus`, `secondary_nav`, `woocommerce`. Use `ge
 
 `generatepress/clear-cache` and `generateblocks/clear-cache` also accept `{"force": true}` as a compatibility alias for `{"confirm": true}`.
 
+`generateblocks/clear-cache` warms regenerated CSS files by default after deleting cache files. Use `{"warm": false}` only when you explicitly want to delete files without rebuilding them. You can also pass `post_ids` and `limit` to restrict warming.
+
 ## Changelog
+
+### 1.1.7
+- Fixed `generateblocks/clear-cache` so it warms regenerated CSS files for known GenerateBlocks posts after deleting cache files, preventing frontend pages from loading without their per-page CSS.
 
 ### 1.1.6
 - Fixed page meta updates for GeneratePress full-width content so `content_area=full-width-content` writes the actual full-width content flag used by the theme.

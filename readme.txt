@@ -3,7 +3,7 @@ Contributors: devenia
 Tags: mcp, generatepress, theme, ai, automation
 Requires at least: 6.9
 Tested up to: 6.9
-Stable tag: 1.1.6
+Stable tag: 1.1.7
 Requires PHP: 8.0
 License: GPLv2 or later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
@@ -37,6 +37,9 @@ Part of the MCP Expose Abilities ecosystem.
 4. Activate the plugin
 
 == Changelog ==
+
+= 1.1.7 =
+* Fixed: `generateblocks/clear-cache` now warms regenerated CSS files for known GenerateBlocks posts after deleting cache files, preventing frontend pages from loading without their per-page CSS.
 
 = 1.1.6 =
 * Fixed: page meta updates for GeneratePress full-width content now write the actual full-width content flag used by the theme.
