@@ -2,8 +2,8 @@
 Contributors: devenia
 Tags: mcp, generatepress, theme, ai, automation
 Requires at least: 6.9
-Tested up to: 6.9
-Stable tag: 1.1.17
+Tested up to: 7.0
+Stable tag: 1.1.18
 Requires PHP: 8.0
 License: GPLv2 or later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
@@ -41,6 +41,9 @@ Part of the MCP Expose Abilities ecosystem.
 4. Activate the plugin
 
 == Changelog ==
+
+= 1.1.18 =
+* Fixed: Updated `Tested up to` to WordPress 7.0 for Plugin Check compliance.
 
 = 1.1.17 =
 * Added: `generatepress/update-global-design-settings` typography groups for common GeneratePress surfaces beyond body/navigation/buttons/headings: `html`, `site_title`, `mobile_navigation_site_title`, `site_tagline`, `subnavigation`, `entry_meta`, `sidebar_widget_title`, `sidebar_widget_text`, `footer_widget_title`, `footer_widget_text`, and `footer_bar_text`.

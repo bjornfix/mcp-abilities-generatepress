@@ -5,8 +5,8 @@ GeneratePress theme management for WordPress via MCP.
 [![GitHub release](https://img.shields.io/github/v/release/bjornfix/mcp-abilities-generatepress)](https://github.com/bjornfix/mcp-abilities-generatepress/releases)
 [![License: GPL v2](https://img.shields.io/badge/License-GPL%20v2-blue.svg)](https://www.gnu.org/licenses/gpl-2.0)
 
-**Tested up to:** 6.9
-**Stable tag:** 1.1.17
+**Tested up to:** 7.0
+**Stable tag:** 1.1.18
 **License:** GPLv2 or later
 **License URI:** https://www.gnu.org/licenses/gpl-2.0.html
 
@@ -278,6 +278,9 @@ Use this ability for site-wide design decisions instead of page/block-level styl
 `generateblocks/clear-cache` preserves existing generated CSS files by default and only clears cache metadata. Use `{"delete_files": true}` only for destructive file clearing; warming then verifies that the expected per-page CSS file was actually regenerated. You can also pass `post_ids` and `limit` to restrict warming.
 
 ## Changelog
+
+### 1.1.18
+- Updated `Tested up to` to WordPress 7.0 for Plugin Check compliance.
 
 ### 1.1.17
 - Added typography groups for common GeneratePress surfaces beyond body/navigation/buttons/headings: `html`, `site_title`, `mobile_navigation_site_title`, `site_tagline`, `subnavigation`, `entry_meta`, `sidebar_widget_title`, `sidebar_widget_text`, `footer_widget_title`, `footer_widget_text`, and `footer_bar_text`.
