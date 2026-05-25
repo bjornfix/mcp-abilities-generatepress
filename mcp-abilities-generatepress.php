@@ -3,7 +3,7 @@
  * Plugin Name: MCP Abilities - GeneratePress
  * Plugin URI: https://github.com/bjornfix/mcp-abilities-generatepress
  * Description: GeneratePress and GenerateBlocks abilities for MCP. Manage theme settings, elements, global styles, page meta, and caches.
- * Version: 1.1.16
+ * Version: 1.1.17
  * Author: Devenia
  * Author URI: https://devenia.com
  * License: GPL-2.0+
@@ -498,6 +498,17 @@ function mcp_abilities_generatepress_apply_typography_group( array &$settings, a
 				'textTransform' => 'navigation_font_transform',
 			),
 		),
+		'subnavigation' => array(
+			'selector' => 'primary-sub-menu-items',
+			'rule_group' => 'primaryNavigation',
+			'keys'     => array(
+				'fontFamily'    => 'font_subnavigation',
+				'fontWeight'    => 'subnavigation_font_weight',
+				'fontSize'      => 'subnavigation_font_size',
+				'letterSpacing' => 'subnavigation_letter_spacing',
+				'textTransform' => 'subnavigation_font_transform',
+			),
+		),
 		'buttons'    => array(
 			'selector' => 'buttons',
 			'rule_group' => 'content',
@@ -507,6 +518,131 @@ function mcp_abilities_generatepress_apply_typography_group( array &$settings, a
 				'fontSize'      => 'buttons_font_size',
 				'letterSpacing' => 'buttons_letter_spacing',
 				'textTransform' => 'buttons_font_transform',
+			),
+		),
+		'html' => array(
+			'selector' => 'html',
+			'rule_group' => 'base',
+			'keys'     => array(
+				'fontFamily'    => null,
+				'fontWeight'    => null,
+				'fontSize'      => null,
+				'fontSizeTablet' => null,
+				'fontSizeMobile' => null,
+				'lineHeight'    => null,
+				'lineHeightTablet' => null,
+				'lineHeightMobile' => null,
+				'letterSpacing' => null,
+				'letterSpacingTablet' => null,
+				'letterSpacingMobile' => null,
+				'textTransform' => null,
+				'textDecoration' => null,
+				'fontStyle'     => null,
+				'marginBottom'  => null,
+				'marginBottomTablet' => null,
+				'marginBottomMobile' => null,
+				'marginBottomUnit' => null,
+			),
+		),
+		'site_title' => array(
+			'selector' => 'site-title',
+			'rule_group' => 'header',
+			'keys'     => array(
+				'fontFamily'    => 'font_site_title',
+				'fontWeight'    => 'site_title_font_weight',
+				'fontSize'      => 'site_title_font_size',
+				'fontSizeTablet' => 'tablet_site_title_font_size',
+				'fontSizeMobile' => 'mobile_site_title_font_size',
+				'textTransform' => 'site_title_font_transform',
+			),
+		),
+		'mobile_navigation_site_title' => array(
+			'selector' => 'mobile-navigation-site-title',
+			'rule_group' => 'header',
+			'keys'     => array(
+				'fontSize' => 'mobile_navigation_site_title_font_size',
+			),
+		),
+		'site_tagline' => array(
+			'selector' => 'site-description',
+			'rule_group' => 'header',
+			'keys'     => array(
+				'fontFamily'    => 'font_site_tagline',
+				'fontWeight'    => 'site_tagline_font_weight',
+				'fontSize'      => 'site_tagline_font_size',
+				'textTransform' => 'site_tagline_font_transform',
+			),
+		),
+		'entry_meta' => array(
+			'selector' => '.entry-meta, .entry-meta a, .posted-on, .posted-on a, .cat-links, .cat-links a',
+			'rule_group' => 'content',
+			'keys'     => array(
+				'fontFamily'    => null,
+				'fontWeight'    => null,
+				'fontSize'      => null,
+				'lineHeight'    => null,
+				'letterSpacing' => null,
+				'textTransform' => null,
+			),
+		),
+		'sidebar_widget_title' => array(
+			'selector' => '.sidebar .widget .widget-title',
+			'rule_group' => 'sidebar',
+			'keys'     => array(
+				'fontFamily'    => null,
+				'fontWeight'    => null,
+				'fontSize'      => null,
+				'lineHeight'    => null,
+				'letterSpacing' => null,
+				'textTransform' => null,
+			),
+		),
+		'sidebar_widget_text' => array(
+			'selector' => '.sidebar .widget',
+			'rule_group' => 'sidebar',
+			'keys'     => array(
+				'fontFamily'    => null,
+				'fontWeight'    => null,
+				'fontSize'      => null,
+				'lineHeight'    => null,
+				'letterSpacing' => null,
+				'textTransform' => null,
+			),
+		),
+		'footer_widget_title' => array(
+			'selector' => '.footer-widgets .widget-title',
+			'rule_group' => 'footer',
+			'keys'     => array(
+				'fontFamily'    => null,
+				'fontWeight'    => null,
+				'fontSize'      => null,
+				'lineHeight'    => null,
+				'letterSpacing' => null,
+				'textTransform' => null,
+			),
+		),
+		'footer_widget_text' => array(
+			'selector' => '.footer-widgets',
+			'rule_group' => 'footer',
+			'keys'     => array(
+				'fontFamily'    => null,
+				'fontWeight'    => null,
+				'fontSize'      => null,
+				'lineHeight'    => null,
+				'letterSpacing' => null,
+				'textTransform' => null,
+			),
+		),
+		'footer_bar_text' => array(
+			'selector' => '.site-info',
+			'rule_group' => 'footer',
+			'keys'     => array(
+				'fontFamily'    => null,
+				'fontWeight'    => null,
+				'fontSize'      => null,
+				'lineHeight'    => null,
+				'letterSpacing' => null,
+				'textTransform' => null,
 			),
 		),
 	);
@@ -541,14 +677,20 @@ function mcp_abilities_generatepress_apply_typography_group( array &$settings, a
 
 		$value = is_string( $values[ $input_key ] ) ? trim( $values[ $input_key ] ) : $values[ $input_key ];
 		if ( '' === $value || null === $value ) {
-			unset( $settings[ $setting_key ] );
+			if ( is_string( $setting_key ) && '' !== $setting_key ) {
+				unset( $settings[ $setting_key ] );
+			}
 			$rule_updates[ $input_key ] = null;
-			$changed[] = $setting_key;
+			$changed[] = is_string( $setting_key ) && '' !== $setting_key ? $setting_key : 'typography.' . $group . '.' . $input_key;
 			continue;
 		}
 
-		$settings[ $setting_key ] = $value;
-		$changed[] = $setting_key;
+		if ( is_string( $setting_key ) && '' !== $setting_key ) {
+			$settings[ $setting_key ] = $value;
+			$changed[] = $setting_key;
+		} else {
+			$changed[] = 'typography.' . $group . '.' . $input_key;
+		}
 
 		if ( 'fontFamily' === $input_key ) {
 			$rule_updates['fontFamily'] = mcp_abilities_generatepress_font_family_value( (string) $value );
@@ -1976,7 +2118,7 @@ function mcp_abilities_generatepress_register_abilities(): void {
 				$updated_keys     = array();
 
 				if ( isset( $input['typography'] ) && is_array( $input['typography'] ) ) {
-					foreach ( array( 'body', 'navigation', 'buttons', 'h1', 'h2', 'h3', 'h4', 'h5', 'h6' ) as $group ) {
+					foreach ( array( 'body', 'html', 'site_title', 'mobile_navigation_site_title', 'site_tagline', 'navigation', 'subnavigation', 'buttons', 'entry_meta', 'sidebar_widget_title', 'sidebar_widget_text', 'footer_widget_title', 'footer_widget_text', 'footer_bar_text', 'h1', 'h2', 'h3', 'h4', 'h5', 'h6' ) as $group ) {
 						if ( isset( $input['typography'][ $group ] ) && is_array( $input['typography'][ $group ] ) ) {
 							$changed = mcp_abilities_generatepress_apply_typography_group( $settings, $rules, $group, $input['typography'][ $group ] );
 							if ( ! empty( $changed ) ) {
