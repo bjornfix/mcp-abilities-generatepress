@@ -6,7 +6,7 @@ GeneratePress theme management for WordPress via MCP.
 [![License: GPL v2](https://img.shields.io/badge/License-GPL%20v2-blue.svg)](https://www.gnu.org/licenses/gpl-2.0)
 
 **Tested up to:** 7.0
-**Stable tag:** 1.1.18
+**Stable tag:** 1.1.19
 **License:** GPLv2 or later
 **License URI:** https://www.gnu.org/licenses/gpl-2.0.html
 
@@ -278,6 +278,10 @@ Use this ability for site-wide design decisions instead of page/block-level styl
 `generateblocks/clear-cache` preserves existing generated CSS files by default and only clears cache metadata. Use `{"delete_files": true}` only for destructive file clearing; warming then verifies that the expected per-page CSS file was actually regenerated. You can also pass `post_ids` and `limit` to restrict warming.
 
 ## Changelog
+
+### 1.1.19
+- Added automatic GeneratePress headline disabling for pages whose Gutenberg content already contains an H1, preventing duplicate visible titles.
+- Added `generatepress/audit-duplicate-headlines` to find and optionally fix existing duplicate-title pages.
 
 ### 1.1.18
 - Updated `Tested up to` to WordPress 7.0 for Plugin Check compliance.

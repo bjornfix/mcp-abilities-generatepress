@@ -3,7 +3,7 @@
  * Plugin Name: MCP Abilities - GeneratePress
  * Plugin URI: https://github.com/bjornfix/mcp-abilities-generatepress
  * Description: GeneratePress and GenerateBlocks abilities for MCP. Manage theme settings, elements, global styles, page meta, and caches.
- * Version: 1.1.18
+ * Version: 1.1.19
  * Author: Devenia
  * Author URI: https://devenia.com
  * License: GPL-2.0+
@@ -408,6 +408,66 @@ function mcp_abilities_generatepress_page_meta_map(): array {
 		'sticky_header'          => '_generate-sticky-navigation-meta',
 	);
 }
+
+/**
+ * Check whether block content contains a visible top-level heading.
+ *
+ * @param array<int,array<string,mixed>> $blocks Parsed Gutenberg blocks.
+ */
+function mcp_abilities_generatepress_blocks_have_h1( array $blocks ): bool {
+	foreach ( $blocks as $block ) {
+		$block_name = isset( $block['blockName'] ) ? (string) $block['blockName'] : '';
+		$attrs      = isset( $block['attrs'] ) && is_array( $block['attrs'] ) ? $block['attrs'] : array();
+
+		if ( 'core/heading' === $block_name ) {
+			$level = isset( $attrs['level'] ) ? (int) $attrs['level'] : 2;
+			if ( 1 === $level ) {
+				return true;
+			}
+		}
+
+		if ( ! empty( $block['innerBlocks'] ) && is_array( $block['innerBlocks'] ) && mcp_abilities_generatepress_blocks_have_h1( $block['innerBlocks'] ) ) {
+			return true;
+		}
+	}
+
+	return false;
+}
+
+/**
+ * Check whether post content contains a Gutenberg H1 block.
+ */
+function mcp_abilities_generatepress_content_has_h1( string $content ): bool {
+	if ( '' === trim( $content ) ) {
+		return false;
+	}
+
+	return mcp_abilities_generatepress_blocks_have_h1( parse_blocks( $content ) );
+}
+
+/**
+ * Keep GeneratePress from rendering a duplicate title when page content owns the H1.
+ *
+ * @param int     $post_id Post ID.
+ * @param WP_Post $post    Post object.
+ * @param bool    $update  Whether this is an existing post being updated.
+ */
+function mcp_abilities_generatepress_sync_page_headline_visibility( int $post_id, WP_Post $post, bool $update ): void {
+	unset( $update );
+
+	if ( wp_is_post_autosave( $post_id ) || wp_is_post_revision( $post_id ) ) {
+		return;
+	}
+
+	if ( 'page' !== $post->post_type || 'auto-draft' === $post->post_status ) {
+		return;
+	}
+
+	if ( mcp_abilities_generatepress_content_has_h1( (string) $post->post_content ) ) {
+		update_post_meta( $post_id, '_generate-disable-headline', 'true' );
+	}
+}
+add_action( 'save_post_page', 'mcp_abilities_generatepress_sync_page_headline_visibility', 20, 3 );
 
 /**
  * Map module slugs to GeneratePress settings options.
@@ -3452,6 +3512,148 @@ function mcp_abilities_generatepress_register_abilities(): void {
 					'success' => true,
 					'updated' => $updated,
 					'message' => 'GeneratePress page meta updated for post ' . $post_id,
+				);
+			},
+			'permission_callback' => function (): bool {
+				return current_user_can( 'edit_theme_options' );
+			},
+			'meta'                => array(
+				'annotations' => array(
+					'readonly'    => false,
+					'destructive' => false,
+					'idempotent'  => true,
+				),
+			),
+		)
+	);
+
+	// =========================================================================
+	// GENERATEPRESS - Audit Duplicate Headlines
+	// =========================================================================
+	wp_register_ability(
+		'generatepress/audit-duplicate-headlines',
+		array(
+			'label'               => 'Audit GeneratePress Duplicate Headlines',
+			'description'         => 'Finds pages where GeneratePress would render the theme headline while Gutenberg content already contains an H1, and optionally disables the GeneratePress headline.',
+			'category'            => 'site',
+			'input_schema'        => array(
+				'type'                 => 'object',
+				'properties'           => array(
+					'post_type' => array(
+						'type'        => 'string',
+						'default'     => 'page',
+						'description' => 'Public post type to audit. Defaults to page.',
+					),
+					'status' => array(
+						'type'        => 'string',
+						'enum'        => array( 'publish', 'draft', 'pending', 'private', 'any' ),
+						'default'     => 'publish',
+						'description' => 'Post status to audit.',
+					),
+					'limit' => array(
+						'type'        => 'integer',
+						'default'     => 100,
+						'minimum'     => 1,
+						'maximum'     => 500,
+						'description' => 'Maximum posts to inspect.',
+					),
+					'fix' => array(
+						'type'        => 'boolean',
+						'default'     => false,
+						'description' => 'When true, set GeneratePress disable_headline meta on affected posts.',
+					),
+				),
+				'additionalProperties' => false,
+			),
+			'output_schema'       => array(
+				'type'       => 'object',
+				'properties' => array(
+					'success'   => array( 'type' => 'boolean' ),
+					'checked'   => array( 'type' => 'integer' ),
+					'found'     => array( 'type' => 'integer' ),
+					'fixed'     => array( 'type' => 'integer' ),
+					'candidates' => array( 'type' => 'array' ),
+					'message'   => array( 'type' => 'string' ),
+				),
+			),
+			'execute_callback'    => function ( $input = array() ): array {
+				$input = is_array( $input ) ? $input : array();
+
+				$post_type = isset( $input['post_type'] ) ? sanitize_key( (string) $input['post_type'] ) : 'page';
+				if ( ! post_type_exists( $post_type ) ) {
+					return array(
+						'success' => false,
+						'message' => "Post type {$post_type} not found.",
+					);
+				}
+
+				$post_type_object = get_post_type_object( $post_type );
+				if ( ! $post_type_object || empty( $post_type_object->public ) ) {
+					return array(
+						'success' => false,
+						'message' => "Post type {$post_type} is not public.",
+					);
+				}
+
+				$status = isset( $input['status'] ) ? sanitize_key( (string) $input['status'] ) : 'publish';
+				$limit  = isset( $input['limit'] ) ? max( 1, min( 500, (int) $input['limit'] ) ) : 100;
+				$fix    = ! empty( $input['fix'] );
+
+				$query = new WP_Query(
+					array(
+						'post_type'              => $post_type,
+						'post_status'            => $status,
+						'posts_per_page'         => $limit,
+						'orderby'                => 'modified',
+						'order'                  => 'DESC',
+						'no_found_rows'          => true,
+						'update_post_meta_cache' => false,
+						'update_post_term_cache' => false,
+					)
+				);
+
+				$candidates = array();
+				$fixed      = 0;
+
+				foreach ( $query->posts as $post ) {
+					if ( ! $post instanceof WP_Post ) {
+						continue;
+					}
+
+					$has_h1            = mcp_abilities_generatepress_content_has_h1( (string) $post->post_content );
+					$headline_disabled = 'true' === get_post_meta( $post->ID, '_generate-disable-headline', true );
+
+					if ( ! $has_h1 || $headline_disabled ) {
+						continue;
+					}
+
+					if ( $fix ) {
+						update_post_meta( $post->ID, '_generate-disable-headline', 'true' );
+						$headline_disabled = true;
+						$fixed++;
+					}
+
+					$candidates[] = array(
+						'id'                => (int) $post->ID,
+						'title'             => get_the_title( $post ),
+						'post_type'         => $post->post_type,
+						'status'            => $post->post_status,
+						'link'              => get_permalink( $post ),
+						'has_h1'            => true,
+						'disable_headline'  => $headline_disabled ? 'true' : '',
+						'action'            => $fix ? 'disabled_generatepress_headline' : 'needs_disable_headline',
+					);
+				}
+
+				return array(
+					'success'    => true,
+					'checked'    => count( $query->posts ),
+					'found'      => count( $candidates ),
+					'fixed'      => $fixed,
+					'candidates' => $candidates,
+					'message'    => $fix
+						? "Checked {$limit} {$post_type} item(s) and disabled duplicate GeneratePress headlines on {$fixed} item(s)."
+						: "Checked {$limit} {$post_type} item(s) for duplicate GeneratePress headlines.",
 				);
 			},
 			'permission_callback' => function (): bool {

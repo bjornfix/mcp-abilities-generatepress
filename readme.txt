@@ -3,7 +3,7 @@ Contributors: devenia
 Tags: mcp, generatepress, theme, ai, automation
 Requires at least: 6.9
 Tested up to: 7.0
-Stable tag: 1.1.18
+Stable tag: 1.1.19
 Requires PHP: 8.0
 License: GPLv2 or later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
@@ -41,6 +41,10 @@ Part of the MCP Expose Abilities ecosystem.
 4. Activate the plugin
 
 == Changelog ==
+
+= 1.1.19 =
+* Added: automatic GeneratePress headline disabling for pages whose Gutenberg content already contains an H1, preventing duplicate visible titles.
+* Added: `generatepress/audit-duplicate-headlines` to find and optionally fix existing duplicate-title pages.
 
 = 1.1.18 =
 * Fixed: Updated `Tested up to` to WordPress 7.0 for Plugin Check compliance.
