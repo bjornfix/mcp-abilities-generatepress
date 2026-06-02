@@ -3,7 +3,7 @@ Contributors: devenia
 Tags: mcp, generatepress, theme, ai, automation
 Requires at least: 6.9
 Tested up to: 7.0
-Stable tag: 1.1.19
+Stable tag: 1.1.20
 Requires PHP: 8.0
 License: GPLv2 or later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
@@ -17,18 +17,22 @@ This add-on plugin exposes GeneratePress theme settings, elements, and GenerateB
 == Abilities ==
 
 * Theme settings (colors, typography, layout, buttons)
+* Full GeneratePress, GeneratePress Premium, GenerateBlocks, and Pro control-surface discovery
 * Live GeneratePress setting-key discovery and global design settings updates for typography, colors, layout, spacing, buttons, and site identity
 * Typography rules and font manager (Local Font Library)
 * Module status management and module settings access
+* Full bounded GP/GP Premium module settings discovery and updates for any stored `generate_*_settings` option
 * Native blog archive settings and featured-image size diagnostics
 * Archive/page-for-posts GeneratePress Element upsert for GenerateBlocks hero/CTA bands
 * GeneratePress options (read/write)
 * GeneratePress theme mods (read/write for GP-relevant mods)
+* WordPress Custom CSS for the active GeneratePress stylesheet (read/update/patch/clear)
 * GeneratePress Elements (list/get/create/update/delete)
 * Page-specific meta (read/write)
 * GeneratePress cache control
 * Starter Site cache inspection/clear
 * GenerateBlocks global styles/defaults/settings and control-surface diagnostics
+* GenerateBlocks and GenerateBlocks Pro options (list/get/update for GB-owned option prefixes)
 * GenerateBlocks CSS cache control
 
 Part of the MCP Expose Abilities ecosystem.
@@ -41,6 +45,13 @@ Part of the MCP Expose Abilities ecosystem.
 4. Activate the plugin
 
 == Changelog ==
+
+= 1.1.20 =
+* Added: `generatepress/get-custom-css`, `generatepress/update-custom-css`, `generatepress/patch-custom-css`, and `generatepress/clear-custom-css` for managing WordPress Custom CSS through the GeneratePress MCP surface.
+* Added: `custom_css_post_id` to the supported theme-mod surface so Custom CSS state is visible alongside other GeneratePress customizer data.
+* Added: `generatepress/list-control-surface` to discover GeneratePress, GeneratePress Premium, GenerateBlocks, and Pro control surfaces on each site.
+* Added: `generatepress/list-module-settings` and expanded module settings abilities so agents can discover and update any stored `generate_*_settings` option, not only a fixed module list.
+* Added: `generateblocks/list-options`, `generateblocks/get-options`, and `generateblocks/update-options` for bounded GenerateBlocks and GenerateBlocks Pro option management.
 
 = 1.1.19 =
 * Added: automatic GeneratePress headline disabling for pages whose Gutenberg content already contains an H1, preventing duplicate visible titles.

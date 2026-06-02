@@ -6,7 +6,7 @@ GeneratePress theme management for WordPress via MCP.
 [![License: GPL v2](https://img.shields.io/badge/License-GPL%20v2-blue.svg)](https://www.gnu.org/licenses/gpl-2.0)
 
 **Tested up to:** 7.0
-**Stable tag:** 1.1.19
+**Stable tag:** 1.1.20
 **License:** GPLv2 or later
 **License URI:** https://www.gnu.org/licenses/gpl-2.0.html
 
@@ -49,7 +49,7 @@ With this add-on, you can ask Codex or Claude to inspect the current setup, chan
 3. Upload via WordPress Admin → Plugins → Add New → Upload Plugin
 4. Activate the plugin
 
-## Abilities (36)
+## Abilities (45)
 
 | Ability | Description |
 |---------|-------------|
@@ -58,15 +58,21 @@ With this add-on, you can ask Codex or Claude to inspect the current setup, chan
 | `generatepress/get-options` | Get specific GeneratePress/GenerateBlocks options |
 | `generatepress/update-options` | Update or delete GeneratePress/GenerateBlocks options |
 | `generatepress/get-settings` | Get theme settings (colors, typography, layout) |
+| `generatepress/list-control-surface` | Discover GeneratePress, GeneratePress Premium, GenerateBlocks, and Pro control surfaces |
 | `generatepress/list-setting-keys` | Discover live GeneratePress setting keys and classify the full control surface |
 | `generatepress/update-settings` | Update theme settings |
 | `generatepress/update-global-design-settings` | Update global GeneratePress design settings for typography, colors, layout, spacing, buttons, and site identity |
 | `generatepress/get-theme-mods` | Get GeneratePress-relevant theme mods |
 | `generatepress/update-theme-mods` | Update GeneratePress-relevant theme mods |
+| `generatepress/get-custom-css` | Get WordPress Custom CSS for the active GeneratePress stylesheet |
+| `generatepress/update-custom-css` | Update or clear WordPress Custom CSS for the active GeneratePress stylesheet |
+| `generatepress/patch-custom-css` | Patch WordPress Custom CSS using exact or regex replacement |
+| `generatepress/clear-custom-css` | Clear WordPress Custom CSS for the active GeneratePress stylesheet |
 | `generatepress/get-typography` | Get typography rules and font manager entries |
 | `generatepress/update-typography` | Update typography rules and font manager entries |
 | `generatepress/list-modules` | List GeneratePress Premium module statuses |
 | `generatepress/update-modules` | Activate or deactivate GeneratePress modules |
+| `generatepress/list-module-settings` | Discover all stored GeneratePress and GP Premium module settings options |
 | `generatepress/get-module-settings` | Get settings for a GeneratePress module |
 | `generatepress/update-module-settings` | Update settings for a GeneratePress module |
 | `generatepress/get-blog-archive-settings` | Get native WordPress and GeneratePress blog archive controls |
@@ -87,6 +93,9 @@ With this add-on, you can ask Codex or Claude to inspect the current setup, chan
 | `generatepress/regenerate-featured-image-sizes` | Regenerate featured-image attachment metadata |
 | `generateblocks/get-global-styles` | Get GenerateBlocks global styles |
 | `generateblocks/update-global-styles` | Update GenerateBlocks global styles |
+| `generateblocks/list-options` | List GenerateBlocks and GenerateBlocks Pro options |
+| `generateblocks/get-options` | Get GenerateBlocks and GenerateBlocks Pro options |
+| `generateblocks/update-options` | Update or delete GenerateBlocks and GenerateBlocks Pro options |
 | `generateblocks/list-control-surface` | Discover GenerateBlocks options, CSS posts, and generated CSS status |
 | `generateblocks/clear-cache` | Clear GenerateBlocks CSS cache |
 
@@ -278,6 +287,13 @@ Use this ability for site-wide design decisions instead of page/block-level styl
 `generateblocks/clear-cache` preserves existing generated CSS files by default and only clears cache metadata. Use `{"delete_files": true}` only for destructive file clearing; warming then verifies that the expected per-page CSS file was actually regenerated. You can also pass `post_ids` and `limit` to restrict warming.
 
 ## Changelog
+
+### 1.1.20
+- Added `generatepress/get-custom-css`, `generatepress/update-custom-css`, `generatepress/patch-custom-css`, and `generatepress/clear-custom-css` for managing WordPress Custom CSS through the GeneratePress MCP surface.
+- Added `custom_css_post_id` to the supported theme-mod surface so Custom CSS state is visible alongside other GeneratePress customizer data.
+- Added `generatepress/list-control-surface` to discover GeneratePress, GeneratePress Premium, GenerateBlocks, and Pro control surfaces on each site.
+- Added `generatepress/list-module-settings` and expanded module settings abilities so agents can discover and update any stored `generate_*_settings` option, not only a fixed module list.
+- Added `generateblocks/list-options`, `generateblocks/get-options`, and `generateblocks/update-options` for bounded GenerateBlocks and GenerateBlocks Pro option management.
 
 ### 1.1.19
 - Added automatic GeneratePress headline disabling for pages whose Gutenberg content already contains an H1, preventing duplicate visible titles.
