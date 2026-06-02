@@ -3,7 +3,7 @@ Contributors: devenia
 Tags: mcp, generatepress, theme, ai, automation
 Requires at least: 6.9
 Tested up to: 7.0
-Stable tag: 1.1.21
+Stable tag: 1.1.22
 Requires PHP: 8.0
 License: GPLv2 or later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
@@ -45,6 +45,9 @@ Part of the MCP Expose Abilities ecosystem.
 4. Activate the plugin
 
 == Changelog ==
+
+= 1.1.22 =
+* Fixed: `generatepress/get-custom-css` compatibility schema is now applied to the correct ability.
 
 = 1.1.21 =
 * Fixed: `generatepress/get-custom-css` now exposes an explicit compatibility input property so MCP clients that reject empty object schemas can call it reliably.
