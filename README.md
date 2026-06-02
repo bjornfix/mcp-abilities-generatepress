@@ -6,7 +6,7 @@ GeneratePress theme management for WordPress via MCP.
 [![License: GPL v2](https://img.shields.io/badge/License-GPL%20v2-blue.svg)](https://www.gnu.org/licenses/gpl-2.0)
 
 **Tested up to:** 7.0
-**Stable tag:** 1.1.20
+**Stable tag:** 1.1.21
 **License:** GPLv2 or later
 **License URI:** https://www.gnu.org/licenses/gpl-2.0.html
 
@@ -287,6 +287,9 @@ Use this ability for site-wide design decisions instead of page/block-level styl
 `generateblocks/clear-cache` preserves existing generated CSS files by default and only clears cache metadata. Use `{"delete_files": true}` only for destructive file clearing; warming then verifies that the expected per-page CSS file was actually regenerated. You can also pass `post_ids` and `limit` to restrict warming.
 
 ## Changelog
+
+### 1.1.21
+- Fixed `generatepress/get-custom-css` to expose an explicit compatibility input property so MCP clients that reject empty object schemas can call it reliably.
 
 ### 1.1.20
 - Added `generatepress/get-custom-css`, `generatepress/update-custom-css`, `generatepress/patch-custom-css`, and `generatepress/clear-custom-css` for managing WordPress Custom CSS through the GeneratePress MCP surface.
