@@ -6,7 +6,7 @@ GeneratePress theme management for WordPress via MCP.
 [![License: GPL v2](https://img.shields.io/badge/License-GPL%20v2-blue.svg)](https://www.gnu.org/licenses/gpl-2.0)
 
 **Tested up to:** 7.0
-**Stable tag:** 1.1.22
+**Stable tag:** 1.1.23
 **License:** GPLv2 or later
 **License URI:** https://www.gnu.org/licenses/gpl-2.0.html
 
@@ -287,6 +287,10 @@ Use this ability for site-wide design decisions instead of page/block-level styl
 `generateblocks/clear-cache` preserves existing generated CSS files by default and only clears cache metadata. Use `{"delete_files": true}` only for destructive file clearing; warming then verifies that the expected per-page CSS file was actually regenerated. You can also pass `post_ids` and `limit` to restrict warming.
 
 ## Changelog
+
+### 1.1.23
+- Fixed automatic page-layout sync so it detects GenerateBlocks headline H1 blocks, not only core heading blocks.
+- Fixed `generatepress/get-settings` layout output so it includes regular page, blog/archive, and single post sidebar layout defaults.
 
 ### 1.1.22
 - Fixed `generatepress/get-custom-css` compatibility schema so it is applied to the correct ability.

@@ -3,7 +3,7 @@
  * Plugin Name: MCP Abilities - GeneratePress
  * Plugin URI: https://github.com/bjornfix/mcp-abilities-generatepress
  * Description: GeneratePress and GenerateBlocks abilities for MCP. Manage theme settings, elements, global styles, page meta, and caches.
- * Version: 1.1.22
+ * Version: 1.1.23
  * Author: Devenia
  * Author URI: https://devenia.com
  * License: GPL-2.0+
@@ -437,6 +437,10 @@ function mcp_abilities_generatepress_blocks_have_h1( array $blocks ): bool {
 			}
 		}
 
+		if ( 'generateblocks/headline' === $block_name && isset( $attrs['element'] ) && 'h1' === strtolower( (string) $attrs['element'] ) ) {
+			return true;
+		}
+
 		if ( ! empty( $block['innerBlocks'] ) && is_array( $block['innerBlocks'] ) && mcp_abilities_generatepress_blocks_have_h1( $block['innerBlocks'] ) ) {
 			return true;
 		}
@@ -474,7 +478,9 @@ function mcp_abilities_generatepress_sync_page_headline_visibility( int $post_id
 		return;
 	}
 
-	if ( mcp_abilities_generatepress_content_has_h1( (string) $post->post_content ) ) {
+	$content = (string) $post->post_content;
+
+	if ( mcp_abilities_generatepress_content_has_h1( $content ) ) {
 		update_post_meta( $post_id, '_generate-disable-headline', 'true' );
 	}
 }
@@ -1739,6 +1745,7 @@ function mcp_abilities_generatepress_register_abilities(): void {
 				// Layout keys.
 				$layout_keys = array(
 					'container_width', 'content_layout_setting', 'content_width',
+					'layout_setting', 'blog_layout_setting', 'single_layout_setting',
 					'sidebar_width', 'sidebar_layout', 'header_layout_setting',
 					'footer_widget_setting', 'back_to_top',
 				);
