@@ -3,7 +3,7 @@
  * Plugin Name: MCP Abilities - GeneratePress
  * Plugin URI: https://github.com/bjornfix/mcp-abilities-generatepress
  * Description: GeneratePress and GenerateBlocks abilities for MCP. Manage theme settings, elements, global styles, page meta, and caches.
- * Version: 1.1.23
+ * Version: 1.1.24
  * Author: Devenia
  * Author URI: https://devenia.com
  * License: GPL-2.0+
@@ -417,6 +417,179 @@ function mcp_abilities_generatepress_page_meta_map(): array {
 		'content_area'           => '_generate-full-width-content',
 		'transparent_header'     => '_generate-transparent-header',
 		'sticky_header'          => '_generate-sticky-navigation-meta',
+	);
+}
+
+/**
+ * Normalize a GeneratePress page meta input value to the value stored by the theme.
+ *
+ * @param string $input_key Ability input key.
+ * @param mixed  $value     Input value.
+ * @return mixed
+ */
+function mcp_abilities_generatepress_expected_page_meta_value( string $input_key, $value ) {
+	if ( 'content_area' === $input_key ) {
+		if ( 'full-width' === $value || 'full-width-content' === $value ) {
+			return 'true';
+		}
+		if ( 'contained' === $value ) {
+			return 'contained';
+		}
+		if ( '' === $value ) {
+			return '';
+		}
+	}
+
+	if ( is_bool( $value ) ) {
+		return $value ? 'true' : '';
+	}
+
+	if ( is_string( $value ) ) {
+		return '' === $value ? '' : sanitize_text_field( $value );
+	}
+
+	return $value;
+}
+
+/**
+ * Build expected frontend layout checks from requested GeneratePress page meta.
+ *
+ * @param array<string,mixed> $input Ability input.
+ * @return array{expected_body_classes:array<int,string>,forbidden_body_classes:array<int,string>,forbid_entry_title:bool}
+ */
+function mcp_abilities_generatepress_frontend_layout_expectations( array $input ): array {
+	$expected_body_classes  = array();
+	$forbidden_body_classes = array();
+	$forbid_entry_title     = false;
+
+	if ( isset( $input['sidebar_layout'] ) && is_string( $input['sidebar_layout'] ) ) {
+		$sidebar_layout = $input['sidebar_layout'];
+		if ( '' !== $sidebar_layout ) {
+			$expected_body_classes[] = $sidebar_layout;
+		}
+		if ( 'no-sidebar' === $sidebar_layout ) {
+			$forbidden_body_classes = array_merge(
+				$forbidden_body_classes,
+				array( 'right-sidebar', 'left-sidebar', 'both-sidebars', 'both-left', 'both-right' )
+			);
+		}
+	}
+
+	if ( isset( $input['content_area'] ) && is_string( $input['content_area'] ) ) {
+		$content_area = $input['content_area'];
+		if ( 'full-width' === $content_area || 'full-width-content' === $content_area ) {
+			$expected_body_classes[]  = 'full-width-content';
+			$forbidden_body_classes[] = 'contained-content';
+		} elseif ( 'contained' === $content_area ) {
+			$expected_body_classes[]  = 'contained-content';
+			$forbidden_body_classes[] = 'full-width-content';
+		}
+	}
+
+	if ( isset( $input['disable_headline'] ) && true === $input['disable_headline'] ) {
+		$forbid_entry_title = true;
+	}
+
+	return array(
+		'expected_body_classes'  => array_values( array_unique( $expected_body_classes ) ),
+		'forbidden_body_classes' => array_values( array_unique( $forbidden_body_classes ) ),
+		'forbid_entry_title'     => $forbid_entry_title,
+	);
+}
+
+/**
+ * Extract body classes from frontend HTML.
+ *
+ * @param string $html Frontend HTML.
+ * @return array<int,string>
+ */
+function mcp_abilities_generatepress_extract_body_classes( string $html ): array {
+	if ( ! preg_match( '/<body[^>]*class=["\']([^"\']*)["\']/i', $html, $matches ) ) {
+		return array();
+	}
+
+	return array_values( array_filter( preg_split( '/\s+/', trim( html_entity_decode( $matches[1], ENT_QUOTES ) ) ) ) );
+}
+
+/**
+ * Verify the public frontend layout after GeneratePress page meta changes.
+ *
+ * @param int                 $post_id      Post ID.
+ * @param string              $frontend_url Frontend URL to verify.
+ * @param array<string,mixed> $expectations Layout expectations.
+ * @return array<string,mixed>
+ */
+function mcp_abilities_generatepress_verify_frontend_page_layout( int $post_id, string $frontend_url, array $expectations ): array {
+	$frontend_url = esc_url_raw( $frontend_url );
+	if ( '' === $frontend_url ) {
+		return array(
+			'success'  => false,
+			'url'      => '',
+			'errors'   => array( 'frontend_url_empty' ),
+			'message'  => 'No frontend URL available for layout verification.',
+		);
+	}
+
+	$response = wp_remote_get(
+		$frontend_url,
+		array(
+			'timeout'     => 15,
+			'redirection' => 3,
+			'user-agent'  => 'MCP Abilities GeneratePress layout verifier; post=' . $post_id,
+		)
+	);
+
+	if ( is_wp_error( $response ) ) {
+		return array(
+			'success' => false,
+			'url'     => $frontend_url,
+			'errors'  => array( $response->get_error_code() ),
+			'message' => $response->get_error_message(),
+		);
+	}
+
+	$status = (int) wp_remote_retrieve_response_code( $response );
+	$html   = (string) wp_remote_retrieve_body( $response );
+	if ( $status < 200 || $status >= 300 ) {
+		return array(
+			'success' => false,
+			'url'     => $frontend_url,
+			'status'  => $status,
+			'errors'  => array( 'http_' . $status ),
+			'message' => 'Frontend layout verification failed because the URL did not return HTTP 2xx.',
+		);
+	}
+
+	$body_classes = mcp_abilities_generatepress_extract_body_classes( $html );
+	$errors       = array();
+
+	foreach ( $expectations['expected_body_classes'] as $class_name ) {
+		if ( ! in_array( $class_name, $body_classes, true ) ) {
+			$errors[] = 'missing_body_class:' . $class_name;
+		}
+	}
+
+	foreach ( $expectations['forbidden_body_classes'] as $class_name ) {
+		if ( in_array( $class_name, $body_classes, true ) ) {
+			$errors[] = 'forbidden_body_class:' . $class_name;
+		}
+	}
+
+	$entry_title_count = substr_count( $html, 'class="entry-title' ) + substr_count( $html, "class='entry-title" );
+	if ( ! empty( $expectations['forbid_entry_title'] ) && $entry_title_count > 0 ) {
+		$errors[] = 'entry_title_still_visible';
+	}
+
+	return array(
+		'success'                   => empty( $errors ),
+		'url'                       => $frontend_url,
+		'status'                    => $status,
+		'body_classes'              => $body_classes,
+		'expected_body_classes'     => $expectations['expected_body_classes'],
+		'forbidden_body_classes'    => $expectations['forbidden_body_classes'],
+		'entry_title_count'         => $entry_title_count,
+		'errors'                    => $errors,
+		'message'                   => empty( $errors ) ? 'Frontend layout verified.' : 'Frontend layout did not match requested GeneratePress meta. Purge cache and retry verification before declaring the page fixed.',
 	);
 }
 
@@ -4324,6 +4497,25 @@ function mcp_abilities_generatepress_register_abilities(): void {
 						'type'        => 'object',
 						'description' => 'Additional GeneratePress meta keys to update. Use null to delete.',
 					),
+					'verify_frontend' => array(
+						'type'        => 'boolean',
+						'default'     => true,
+						'description' => 'Verify the public frontend body classes after layout-related page meta changes. Defaults to true for layout safety.',
+					),
+					'frontend_url' => array(
+						'type'        => 'string',
+						'description' => 'Optional exact frontend URL to verify. Defaults to the post permalink.',
+					),
+					'expected_body_classes' => array(
+						'type'        => 'array',
+						'description' => 'Optional additional body classes that must be present during frontend verification.',
+						'items'       => array( 'type' => 'string' ),
+					),
+					'forbidden_body_classes' => array(
+						'type'        => 'array',
+						'description' => 'Optional additional body classes that must not be present during frontend verification.',
+						'items'       => array( 'type' => 'string' ),
+					),
 				),
 				'additionalProperties' => false,
 			),
@@ -4332,6 +4524,8 @@ function mcp_abilities_generatepress_register_abilities(): void {
 				'properties' => array(
 					'success' => array( 'type' => 'boolean' ),
 					'updated' => array( 'type' => 'array' ),
+					'meta_verification' => array( 'type' => 'object' ),
+					'frontend_verification' => array( 'type' => 'object' ),
 					'message' => array( 'type' => 'string' ),
 				),
 			),
@@ -4350,6 +4544,7 @@ function mcp_abilities_generatepress_register_abilities(): void {
 				}
 
 				$updated = array();
+				$expected_meta = array();
 
 				// Meta key mappings.
 				$meta_map = mcp_abilities_generatepress_page_meta_map();
@@ -4357,6 +4552,7 @@ function mcp_abilities_generatepress_register_abilities(): void {
 				foreach ( $meta_map as $input_key => $meta_key ) {
 					if ( isset( $input[ $input_key ] ) ) {
 						$value = $input[ $input_key ];
+						$expected_meta[ $input_key ] = mcp_abilities_generatepress_expected_page_meta_value( $input_key, $value );
 
 						if ( 'content_area' === $input_key ) {
 							if ( '' === $value ) {
@@ -4418,10 +4614,76 @@ function mcp_abilities_generatepress_register_abilities(): void {
 					return array( 'success' => false, 'message' => 'No valid settings provided to update' );
 				}
 
-				return array(
+				$actual_meta       = array();
+				$meta_mismatches   = array();
+				foreach ( $expected_meta as $input_key => $expected_value ) {
+					$actual_value             = get_post_meta( $post_id, $meta_map[ $input_key ], true );
+					$actual_meta[ $input_key ] = $actual_value;
+					if ( $actual_value !== $expected_value ) {
+						$meta_mismatches[ $input_key ] = array(
+							'expected' => $expected_value,
+							'actual'   => $actual_value,
+						);
+					}
+				}
+
+				$meta_verification = array(
+					'success'    => empty( $meta_mismatches ),
+					'expected'   => $expected_meta,
+					'actual'     => $actual_meta,
+					'mismatches' => $meta_mismatches,
+				);
+
+				$frontend_verification = array(
 					'success' => true,
-					'updated' => $updated,
-					'message' => 'GeneratePress page meta updated for post ' . $post_id,
+					'skipped' => true,
+					'message' => 'No frontend layout verification was required for this page meta update.',
+				);
+				$expectations          = mcp_abilities_generatepress_frontend_layout_expectations( $input );
+				if ( ! empty( $input['expected_body_classes'] ) && is_array( $input['expected_body_classes'] ) ) {
+					foreach ( $input['expected_body_classes'] as $class_name ) {
+						if ( is_string( $class_name ) && '' !== $class_name ) {
+							$expectations['expected_body_classes'][] = sanitize_html_class( $class_name );
+						}
+					}
+					$expectations['expected_body_classes'] = array_values( array_unique( array_filter( $expectations['expected_body_classes'] ) ) );
+				}
+				if ( ! empty( $input['forbidden_body_classes'] ) && is_array( $input['forbidden_body_classes'] ) ) {
+					foreach ( $input['forbidden_body_classes'] as $class_name ) {
+						if ( is_string( $class_name ) && '' !== $class_name ) {
+							$expectations['forbidden_body_classes'][] = sanitize_html_class( $class_name );
+						}
+					}
+					$expectations['forbidden_body_classes'] = array_values( array_unique( array_filter( $expectations['forbidden_body_classes'] ) ) );
+				}
+				$verify_frontend       = ! array_key_exists( 'verify_frontend', $input ) || true === (bool) $input['verify_frontend'];
+				$has_frontend_checks   = ! empty( $expectations['expected_body_classes'] )
+					|| ! empty( $expectations['forbidden_body_classes'] )
+					|| ! empty( $expectations['forbid_entry_title'] );
+
+				if ( $verify_frontend && $has_frontend_checks ) {
+					$frontend_url = '';
+					if ( ! empty( $input['frontend_url'] ) && is_string( $input['frontend_url'] ) ) {
+						$frontend_url = $input['frontend_url'];
+					} else {
+						$permalink = get_permalink( $post_id );
+						$frontend_url = is_string( $permalink ) ? $permalink : '';
+					}
+
+					$frontend_verification = mcp_abilities_generatepress_verify_frontend_page_layout( $post_id, $frontend_url, $expectations );
+				}
+
+				$success = ! empty( $meta_verification['success'] )
+					&& ! empty( $frontend_verification['success'] );
+
+				return array(
+					'success'               => $success,
+					'updated'               => $updated,
+					'meta_verification'     => $meta_verification,
+					'frontend_verification' => $frontend_verification,
+					'message'               => $success
+						? 'GeneratePress page meta updated and verified for post ' . $post_id
+						: 'GeneratePress page meta was updated, but verification failed. Do not declare the page fixed until the mismatches are resolved.',
 				);
 			},
 			'permission_callback' => function (): bool {

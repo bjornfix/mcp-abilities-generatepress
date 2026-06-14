@@ -8,7 +8,7 @@ GeneratePress and GenerateBlocks abilities for MCP. Manage theme settings, eleme
 [![PHP](https://img.shields.io/badge/PHP-8.0%2B-purple.svg)](https://php.net)
 
 **Tested up to:** 7.0
-**Stable tag:** 1.1.23
+**Stable tag:** 1.1.24
 **License:** GPLv2 or later
 **License URI:** https://www.gnu.org/licenses/gpl-2.0.html
 
@@ -345,6 +345,10 @@ Use this ability for site-wide design decisions instead of page/block-level styl
 `generateblocks/clear-cache` preserves existing generated CSS files by default and only clears cache metadata. Use `{"delete_files": true}` only for destructive file clearing; warming then verifies that the expected per-page CSS file was actually regenerated. You can also pass `post_ids` and `limit` to restrict warming.
 
 ## Changelog
+
+### 1.1.24
+- Added verification guardrails to `generatepress/update-page-meta`: requested GeneratePress page meta is read back after write, and layout-sensitive updates verify frontend body classes by default.
+- Added optional expected/forbidden body-class checks so special GeneratePress setups can be verified without hardcoding site-specific layouts.
 
 ### 1.1.23
 - Fixed automatic page-layout sync so it detects GenerateBlocks headline H1 blocks, not only core heading blocks.

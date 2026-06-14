@@ -3,7 +3,7 @@ Contributors: devenia
 Tags: mcp, generatepress, theme, ai, automation
 Requires at least: 6.9
 Tested up to: 7.0
-Stable tag: 1.1.23
+Stable tag: 1.1.24
 Requires PHP: 8.0
 License: GPLv2 or later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
@@ -45,6 +45,10 @@ Part of the MCP Expose Abilities ecosystem.
 4. Activate the plugin
 
 == Changelog ==
+
+= 1.1.24 =
+* Added: `generatepress/update-page-meta` now reads back requested GeneratePress page meta after writing and verifies frontend layout body classes by default for layout-sensitive updates.
+* Added: optional expected/forbidden body-class checks for special GeneratePress setups without hardcoding site-specific layouts.
 
 = 1.1.23 =
 * Fixed: automatic page-layout sync now detects GenerateBlocks headline H1 blocks, not only core heading blocks.
