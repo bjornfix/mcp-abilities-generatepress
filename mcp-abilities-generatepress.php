@@ -3,7 +3,7 @@
  * Plugin Name: MCP Abilities - GeneratePress
  * Plugin URI: https://github.com/bjornfix/mcp-abilities-generatepress
  * Description: GeneratePress and GenerateBlocks abilities for MCP. Manage theme settings, elements, global styles, page meta, and caches.
- * Version: 1.1.24
+ * Version: 1.1.25
  * Author: Devenia
  * Author URI: https://devenia.com
  * License: GPL-2.0+
@@ -495,6 +495,135 @@ function mcp_abilities_generatepress_frontend_layout_expectations( array $input 
 		'forbidden_body_classes' => array_values( array_unique( $forbidden_body_classes ) ),
 		'forbid_entry_title'     => $forbid_entry_title,
 	);
+}
+
+/**
+ * Build expected GeneratePress page-meta values from audit input.
+ *
+ * @param array<string,mixed> $input Ability input.
+ * @return array<string,string>
+ */
+function mcp_abilities_generatepress_expected_layout_meta_from_input( array $input ): array {
+	$expected = array();
+
+	$defaults = array(
+		'disable_headline' => true,
+		'sidebar_layout'   => 'no-sidebar',
+		'content_area'     => 'full-width-content',
+	);
+
+	foreach ( $defaults as $input_key => $default_value ) {
+		$value = array_key_exists( $input_key, $input ) ? $input[ $input_key ] : $default_value;
+		if ( null === $value ) {
+			continue;
+		}
+		$expected[ $input_key ] = (string) mcp_abilities_generatepress_expected_page_meta_value( $input_key, $value );
+	}
+
+	return $expected;
+}
+
+/**
+ * Collect posts for a GeneratePress layout meta audit.
+ *
+ * @param array<string,mixed> $input Ability input.
+ * @return array{posts:array<int,WP_Post>,message:string}
+ */
+function mcp_abilities_generatepress_collect_layout_audit_posts( array $input ): array {
+	$post_type = isset( $input['post_type'] ) ? sanitize_key( (string) $input['post_type'] ) : 'page';
+	$status    = isset( $input['status'] ) ? sanitize_key( (string) $input['status'] ) : 'publish';
+	$limit     = isset( $input['limit'] ) ? max( 1, min( 500, (int) $input['limit'] ) ) : 100;
+
+	$args = array(
+		'post_type'              => $post_type,
+		'post_status'            => $status,
+		'posts_per_page'         => $limit,
+		'orderby'                => 'modified',
+		'order'                  => 'DESC',
+		'no_found_rows'          => true,
+		'update_post_meta_cache' => false,
+		'update_post_term_cache' => false,
+	);
+
+	if ( ! empty( $input['ids'] ) && is_array( $input['ids'] ) ) {
+		$ids = array_values(
+			array_filter(
+				array_map( 'absint', $input['ids'] )
+			)
+		);
+
+		$args['post__in']       = array_slice( $ids, 0, $limit );
+		$args['orderby']        = 'post__in';
+		$args['posts_per_page'] = count( $args['post__in'] );
+	} elseif ( array_key_exists( 'parent', $input ) ) {
+		$parent              = absint( $input['parent'] );
+		$include_descendants = ! empty( $input['include_descendants'] );
+
+		if ( $include_descendants ) {
+			$descendants = get_pages(
+				array(
+					'post_type'   => $post_type,
+					'post_status' => $status,
+					'child_of'    => $parent,
+					'sort_column' => 'post_modified',
+					'sort_order'  => 'DESC',
+					'number'      => $limit,
+				)
+			);
+
+			return array(
+				'posts'   => array_values(
+					array_filter(
+						$descendants,
+						static function ( $post ): bool {
+							return $post instanceof WP_Post;
+						}
+					)
+				),
+				'message' => 'Collected descendant pages with get_pages().',
+			);
+		}
+
+		$args['post_parent'] = $parent;
+	}
+
+	$query = new WP_Query( $args );
+
+	return array(
+		'posts'   => array_values(
+			array_filter(
+				$query->posts,
+				static function ( $post ): bool {
+					return $post instanceof WP_Post;
+				}
+			)
+		),
+		'message' => 'Collected posts with WP_Query.',
+	);
+}
+
+/**
+ * Return missing required content patterns for a post.
+ *
+ * @param WP_Post           $post     Post object.
+ * @param array<int,string> $patterns Required literal content patterns.
+ * @return array<int,string>
+ */
+function mcp_abilities_generatepress_missing_content_patterns( WP_Post $post, array $patterns ): array {
+	$missing = array();
+	$content = (string) $post->post_content;
+
+	foreach ( $patterns as $pattern ) {
+		$pattern = (string) $pattern;
+		if ( '' === $pattern ) {
+			continue;
+		}
+		if ( ! str_contains( $content, $pattern ) ) {
+			$missing[] = $pattern;
+		}
+	}
+
+	return $missing;
 }
 
 /**
@@ -4826,6 +4955,215 @@ function mcp_abilities_generatepress_register_abilities(): void {
 					'message'    => $fix
 						? "Checked {$limit} {$post_type} item(s) and disabled duplicate GeneratePress headlines on {$fixed} item(s)."
 						: "Checked {$limit} {$post_type} item(s) for duplicate GeneratePress headlines.",
+				);
+			},
+			'permission_callback' => function (): bool {
+				return current_user_can( 'edit_theme_options' );
+			},
+			'meta'                => array(
+				'annotations' => array(
+					'readonly'    => false,
+					'destructive' => false,
+					'idempotent'  => true,
+				),
+			),
+		)
+	);
+
+	// =========================================================================
+	// GENERATEPRESS - Audit Page Layout Meta
+	// =========================================================================
+	wp_register_ability(
+		'generatepress/audit-page-layout-meta',
+		array(
+			'label'               => 'Audit GeneratePress Page Layout Meta',
+			'description'         => 'Audits pages or page families for expected GeneratePress layout meta and optional required content markers. Can repair GeneratePress meta mismatches.',
+			'category'            => 'site',
+			'input_schema'        => array(
+				'type'                 => 'object',
+				'properties'           => array(
+					'post_type' => array(
+						'type'        => 'string',
+						'default'     => 'page',
+						'description' => 'Public post type to audit. Defaults to page.',
+					),
+					'status' => array(
+						'type'        => 'string',
+						'enum'        => array( 'publish', 'draft', 'pending', 'private', 'any' ),
+						'default'     => 'publish',
+						'description' => 'Post status to audit.',
+					),
+					'ids' => array(
+						'type'        => 'array',
+						'items'       => array( 'type' => 'integer' ),
+						'description' => 'Optional explicit post/page IDs to audit.',
+					),
+					'parent' => array(
+						'type'        => 'integer',
+						'description' => 'Optional parent page ID. When set, audits children of this parent.',
+					),
+					'include_descendants' => array(
+						'type'        => 'boolean',
+						'default'     => false,
+						'description' => 'When used with parent, include all descendants instead of only direct children.',
+					),
+					'limit' => array(
+						'type'        => 'integer',
+						'default'     => 100,
+						'minimum'     => 1,
+						'maximum'     => 500,
+						'description' => 'Maximum posts to inspect.',
+					),
+					'disable_headline' => array(
+						'type'        => 'boolean',
+						'default'     => true,
+						'description' => 'Expected GeneratePress disable-headline state.',
+					),
+					'sidebar_layout' => array(
+						'type'        => 'string',
+						'enum'        => array( '', 'right-sidebar', 'left-sidebar', 'no-sidebar', 'both-sidebars', 'both-left', 'both-right' ),
+						'default'     => 'no-sidebar',
+						'description' => 'Expected GeneratePress sidebar layout.',
+					),
+					'content_area' => array(
+						'type'        => 'string',
+						'enum'        => array( '', 'full-width', 'contained', 'full-width-content' ),
+						'default'     => 'full-width-content',
+						'description' => 'Expected GeneratePress content area.',
+					),
+					'required_content_patterns' => array(
+						'type'        => 'array',
+						'items'       => array( 'type' => 'string' ),
+						'description' => 'Optional literal strings that must appear in post_content, useful for detecting missing reusable layout markers. These are reported but not auto-repaired.',
+					),
+					'fix' => array(
+						'type'        => 'boolean',
+						'default'     => false,
+						'description' => 'When true, repair GeneratePress meta mismatches. Content pattern misses are never auto-repaired.',
+					),
+				),
+				'additionalProperties' => false,
+			),
+			'output_schema'       => array(
+				'type'       => 'object',
+				'properties' => array(
+					'success'          => array( 'type' => 'boolean' ),
+					'checked'          => array( 'type' => 'integer' ),
+					'found'            => array( 'type' => 'integer' ),
+					'fixed'            => array( 'type' => 'integer' ),
+					'expected_meta'    => array( 'type' => 'object' ),
+					'content_patterns' => array( 'type' => 'array' ),
+					'items'            => array( 'type' => 'array' ),
+					'message'          => array( 'type' => 'string' ),
+				),
+			),
+			'execute_callback'    => function ( $input = array() ): array {
+				$input = is_array( $input ) ? $input : array();
+
+				$post_type = isset( $input['post_type'] ) ? sanitize_key( (string) $input['post_type'] ) : 'page';
+				if ( ! post_type_exists( $post_type ) ) {
+					return array(
+						'success' => false,
+						'message' => "Post type {$post_type} not found.",
+					);
+				}
+
+				$post_type_object = get_post_type_object( $post_type );
+				if ( ! $post_type_object || empty( $post_type_object->public ) ) {
+					return array(
+						'success' => false,
+						'message' => "Post type {$post_type} is not public.",
+					);
+				}
+
+				$meta_map = mcp_abilities_generatepress_page_meta_map();
+				$expected = mcp_abilities_generatepress_expected_layout_meta_from_input( $input );
+				$fix      = ! empty( $input['fix'] );
+				$patterns = array();
+
+				if ( ! empty( $input['required_content_patterns'] ) && is_array( $input['required_content_patterns'] ) ) {
+					foreach ( $input['required_content_patterns'] as $pattern ) {
+						if ( is_string( $pattern ) && '' !== $pattern ) {
+							$patterns[] = $pattern;
+						}
+					}
+				}
+
+				$collection = mcp_abilities_generatepress_collect_layout_audit_posts( $input );
+				$items      = array();
+				$fixed      = 0;
+
+				foreach ( $collection['posts'] as $post ) {
+					$mismatches = array();
+					$meta_after = array();
+
+					foreach ( $expected as $input_key => $expected_value ) {
+						if ( empty( $meta_map[ $input_key ] ) ) {
+							continue;
+						}
+
+						$meta_key     = $meta_map[ $input_key ];
+						$actual_value = (string) get_post_meta( $post->ID, $meta_key, true );
+
+						if ( $actual_value === $expected_value ) {
+							$meta_after[ $input_key ] = $actual_value;
+							continue;
+						}
+
+						$mismatches[ $input_key ] = array(
+							'key'      => $meta_key,
+							'expected' => $expected_value,
+							'actual'   => $actual_value,
+						);
+
+						if ( $fix ) {
+							if ( '' === $expected_value ) {
+								delete_post_meta( $post->ID, $meta_key );
+								$meta_after[ $input_key ] = '';
+							} else {
+								update_post_meta( $post->ID, $meta_key, $expected_value );
+								$meta_after[ $input_key ] = $expected_value;
+							}
+						} else {
+							$meta_after[ $input_key ] = $actual_value;
+						}
+					}
+
+					$missing_patterns = mcp_abilities_generatepress_missing_content_patterns( $post, $patterns );
+
+					if ( empty( $mismatches ) && empty( $missing_patterns ) ) {
+						continue;
+					}
+
+					if ( $fix && ! empty( $mismatches ) ) {
+						$fixed++;
+					}
+
+					$items[] = array(
+						'id'                       => (int) $post->ID,
+						'title'                    => get_the_title( $post ),
+						'post_type'                => $post->post_type,
+						'status'                   => $post->post_status,
+						'parent_id'                => (int) $post->post_parent,
+						'link'                     => get_permalink( $post ),
+						'meta_mismatches'          => $mismatches,
+						'meta_after'               => $meta_after,
+						'missing_content_patterns' => $missing_patterns,
+						'action'                   => $fix && ! empty( $mismatches ) ? 'repaired_generatepress_meta' : 'needs_review',
+					);
+				}
+
+				return array(
+					'success'          => true,
+					'checked'          => count( $collection['posts'] ),
+					'found'            => count( $items ),
+					'fixed'            => $fixed,
+					'expected_meta'    => $expected,
+					'content_patterns' => $patterns,
+					'items'            => $items,
+					'message'          => $fix
+						? "Checked " . count( $collection['posts'] ) . " {$post_type} item(s), repaired GeneratePress meta on {$fixed} item(s)."
+						: "Checked " . count( $collection['posts'] ) . " {$post_type} item(s) for GeneratePress layout meta.",
 				);
 			},
 			'permission_callback' => function (): bool {
