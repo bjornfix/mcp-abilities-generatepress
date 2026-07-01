@@ -3,7 +3,7 @@
  * Plugin Name: MCP Abilities - GeneratePress
  * Plugin URI: https://github.com/bjornfix/mcp-abilities-generatepress
  * Description: GeneratePress and GenerateBlocks abilities for MCP. Manage theme settings, elements, global styles, page meta, and caches.
- * Version: 1.1.30
+ * Version: 1.1.31
  * Author: Devenia
  * Author URI: https://devenia.com
  * License: GPL-2.0+
@@ -1640,16 +1640,48 @@ function mcp_abilities_generatepress_pattern_response_data( array $response ) {
 }
 
 /**
- * Get GenerateBlocks pattern libraries from the same local REST route the editor uses.
+ * Convert a GenerateBlocks pattern library DTO into a redaction-friendly array.
+ *
+ * @param mixed $library GenerateBlocks library DTO or array.
+ */
+function mcp_abilities_generatepress_pattern_library_to_array( $library ): array {
+	if ( is_array( $library ) ) {
+		return $library;
+	}
+
+	if ( ! is_object( $library ) ) {
+		return array();
+	}
+
+	return array(
+		'id'        => isset( $library->id ) ? (string) $library->id : '',
+		'name'      => isset( $library->name ) ? (string) $library->name : '',
+		'domain'    => isset( $library->domain ) ? (string) $library->domain : '',
+		'publicKey' => isset( $library->public_key ) ? (string) $library->public_key : '',
+		'isEnabled' => ! empty( $library->is_enabled ),
+		'isDefault' => ! empty( $library->is_default ),
+		'isLocal'   => ! empty( $library->is_local ),
+	);
+}
+
+/**
+ * Get GenerateBlocks pattern libraries from the same registry the editor uses.
  */
 function mcp_abilities_generatepress_get_pattern_libraries(): array {
-	$response = mcp_abilities_generatepress_rest_request(
-		'GET',
-		'/generateblocks/v1/pattern-library/libraries'
-	);
+	if ( ! class_exists( 'GenerateBlocks_Libraries' ) ) {
+		return array();
+	}
 
-	$data = mcp_abilities_generatepress_pattern_response_data( $response );
-	return is_array( $data ) ? $data : array();
+	$libraries = GenerateBlocks_Libraries::get_instance()->get_all( false );
+	if ( ! is_array( $libraries ) ) {
+		return array();
+	}
+
+	return array_values(
+		array_filter(
+			array_map( 'mcp_abilities_generatepress_pattern_library_to_array', $libraries )
+		)
+	);
 }
 
 /**
@@ -1708,7 +1740,10 @@ function mcp_abilities_generatepress_get_pattern_library_items( string $kind, st
 		'GET',
 		$route,
 		$params,
-		array( 'X-GB-Public-Key' => isset( $library['publicKey'] ) ? (string) $library['publicKey'] : '' )
+		array(
+			'X-GB-Public-Key' => isset( $library['publicKey'] ) ? (string) $library['publicKey'] : '',
+			'Host'            => wp_parse_url( home_url(), PHP_URL_HOST ),
+		)
 	);
 
 	$data = mcp_abilities_generatepress_pattern_response_data( $response );
