@@ -3,7 +3,7 @@
  * Plugin Name: MCP Abilities - GeneratePress
  * Plugin URI: https://github.com/bjornfix/mcp-abilities-generatepress
  * Description: GeneratePress and GenerateBlocks abilities for MCP. Manage theme settings, elements, global styles, page meta, and caches.
- * Version: 1.1.32
+ * Version: 1.1.33
  * Author: Devenia
  * Author URI: https://devenia.com
  * License: GPL-2.0+
@@ -1703,9 +1703,6 @@ function mcp_abilities_generatepress_public_pattern_library( array $library, boo
 	$public_key = isset( $library['publicKey'] ) ? (string) $library['publicKey'] : '';
 	unset( $library['publicKey'] );
 	$library['has_public_key'] = '' !== $public_key;
-	if ( $include_key_hint && '' !== $public_key ) {
-		$library['public_key_hint'] = substr( $public_key, 0, 4 ) . '...' . substr( $public_key, -4 );
-	}
 	return $library;
 }
 
@@ -1762,6 +1759,7 @@ function mcp_abilities_generatepress_get_pattern_library_items( string $kind, st
 function mcp_abilities_generatepress_public_pattern_item( array $pattern, bool $include_pattern = false ): array {
 	if ( ! $include_pattern ) {
 		unset( $pattern['pattern'] );
+		unset( $pattern['preview'] );
 	}
 	return $pattern;
 }
