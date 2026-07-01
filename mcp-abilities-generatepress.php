@@ -3,7 +3,7 @@
  * Plugin Name: MCP Abilities - GeneratePress
  * Plugin URI: https://github.com/bjornfix/mcp-abilities-generatepress
  * Description: GeneratePress and GenerateBlocks abilities for MCP. Manage theme settings, elements, global styles, page meta, and caches.
- * Version: 1.1.25
+ * Version: 1.1.26
  * Author: Devenia
  * Author URI: https://devenia.com
  * License: GPL-2.0+
@@ -1557,6 +1557,27 @@ function mcp_abilities_generatepress_normalize_module_status( $value ): ?string 
 }
 
 /**
+ * Register an ability with MCP adapter-compatible empty input handling.
+ *
+ * Some MCP clients serialize an empty object as an empty PHP array. For read
+ * abilities with only optional input fields, accept that shape without relaxing
+ * abilities that require IDs, confirmations, or payloads.
+ */
+function mcp_abilities_generatepress_register_ability( string $name, array $args ): void {
+	if (
+		isset( $args['input_schema'] )
+		&& is_array( $args['input_schema'] )
+		&& isset( $args['input_schema']['type'] )
+		&& 'object' === $args['input_schema']['type']
+		&& empty( $args['input_schema']['required'] )
+	) {
+		$args['input_schema']['type'] = array( 'object', 'array', 'null' );
+	}
+
+	wp_register_ability( $name, $args );
+}
+
+/**
  * Register GeneratePress and GenerateBlocks abilities.
  */
 function mcp_abilities_generatepress_register_abilities(): void {
@@ -1573,7 +1594,7 @@ function mcp_abilities_generatepress_register_abilities(): void {
 	// =========================================================================
 	// GENERATEPRESS - Get Theme Info
 	// =========================================================================
-	wp_register_ability(
+	mcp_abilities_generatepress_register_ability(
 		'generatepress/get-info',
 		array(
 			'label'               => 'Get GeneratePress Theme Info',
@@ -1629,7 +1650,7 @@ function mcp_abilities_generatepress_register_abilities(): void {
 	// =========================================================================
 	// GENERATEPRESS - Clear Cache
 	// =========================================================================
-	wp_register_ability(
+	mcp_abilities_generatepress_register_ability(
 		'generatepress/clear-cache',
 		array(
 			'label'               => 'Clear GeneratePress Cache',
@@ -1692,7 +1713,7 @@ function mcp_abilities_generatepress_register_abilities(): void {
 	// =========================================================================
 	// GENERATEPRESS - List Options
 	// =========================================================================
-	wp_register_ability(
+	mcp_abilities_generatepress_register_ability(
 		'generatepress/list-options',
 		array(
 			'label'               => 'List GeneratePress Options',
@@ -1800,7 +1821,7 @@ function mcp_abilities_generatepress_register_abilities(): void {
 	// =========================================================================
 	// GENERATEPRESS - Get Options
 	// =========================================================================
-	wp_register_ability(
+	mcp_abilities_generatepress_register_ability(
 		'generatepress/get-options',
 		array(
 			'label'               => 'Get GeneratePress Options',
@@ -1881,7 +1902,7 @@ function mcp_abilities_generatepress_register_abilities(): void {
 	// =========================================================================
 	// GENERATEPRESS - Update Options
 	// =========================================================================
-	wp_register_ability(
+	mcp_abilities_generatepress_register_ability(
 		'generatepress/update-options',
 		array(
 			'label'               => 'Update GeneratePress Options',
@@ -1979,7 +2000,7 @@ function mcp_abilities_generatepress_register_abilities(): void {
 	// =========================================================================
 	// GENERATEPRESS - Get Settings
 	// =========================================================================
-	wp_register_ability(
+	mcp_abilities_generatepress_register_ability(
 		'generatepress/get-settings',
 		array(
 			'label'               => 'Get GeneratePress Settings',
@@ -2142,7 +2163,7 @@ function mcp_abilities_generatepress_register_abilities(): void {
 		)
 	);
 
-	wp_register_ability(
+	mcp_abilities_generatepress_register_ability(
 		'generatepress/list-control-surface',
 		array(
 			'label'               => 'List GeneratePress Control Surface',
@@ -2291,7 +2312,7 @@ function mcp_abilities_generatepress_register_abilities(): void {
 	// =========================================================================
 	// GENERATEPRESS - List Setting Keys
 	// =========================================================================
-	wp_register_ability(
+	mcp_abilities_generatepress_register_ability(
 		'generatepress/list-setting-keys',
 		array(
 			'label'               => 'List GeneratePress Setting Keys',
@@ -2427,7 +2448,7 @@ function mcp_abilities_generatepress_register_abilities(): void {
 	// =========================================================================
 	// GENERATEPRESS - Theme Mods
 	// =========================================================================
-	wp_register_ability(
+	mcp_abilities_generatepress_register_ability(
 		'generatepress/get-theme-mods',
 		array(
 			'label'               => 'Get GeneratePress Theme Mods',
@@ -2479,7 +2500,7 @@ function mcp_abilities_generatepress_register_abilities(): void {
 		)
 	);
 
-	wp_register_ability(
+	mcp_abilities_generatepress_register_ability(
 		'generatepress/update-theme-mods',
 		array(
 			'label'               => 'Update GeneratePress Theme Mods',
@@ -2556,7 +2577,7 @@ function mcp_abilities_generatepress_register_abilities(): void {
 	// =========================================================================
 	// GENERATEPRESS - Custom CSS
 	// =========================================================================
-	wp_register_ability(
+	mcp_abilities_generatepress_register_ability(
 		'generatepress/get-custom-css',
 		array(
 			'label'               => 'Get GeneratePress Custom CSS',
@@ -2611,7 +2632,7 @@ function mcp_abilities_generatepress_register_abilities(): void {
 		)
 	);
 
-	wp_register_ability(
+	mcp_abilities_generatepress_register_ability(
 		'generatepress/update-custom-css',
 		array(
 			'label'               => 'Update GeneratePress Custom CSS',
@@ -2684,7 +2705,7 @@ function mcp_abilities_generatepress_register_abilities(): void {
 		)
 	);
 
-	wp_register_ability(
+	mcp_abilities_generatepress_register_ability(
 		'generatepress/patch-custom-css',
 		array(
 			'label'               => 'Patch GeneratePress Custom CSS',
@@ -2824,7 +2845,7 @@ function mcp_abilities_generatepress_register_abilities(): void {
 		)
 	);
 
-	wp_register_ability(
+	mcp_abilities_generatepress_register_ability(
 		'generatepress/clear-custom-css',
 		array(
 			'label'               => 'Clear GeneratePress Custom CSS',
@@ -2911,7 +2932,7 @@ function mcp_abilities_generatepress_register_abilities(): void {
 	// =========================================================================
 	// GENERATEPRESS - Update Settings
 	// =========================================================================
-	wp_register_ability(
+	mcp_abilities_generatepress_register_ability(
 		'generatepress/update-settings',
 		array(
 			'label'               => 'Update GeneratePress Settings',
@@ -3013,7 +3034,7 @@ function mcp_abilities_generatepress_register_abilities(): void {
 	// =========================================================================
 	// GENERATEPRESS - Update Global Design Settings
 	// =========================================================================
-	wp_register_ability(
+	mcp_abilities_generatepress_register_ability(
 		'generatepress/update-global-design-settings',
 		array(
 			'label'               => 'Update GeneratePress Global Design Settings',
@@ -3155,7 +3176,7 @@ function mcp_abilities_generatepress_register_abilities(): void {
 	// =========================================================================
 	// GENERATEPRESS - List Modules
 	// =========================================================================
-	wp_register_ability(
+	mcp_abilities_generatepress_register_ability(
 		'generatepress/list-modules',
 		array(
 			'label'               => 'List GeneratePress Modules',
@@ -3222,7 +3243,7 @@ function mcp_abilities_generatepress_register_abilities(): void {
 		)
 	);
 
-	wp_register_ability(
+	mcp_abilities_generatepress_register_ability(
 		'generatepress/list-module-settings',
 		array(
 			'label'               => 'List GeneratePress Module Settings',
@@ -3280,7 +3301,7 @@ function mcp_abilities_generatepress_register_abilities(): void {
 	// =========================================================================
 	// GENERATEPRESS - Update Modules
 	// =========================================================================
-	wp_register_ability(
+	mcp_abilities_generatepress_register_ability(
 		'generatepress/update-modules',
 		array(
 			'label'               => 'Update GeneratePress Modules',
@@ -3370,7 +3391,7 @@ function mcp_abilities_generatepress_register_abilities(): void {
 	// =========================================================================
 	// GENERATEPRESS - Get Module Settings
 	// =========================================================================
-	wp_register_ability(
+	mcp_abilities_generatepress_register_ability(
 		'generatepress/get-module-settings',
 		array(
 			'label'               => 'Get GeneratePress Module Settings',
@@ -3446,7 +3467,7 @@ function mcp_abilities_generatepress_register_abilities(): void {
 	// =========================================================================
 	// GENERATEPRESS - Update Module Settings
 	// =========================================================================
-	wp_register_ability(
+	mcp_abilities_generatepress_register_ability(
 		'generatepress/update-module-settings',
 		array(
 			'label'               => 'Update GeneratePress Module Settings',
@@ -3544,7 +3565,7 @@ function mcp_abilities_generatepress_register_abilities(): void {
 	// =========================================================================
 	// GENERATEPRESS - Blog Archive Settings
 	// =========================================================================
-	wp_register_ability(
+	mcp_abilities_generatepress_register_ability(
 		'generatepress/get-blog-archive-settings',
 		array(
 			'label'               => 'Get GeneratePress Blog Archive Settings',
@@ -3620,7 +3641,7 @@ function mcp_abilities_generatepress_register_abilities(): void {
 		)
 	);
 
-	wp_register_ability(
+	mcp_abilities_generatepress_register_ability(
 		'generatepress/update-blog-archive-settings',
 		array(
 			'label'               => 'Update GeneratePress Blog Archive Settings',
@@ -3755,7 +3776,7 @@ function mcp_abilities_generatepress_register_abilities(): void {
 	// =========================================================================
 	// GENERATEPRESS - Get Typography
 	// =========================================================================
-	wp_register_ability(
+	mcp_abilities_generatepress_register_ability(
 		'generatepress/get-typography',
 		array(
 			'label'               => 'Get GeneratePress Typography',
@@ -3802,7 +3823,7 @@ function mcp_abilities_generatepress_register_abilities(): void {
 	// =========================================================================
 	// GENERATEPRESS - Update Typography
 	// =========================================================================
-	wp_register_ability(
+	mcp_abilities_generatepress_register_ability(
 		'generatepress/update-typography',
 		array(
 			'label'               => 'Update GeneratePress Typography',
@@ -3875,7 +3896,7 @@ function mcp_abilities_generatepress_register_abilities(): void {
 	// =========================================================================
 	// GENERATEPRESS - Get Site Library Cache
 	// =========================================================================
-	wp_register_ability(
+	mcp_abilities_generatepress_register_ability(
 		'generatepress/get-site-library-cache',
 		array(
 			'label'               => 'Get GeneratePress Site Library Cache',
@@ -3933,7 +3954,7 @@ function mcp_abilities_generatepress_register_abilities(): void {
 	// =========================================================================
 	// GENERATEPRESS - Clear Site Library Cache
 	// =========================================================================
-	wp_register_ability(
+	mcp_abilities_generatepress_register_ability(
 		'generatepress/clear-site-library-cache',
 		array(
 			'label'               => 'Clear GeneratePress Site Library Cache',
@@ -3992,7 +4013,7 @@ function mcp_abilities_generatepress_register_abilities(): void {
 	// =========================================================================
 	// GENERATEBLOCKS - Get Global Styles
 	// =========================================================================
-	wp_register_ability(
+	mcp_abilities_generatepress_register_ability(
 		'generateblocks/get-global-styles',
 		array(
 			'label'               => 'Get GenerateBlocks Global Styles',
@@ -4048,7 +4069,7 @@ function mcp_abilities_generatepress_register_abilities(): void {
 	// =========================================================================
 	// GENERATEBLOCKS - Update Global Styles
 	// =========================================================================
-	wp_register_ability(
+	mcp_abilities_generatepress_register_ability(
 		'generateblocks/update-global-styles',
 		array(
 			'label'               => 'Update GenerateBlocks Global Styles',
@@ -4116,7 +4137,7 @@ function mcp_abilities_generatepress_register_abilities(): void {
 		)
 	);
 
-	wp_register_ability(
+	mcp_abilities_generatepress_register_ability(
 		'generateblocks/list-options',
 		array(
 			'label'               => 'List GenerateBlocks Options',
@@ -4212,7 +4233,7 @@ function mcp_abilities_generatepress_register_abilities(): void {
 		)
 	);
 
-	wp_register_ability(
+	mcp_abilities_generatepress_register_ability(
 		'generateblocks/get-options',
 		array(
 			'label'               => 'Get GenerateBlocks Options',
@@ -4284,7 +4305,7 @@ function mcp_abilities_generatepress_register_abilities(): void {
 		)
 	);
 
-	wp_register_ability(
+	mcp_abilities_generatepress_register_ability(
 		'generateblocks/update-options',
 		array(
 			'label'               => 'Update GenerateBlocks Options',
@@ -4373,7 +4394,7 @@ function mcp_abilities_generatepress_register_abilities(): void {
 	// =========================================================================
 	// GENERATEBLOCKS - Control Surface
 	// =========================================================================
-	wp_register_ability(
+	mcp_abilities_generatepress_register_ability(
 		'generateblocks/list-control-surface',
 		array(
 			'label'               => 'List GenerateBlocks Control Surface',
@@ -4480,7 +4501,7 @@ function mcp_abilities_generatepress_register_abilities(): void {
 	// =========================================================================
 	// GENERATEPRESS - Get Page Meta
 	// =========================================================================
-	wp_register_ability(
+	mcp_abilities_generatepress_register_ability(
 		'generatepress/get-page-meta',
 		array(
 			'label'               => 'Get GeneratePress Page Meta',
@@ -4574,7 +4595,7 @@ function mcp_abilities_generatepress_register_abilities(): void {
 	// =========================================================================
 	// GENERATEPRESS - Update Page Meta
 	// =========================================================================
-	wp_register_ability(
+	mcp_abilities_generatepress_register_ability(
 		'generatepress/update-page-meta',
 		array(
 			'label'               => 'Update GeneratePress Page Meta',
@@ -4831,7 +4852,7 @@ function mcp_abilities_generatepress_register_abilities(): void {
 	// =========================================================================
 	// GENERATEPRESS - Audit Duplicate Headlines
 	// =========================================================================
-	wp_register_ability(
+	mcp_abilities_generatepress_register_ability(
 		'generatepress/audit-duplicate-headlines',
 		array(
 			'label'               => 'Audit GeneratePress Duplicate Headlines',
@@ -4973,7 +4994,7 @@ function mcp_abilities_generatepress_register_abilities(): void {
 	// =========================================================================
 	// GENERATEPRESS - Audit Page Layout Meta
 	// =========================================================================
-	wp_register_ability(
+	mcp_abilities_generatepress_register_ability(
 		'generatepress/audit-page-layout-meta',
 		array(
 			'label'               => 'Audit GeneratePress Page Layout Meta',
@@ -5182,7 +5203,7 @@ function mcp_abilities_generatepress_register_abilities(): void {
 	// =========================================================================
 	// GENERATEPRESS - List Elements
 	// =========================================================================
-	wp_register_ability(
+	mcp_abilities_generatepress_register_ability(
 		'generatepress/list-elements',
 		array(
 			'label'               => 'List GeneratePress Elements',
@@ -5372,7 +5393,7 @@ function mcp_abilities_generatepress_register_abilities(): void {
 	// =========================================================================
 	// GENERATEPRESS - Get Element
 	// =========================================================================
-	wp_register_ability(
+	mcp_abilities_generatepress_register_ability(
 		'generatepress/get-element',
 		array(
 			'label'               => 'Get GeneratePress Element',
@@ -5496,7 +5517,7 @@ function mcp_abilities_generatepress_register_abilities(): void {
 	// =========================================================================
 	// GENERATEPRESS - Create Element
 	// =========================================================================
-	wp_register_ability(
+	mcp_abilities_generatepress_register_ability(
 		'generatepress/create-element',
 		array(
 			'label'               => 'Create GeneratePress Element',
@@ -5677,7 +5698,7 @@ function mcp_abilities_generatepress_register_abilities(): void {
 	// =========================================================================
 	// GENERATEPRESS - Update Element
 	// =========================================================================
-	wp_register_ability(
+	mcp_abilities_generatepress_register_ability(
 		'generatepress/update-element',
 		array(
 			'label'               => 'Update GeneratePress Element',
@@ -5871,7 +5892,7 @@ function mcp_abilities_generatepress_register_abilities(): void {
 	// =========================================================================
 	// GENERATEPRESS - Upsert Archive Hook Element
 	// =========================================================================
-	wp_register_ability(
+	mcp_abilities_generatepress_register_ability(
 		'generatepress/upsert-archive-hook-element',
 		array(
 			'label'               => 'Upsert Archive Hook Element',
@@ -6032,7 +6053,7 @@ function mcp_abilities_generatepress_register_abilities(): void {
 	// =========================================================================
 	// GENERATEPRESS - Delete Element
 	// =========================================================================
-	wp_register_ability(
+	mcp_abilities_generatepress_register_ability(
 		'generatepress/delete-element',
 		array(
 			'label'               => 'Delete GeneratePress Element',
@@ -6102,7 +6123,7 @@ function mcp_abilities_generatepress_register_abilities(): void {
 	// =========================================================================
 	// GENERATEPRESS - Restore Element from Trash
 	// =========================================================================
-	wp_register_ability(
+	mcp_abilities_generatepress_register_ability(
 		'generatepress/restore-element',
 		array(
 			'label'               => 'Restore GeneratePress Element',
@@ -6176,7 +6197,7 @@ function mcp_abilities_generatepress_register_abilities(): void {
 	// =========================================================================
 	// GENERATEPRESS - Featured Image Size Audit
 	// =========================================================================
-	wp_register_ability(
+	mcp_abilities_generatepress_register_ability(
 		'generatepress/audit-featured-image-sizes',
 		array(
 			'label'               => 'Audit Featured Image Sizes',
@@ -6312,7 +6333,7 @@ function mcp_abilities_generatepress_register_abilities(): void {
 		)
 	);
 
-	wp_register_ability(
+	mcp_abilities_generatepress_register_ability(
 		'generatepress/regenerate-featured-image-sizes',
 		array(
 			'label'               => 'Regenerate Featured Image Sizes',
@@ -6475,7 +6496,7 @@ function mcp_abilities_generatepress_register_abilities(): void {
 	// =========================================================================
 	// GENERATEBLOCKS - Clear CSS Cache
 	// =========================================================================
-	wp_register_ability(
+	mcp_abilities_generatepress_register_ability(
 		'generateblocks/clear-cache',
 		array(
 			'label'               => 'Clear GenerateBlocks Cache',
