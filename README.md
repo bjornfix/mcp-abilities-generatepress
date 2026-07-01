@@ -8,7 +8,7 @@ GeneratePress and GenerateBlocks abilities for MCP. Manage theme settings, eleme
 [![PHP](https://img.shields.io/badge/PHP-8.0%2B-purple.svg)](https://php.net)
 
 **Tested up to:** 7.0
-**Stable tag:** 1.1.31
+**Stable tag:** 1.1.32
 **License:** GPLv2 or later
 **License URI:** https://www.gnu.org/licenses/gpl-2.0.html
 
@@ -348,6 +348,9 @@ Use this ability for site-wide design decisions instead of page/block-level styl
 `generateblocks/clear-cache` preserves existing generated CSS files by default and only clears cache metadata. Use `{"delete_files": true}` only for destructive file clearing; warming then verifies that the expected per-page CSS file was actually regenerated. You can also pass `post_ids` and `limit` to restrict warming.
 
 ## Changelog
+
+### 1.1.32
+- Fixed Pattern Library DTO field normalization so GenerateBlocks library values are read correctly.
 
 ### 1.1.31
 - Fixed Pattern Library abilities to read the GenerateBlocks library registry directly so enabled, disabled, custom, and local libraries are discoverable by library ID without exposing public keys.

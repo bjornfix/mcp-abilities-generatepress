@@ -3,7 +3,7 @@ Contributors: devenia
 Tags: mcp, generatepress, theme, ai, automation
 Requires at least: 6.9
 Tested up to: 7.0
-Stable tag: 1.1.31
+Stable tag: 1.1.32
 Requires PHP: 8.0
 License: GPLv2 or later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
@@ -46,6 +46,9 @@ Part of the MCP Expose Abilities ecosystem.
 4. Activate the plugin
 
 == Changelog ==
+
+= 1.1.32 =
+* Fixed: Pattern Library DTO field normalization now reads GenerateBlocks library values correctly.
 
 = 1.1.31 =
 * Fixed: Pattern Library abilities now read the GenerateBlocks library registry directly so enabled, disabled, custom, and local libraries are discoverable by library ID without exposing public keys.
