@@ -3,7 +3,7 @@ Contributors: devenia
 Tags: mcp, generatepress, theme, ai, automation
 Requires at least: 6.9
 Tested up to: 7.0
-Stable tag: 1.1.27
+Stable tag: 1.1.28
 Requires PHP: 8.0
 License: GPLv2 or later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
@@ -45,6 +45,9 @@ Part of the MCP Expose Abilities ecosystem.
 4. Activate the plugin
 
 == Changelog ==
+
+= 1.1.28 =
+* Fixed: optional-input ability schemas now match the PHP array transport shape used by the MCP adapter.
 
 = 1.1.27 =
 * Fixed: optional-input schema compatibility no longer passes null into array-typed ability callbacks.

@@ -3,7 +3,7 @@
  * Plugin Name: MCP Abilities - GeneratePress
  * Plugin URI: https://github.com/bjornfix/mcp-abilities-generatepress
  * Description: GeneratePress and GenerateBlocks abilities for MCP. Manage theme settings, elements, global styles, page meta, and caches.
- * Version: 1.1.27
+ * Version: 1.1.28
  * Author: Devenia
  * Author URI: https://devenia.com
  * License: GPL-2.0+
@@ -1559,9 +1559,10 @@ function mcp_abilities_generatepress_normalize_module_status( $value ): ?string 
 /**
  * Register an ability with MCP adapter-compatible empty input handling.
  *
- * Some MCP clients serialize an empty object as an empty PHP array. For read
- * abilities with only optional input fields, accept that shape without relaxing
- * abilities that require IDs, confirmations, or payloads.
+ * Some MCP clients serialize JSON objects as PHP arrays before schema
+ * validation. For abilities with only optional input fields, validate that
+ * transport shape without relaxing abilities that require IDs, confirmations,
+ * or payloads.
  */
 function mcp_abilities_generatepress_register_ability( string $name, array $args ): void {
 	if (
@@ -1571,7 +1572,7 @@ function mcp_abilities_generatepress_register_ability( string $name, array $args
 		&& 'object' === $args['input_schema']['type']
 		&& empty( $args['input_schema']['required'] )
 	) {
-		$args['input_schema']['type'] = array( 'object', 'array' );
+		$args['input_schema']['type'] = 'array';
 	}
 
 	wp_register_ability( $name, $args );
