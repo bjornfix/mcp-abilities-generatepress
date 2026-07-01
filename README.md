@@ -8,7 +8,7 @@ GeneratePress and GenerateBlocks abilities for MCP. Manage theme settings, eleme
 [![PHP](https://img.shields.io/badge/PHP-8.0%2B-purple.svg)](https://php.net)
 
 **Tested up to:** 7.0
-**Stable tag:** 1.1.29
+**Stable tag:** 1.1.30
 **License:** GPLv2 or later
 **License URI:** https://www.gnu.org/licenses/gpl-2.0.html
 
@@ -107,7 +107,7 @@ If you are new to the stack, use this order:
 
 If you skip base-stack verification and start with add-ons immediately, troubleshooting gets harder than it needs to be.
 
-## Abilities (45)
+## Abilities (48)
 
 | Ability | Description |
 |---------|-------------|
@@ -155,6 +155,9 @@ If you skip base-stack verification and start with add-ons immediately, troubles
 | `generateblocks/get-options` | Get GenerateBlocks and GenerateBlocks Pro options |
 | `generateblocks/update-options` | Update or delete GenerateBlocks and GenerateBlocks Pro options |
 | `generateblocks/list-control-surface` | Discover GenerateBlocks options, CSS posts, and generated CSS status |
+| `generateblocks/list-pattern-libraries` | List GenerateBlocks Pattern Libraries available to the editor, including custom/local libraries |
+| `generateblocks/list-pattern-categories` | List categories for a GenerateBlocks Pattern Library by library ID |
+| `generateblocks/search-pattern-library` | Search GenerateBlocks Pattern Library patterns by library ID and optionally return block markup |
 | `generateblocks/clear-cache` | Clear GenerateBlocks CSS cache |
 
 ## Usage Examples
@@ -345,6 +348,9 @@ Use this ability for site-wide design decisions instead of page/block-level styl
 `generateblocks/clear-cache` preserves existing generated CSS files by default and only clears cache metadata. Use `{"delete_files": true}` only for destructive file clearing; warming then verifies that the expected per-page CSS file was actually regenerated. You can also pass `post_ids` and `limit` to restrict warming.
 
 ## Changelog
+
+### 1.1.30
+- Added `generateblocks/list-pattern-libraries`, `generateblocks/list-pattern-categories`, and `generateblocks/search-pattern-library` for editor-native GenerateBlocks Pattern Library discovery, including custom/local design libraries by library ID.
 
 ### 1.1.29
 - Fixed optional-input ability callbacks so null MCP input is normalized to an empty array.

@@ -3,7 +3,7 @@
  * Plugin Name: MCP Abilities - GeneratePress
  * Plugin URI: https://github.com/bjornfix/mcp-abilities-generatepress
  * Description: GeneratePress and GenerateBlocks abilities for MCP. Manage theme settings, elements, global styles, page meta, and caches.
- * Version: 1.1.29
+ * Version: 1.1.30
  * Author: Devenia
  * Author URI: https://devenia.com
  * License: GPL-2.0+
@@ -1583,6 +1583,152 @@ function mcp_abilities_generatepress_register_ability( string $name, array $args
 	}
 
 	wp_register_ability( $name, $args );
+}
+
+/**
+ * Call a local WordPress REST route from an ability.
+ */
+function mcp_abilities_generatepress_rest_request( string $method, string $route, array $params = array(), array $headers = array() ): array {
+	$request = new WP_REST_Request( $method, $route );
+	foreach ( $params as $key => $value ) {
+		$request->set_param( $key, $value );
+	}
+	foreach ( $headers as $key => $value ) {
+		if ( '' !== (string) $value ) {
+			$request->set_header( $key, (string) $value );
+		}
+	}
+
+	$response = rest_do_request( $request );
+	if ( is_wp_error( $response ) ) {
+		return array(
+			'success' => false,
+			'status'  => 500,
+			'data'    => array(),
+			'message' => $response->get_error_message(),
+		);
+	}
+
+	$server = rest_get_server();
+	$data   = $server->response_to_data( $response, false );
+	$status = $response->get_status();
+
+	return array(
+		'success' => $status >= 200 && $status < 300,
+		'status'  => $status,
+		'data'    => $data,
+		'message' => $status >= 200 && $status < 300 ? 'REST request completed.' : 'REST request failed.',
+	);
+}
+
+/**
+ * Normalize GenerateBlocks Pattern Library REST response data.
+ */
+function mcp_abilities_generatepress_pattern_response_data( array $response ) {
+	$data = $response['data'] ?? array();
+	if ( is_array( $data ) && array_key_exists( 'response', $data ) ) {
+		$response_data = $data['response'];
+		if ( is_array( $response_data ) && array_key_exists( 'data', $response_data ) ) {
+			return $response_data['data'];
+		}
+		return $response_data;
+	}
+	if ( is_array( $data ) && array_key_exists( 'data', $data ) ) {
+		return $data['data'];
+	}
+	return $data;
+}
+
+/**
+ * Get GenerateBlocks pattern libraries from the same local REST route the editor uses.
+ */
+function mcp_abilities_generatepress_get_pattern_libraries(): array {
+	$response = mcp_abilities_generatepress_rest_request(
+		'GET',
+		'/generateblocks/v1/pattern-library/libraries'
+	);
+
+	$data = mcp_abilities_generatepress_pattern_response_data( $response );
+	return is_array( $data ) ? $data : array();
+}
+
+/**
+ * Find a GenerateBlocks pattern library by ID.
+ */
+function mcp_abilities_generatepress_find_pattern_library( string $library_id ): ?array {
+	foreach ( mcp_abilities_generatepress_get_pattern_libraries() as $library ) {
+		if ( is_array( $library ) && isset( $library['id'] ) && $library_id === (string) $library['id'] ) {
+			return $library;
+		}
+	}
+	return null;
+}
+
+/**
+ * Remove sensitive fields before returning pattern library metadata.
+ */
+function mcp_abilities_generatepress_public_pattern_library( array $library, bool $include_key_hint = false ): array {
+	$public_key = isset( $library['publicKey'] ) ? (string) $library['publicKey'] : '';
+	unset( $library['publicKey'] );
+	$library['has_public_key'] = '' !== $public_key;
+	if ( $include_key_hint && '' !== $public_key ) {
+		$library['public_key_hint'] = substr( $public_key, 0, 4 ) . '...' . substr( $public_key, -4 );
+	}
+	return $library;
+}
+
+/**
+ * Get GenerateBlocks Pattern Library categories or patterns.
+ */
+function mcp_abilities_generatepress_get_pattern_library_items( string $kind, string $library_id, string $category_id = '', string $search = '' ): array {
+	$library = mcp_abilities_generatepress_find_pattern_library( $library_id );
+	if ( null === $library ) {
+		return array(
+			'success' => false,
+			'status'  => 404,
+			'items'   => array(),
+			'message' => 'Pattern library not found.',
+		);
+	}
+
+	$is_local   = ! empty( $library['isLocal'] );
+	$route_base = $is_local ? '/generateblocks-pro/v1' : '/generateblocks/v1';
+	$route      = $route_base . '/pattern-library/' . ( 'categories' === $kind ? 'categories' : 'patterns' );
+	$params     = array(
+		'libraryId' => $library_id,
+		'isLocal'   => $is_local ? 'true' : 'false',
+	);
+
+	if ( 'patterns' === $kind ) {
+		$params['categoryId'] = $category_id;
+		$params['search']     = $search;
+	}
+
+	$response = mcp_abilities_generatepress_rest_request(
+		'GET',
+		$route,
+		$params,
+		array( 'X-GB-Public-Key' => isset( $library['publicKey'] ) ? (string) $library['publicKey'] : '' )
+	);
+
+	$data = mcp_abilities_generatepress_pattern_response_data( $response );
+	return array(
+		'success' => ! empty( $response['success'] ) && is_array( $data ),
+		'status'  => (int) ( $response['status'] ?? 0 ),
+		'items'   => is_array( $data ) ? $data : array(),
+		'message' => is_array( $data ) ? 'Pattern library items retrieved.' : (string) ( $response['message'] ?? 'Pattern library request failed.' ),
+		'library' => mcp_abilities_generatepress_public_pattern_library( $library ),
+	);
+}
+
+/**
+ * Strip pattern markup unless explicitly requested.
+ */
+function mcp_abilities_generatepress_public_pattern_item( array $pattern, bool $include_pattern = false ): array {
+	if ( ! $include_pattern ) {
+		unset( $pattern['pattern'] );
+	}
+	return $pattern;
 }
 
 /**
@@ -4495,6 +4641,209 @@ function mcp_abilities_generatepress_register_abilities(): void {
 			},
 			'permission_callback' => function (): bool {
 				return current_user_can( 'edit_theme_options' );
+			},
+			'meta'                => array(
+				'annotations' => array(
+					'readonly'    => true,
+					'destructive' => false,
+					'idempotent'  => true,
+				),
+			),
+		)
+	);
+
+	// =========================================================================
+	// GENERATEBLOCKS - Pattern Library
+	// =========================================================================
+	mcp_abilities_generatepress_register_ability(
+		'generateblocks/list-pattern-libraries',
+		array(
+			'label'               => 'List GenerateBlocks Pattern Libraries',
+			'description'         => 'Lists the GenerateBlocks Pattern Libraries available to the WordPress editor using the same local REST source as the editor.',
+			'category'            => 'site',
+			'input_schema'        => array(
+				'type'                 => 'object',
+				'properties'           => array(
+					'include_disabled' => array(
+						'type'        => 'boolean',
+						'default'     => false,
+						'description' => 'Include disabled libraries.',
+					),
+				),
+				'additionalProperties' => false,
+			),
+			'output_schema'       => array(
+				'type'       => 'object',
+				'properties' => array(
+					'success'   => array( 'type' => 'boolean' ),
+					'libraries' => array( 'type' => 'array' ),
+					'count'     => array( 'type' => 'integer' ),
+					'message'   => array( 'type' => 'string' ),
+				),
+			),
+			'execute_callback'    => function ( array $input = array() ): array {
+				$include_disabled = ! empty( $input['include_disabled'] );
+				$libraries        = array();
+				foreach ( mcp_abilities_generatepress_get_pattern_libraries() as $library ) {
+					if ( ! is_array( $library ) ) {
+						continue;
+					}
+					if ( ! $include_disabled && isset( $library['isEnabled'] ) && ! $library['isEnabled'] ) {
+						continue;
+					}
+					$libraries[] = mcp_abilities_generatepress_public_pattern_library( $library, true );
+				}
+
+				return array(
+					'success'   => true,
+					'libraries' => $libraries,
+					'count'     => count( $libraries ),
+					'message'   => 'GenerateBlocks pattern libraries listed successfully.',
+				);
+			},
+			'permission_callback' => function (): bool {
+				return current_user_can( 'edit_posts' );
+			},
+			'meta'                => array(
+				'annotations' => array(
+					'readonly'    => true,
+					'destructive' => false,
+					'idempotent'  => true,
+				),
+			),
+		)
+	);
+
+	mcp_abilities_generatepress_register_ability(
+		'generateblocks/list-pattern-categories',
+		array(
+			'label'               => 'List GenerateBlocks Pattern Categories',
+			'description'         => 'Lists categories for a GenerateBlocks Pattern Library using the same local REST source as the editor.',
+			'category'            => 'site',
+			'input_schema'        => array(
+				'type'                 => 'object',
+				'properties'           => array(
+					'library_id' => array(
+						'type'        => 'string',
+						'default'     => 'gb_default_pro_library',
+						'description' => 'Pattern library ID. Defaults to the GenerateBlocks Pro library.',
+					),
+				),
+				'additionalProperties' => false,
+			),
+			'output_schema'       => array(
+				'type'       => 'object',
+				'properties' => array(
+					'success'    => array( 'type' => 'boolean' ),
+					'library'    => array( 'type' => 'object' ),
+					'categories' => array( 'type' => 'array' ),
+					'count'      => array( 'type' => 'integer' ),
+					'message'    => array( 'type' => 'string' ),
+				),
+			),
+			'execute_callback'    => function ( array $input = array() ): array {
+				$library_id = isset( $input['library_id'] ) && is_string( $input['library_id'] ) && '' !== $input['library_id']
+					? sanitize_text_field( $input['library_id'] )
+					: 'gb_default_pro_library';
+
+				$result = mcp_abilities_generatepress_get_pattern_library_items( 'categories', $library_id );
+				return array(
+					'success'    => $result['success'],
+					'library'    => $result['library'] ?? array(),
+					'categories' => $result['items'],
+					'count'      => count( $result['items'] ),
+					'message'    => $result['message'],
+				);
+			},
+			'permission_callback' => function (): bool {
+				return current_user_can( 'edit_posts' );
+			},
+			'meta'                => array(
+				'annotations' => array(
+					'readonly'    => true,
+					'destructive' => false,
+					'idempotent'  => true,
+				),
+			),
+		)
+	);
+
+	mcp_abilities_generatepress_register_ability(
+		'generateblocks/search-pattern-library',
+		array(
+			'label'               => 'Search GenerateBlocks Pattern Library',
+			'description'         => 'Searches a GenerateBlocks Pattern Library using the same local REST source as the editor. Pattern block markup is returned only when explicitly requested.',
+			'category'            => 'site',
+			'input_schema'        => array(
+				'type'                 => 'object',
+				'properties'           => array(
+					'library_id' => array(
+						'type'        => 'string',
+						'default'     => 'gb_default_pro_library',
+						'description' => 'Pattern library ID. Defaults to the GenerateBlocks Pro library.',
+					),
+					'category_id' => array(
+						'type'        => 'string',
+						'default'     => '',
+						'description' => 'Optional category ID, for example the Hero category ID from list-pattern-categories.',
+					),
+					'search' => array(
+						'type'        => 'string',
+						'default'     => '',
+						'description' => 'Optional search term.',
+					),
+					'limit' => array(
+						'type'        => 'integer',
+						'default'     => 20,
+						'minimum'     => 1,
+						'maximum'     => 100,
+						'description' => 'Maximum patterns to return.',
+					),
+					'include_pattern' => array(
+						'type'        => 'boolean',
+						'default'     => false,
+						'description' => 'Include saved block markup for each pattern.',
+					),
+				),
+				'additionalProperties' => false,
+			),
+			'output_schema'       => array(
+				'type'       => 'object',
+				'properties' => array(
+					'success'  => array( 'type' => 'boolean' ),
+					'library'  => array( 'type' => 'object' ),
+					'patterns' => array( 'type' => 'array' ),
+					'count'    => array( 'type' => 'integer' ),
+					'message'  => array( 'type' => 'string' ),
+				),
+			),
+			'execute_callback'    => function ( array $input = array() ): array {
+				$library_id = isset( $input['library_id'] ) && is_string( $input['library_id'] ) && '' !== $input['library_id']
+					? sanitize_text_field( $input['library_id'] )
+					: 'gb_default_pro_library';
+				$category_id     = isset( $input['category_id'] ) && is_string( $input['category_id'] ) ? sanitize_text_field( $input['category_id'] ) : '';
+				$search          = isset( $input['search'] ) && is_string( $input['search'] ) ? sanitize_text_field( $input['search'] ) : '';
+				$limit           = isset( $input['limit'] ) ? max( 1, min( 100, (int) $input['limit'] ) ) : 20;
+				$include_pattern = ! empty( $input['include_pattern'] );
+
+				$result   = mcp_abilities_generatepress_get_pattern_library_items( 'patterns', $library_id, $category_id, $search );
+				$patterns = array();
+				foreach ( array_slice( $result['items'], 0, $limit ) as $pattern ) {
+					if ( is_array( $pattern ) ) {
+						$patterns[] = mcp_abilities_generatepress_public_pattern_item( $pattern, $include_pattern );
+					}
+				}
+
+				return array(
+					'success'  => $result['success'],
+					'library'  => $result['library'] ?? array(),
+					'patterns' => $patterns,
+					'count'    => count( $patterns ),
+					'message'  => $result['message'],
+				);
+			},
+			'permission_callback' => function (): bool {
+				return current_user_can( 'edit_posts' );
 			},
 			'meta'                => array(
 				'annotations' => array(
