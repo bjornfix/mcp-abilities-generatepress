@@ -3,7 +3,7 @@ Contributors: devenia
 Tags: mcp, generatepress, theme, ai, automation
 Requires at least: 6.9
 Tested up to: 7.0
-Stable tag: 1.1.33
+Stable tag: 1.1.35
 Requires PHP: 8.0
 License: GPLv2 or later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
@@ -46,6 +46,12 @@ Part of the MCP Expose Abilities ecosystem.
 4. Activate the plugin
 
 == Changelog ==
+
+= 1.1.35 =
+* Fixed: multi-post GenerateBlocks CSS warming now resets shared generation time between each frontend request, so every requested post receives and verifies its own CSS file.
+
+= 1.1.34 =
+* Fixed: Page meta updates now allow native GeneratePress disable-elements keys that use the `_generate-` prefix, including per-post featured image disabling.
 
 = 1.1.33 =
 * Fixed: Pattern Library list/search responses no longer expose public key hints or preview markup by default.

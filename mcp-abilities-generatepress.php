@@ -3,7 +3,7 @@
  * Plugin Name: MCP Abilities - GeneratePress
  * Plugin URI: https://github.com/bjornfix/mcp-abilities-generatepress
  * Description: GeneratePress and GenerateBlocks abilities for MCP. Manage theme settings, elements, global styles, page meta, and caches.
- * Version: 1.1.33
+ * Version: 1.1.35
  * Author: Devenia
  * Author URI: https://devenia.com
  * License: GPL-2.0+
@@ -129,7 +129,7 @@ function mcp_abilities_generatepress_is_allowed_generateblocks_option_name( stri
  * Check if a meta key is allowed for GeneratePress elements.
  */
 function mcp_abilities_generatepress_is_allowed_meta_key( string $key ): bool {
-	return str_starts_with( $key, '_generate_' );
+	return str_starts_with( $key, '_generate_' ) || str_starts_with( $key, '_generate-' );
 }
 
 /**
@@ -368,7 +368,12 @@ function mcp_abilities_generatepress_warm_generateblocks_css( ?array $post_ids =
 		$url      = add_query_arg( 'mcp_gb_css_warm', (string) time(), $permalink );
 		$css_file = mcp_abilities_generatepress_generateblocks_css_path( $post_id );
 
-		update_option( 'generateblocks_dynamic_css_time', 0, false );
+		// The frontend request updates this option in a separate PHP process.
+		// Recreate it for every post so this request cannot reuse its stale
+		// option-cache value and skip the database reset after the first warm.
+		delete_option( 'generateblocks_dynamic_css_time' );
+		add_option( 'generateblocks_dynamic_css_time', 0, '', false );
+		wp_cache_delete( 'generateblocks_dynamic_css_time', 'options' );
 
 		$response = wp_remote_get(
 			$url,
