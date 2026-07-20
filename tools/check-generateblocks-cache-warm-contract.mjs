@@ -31,4 +31,22 @@ if (implementation.includes("update_option( 'generateblocks_dynamic_css_time'"))
   throw new Error('The cache warmer still uses the request-stale update_option reset.');
 }
 
+const clearStart = php.indexOf("'generateblocks/clear-cache'");
+const clearEnd = php.indexOf("\n\t);\n}", clearStart);
+const clearImplementation = php.slice(clearStart, clearEnd);
+for (const invariant of [
+  'mcp_abilities_generatepress_discover_generateblocks_post_ids()',
+  "unset( $known_posts[ $post_id ], $known_posts[ (string) $post_id ] )",
+  "update_option( 'generateblocks_dynamic_css_posts', $known_posts )",
+  "null === $post_ids ? $global_ids : $post_ids",
+]) {
+  if (!clearImplementation.includes(invariant)) {
+    throw new Error(`Missing scoped/global cache ownership invariant: ${invariant}`);
+  }
+}
+
+if (!php.includes("false !== strpos( (string) get_post_field( 'post_content', $post_id, 'raw' ), '<!-- wp:generateblocks/' )")) {
+  throw new Error('Global cache warming does not recover its authoritative post set from published WordPress content.');
+}
+
 console.log('GenerateBlocks multi-post CSS warm contract passed.');

@@ -3,7 +3,7 @@
  * Plugin Name: MCP Abilities - GeneratePress
  * Plugin URI: https://github.com/bjornfix/mcp-abilities-generatepress
  * Description: GeneratePress and GenerateBlocks abilities for MCP. Manage theme settings, elements, global styles, page meta, and caches.
- * Version: 1.1.36
+ * Version: 1.1.37
  * Author: basicus
  * Author URI: https://profiles.wordpress.org/basicus/
  * License: GPL-2.0+
@@ -324,6 +324,48 @@ function mcp_abilities_generatepress_generateblocks_css_path( int $post_id ): st
 	$css_blog_id = is_multisite() && isset( $blog_id ) && $blog_id > 1 ? '_blog-' . (int) $blog_id : '';
 
 	return trailingslashit( $upload_dir['basedir'] ) . 'generateblocks/style' . $css_blog_id . '-' . $post_id . '.css';
+}
+
+/**
+ * Discover every published public post that currently owns GenerateBlocks content.
+ *
+ * The GenerateBlocks registry is a regenerable cache, not an authoritative content
+ * inventory. A cache-clear operation therefore must not depend on that registry
+ * being complete, especially after a prior targeted invalidation.
+ *
+ * @return array<int>
+ */
+function mcp_abilities_generatepress_discover_generateblocks_post_ids(): array {
+	$post_types = array_values( get_post_types( array( 'public' => true ), 'names' ) );
+	$post_types = array_values( array_diff( $post_types, array( 'attachment' ) ) );
+	if ( ! $post_types ) {
+		return array();
+	}
+
+	$query = new WP_Query(
+		array(
+			'post_type'              => $post_types,
+			'post_status'            => 'publish',
+			'posts_per_page'         => -1,
+			'fields'                 => 'ids',
+			'orderby'                => 'ID',
+			'order'                  => 'ASC',
+			'no_found_rows'          => true,
+			'cache_results'          => false,
+			'update_post_meta_cache' => false,
+			'update_post_term_cache' => false,
+		)
+	);
+
+	$ids = array();
+	foreach ( $query->posts as $post_id ) {
+		$post_id = (int) $post_id;
+		if ( $post_id > 0 && false !== strpos( (string) get_post_field( 'post_content', $post_id, 'raw' ), '<!-- wp:generateblocks/' ) ) {
+			$ids[] = $post_id;
+		}
+	}
+
+	return $ids;
 }
 
 /**
@@ -6975,7 +7017,11 @@ function mcp_abilities_generatepress_register_abilities(): void {
 				$has_post_ids = isset( $input['post_ids'] ) && is_array( $input['post_ids'] ) && ! empty( $input['post_ids'] );
 				$post_ids     = $has_post_ids ? array_values( array_unique( array_filter( array_map( 'intval', $input['post_ids'] ) ) ) ) : null;
 				$known_posts  = get_option( 'generateblocks_dynamic_css_posts', array() );
-				$known_ids    = array_values( array_unique( array_filter( array_map( 'intval', array_keys( is_array( $known_posts ) ? $known_posts : array() ) ) ) ) );
+				$known_posts  = is_array( $known_posts ) ? $known_posts : array();
+				$known_ids    = array_values( array_unique( array_filter( array_map( 'intval', array_keys( $known_posts ) ) ) ) );
+				$discovered_ids = mcp_abilities_generatepress_discover_generateblocks_post_ids();
+				$global_ids   = array_values( array_unique( array_merge( $known_ids, $discovered_ids ) ) );
+				sort( $global_ids );
 
 				if ( $delete_files && is_dir( $css_dir ) ) {
 					$files = array();
@@ -6996,9 +7042,19 @@ function mcp_abilities_generatepress_register_abilities(): void {
 					}
 				}
 
-				// Clear metadata without deleting generated CSS files by default.
-				delete_option( 'generateblocks_css_version' );
-				update_option( 'generateblocks_dynamic_css_posts', array() );
+				// A targeted clear must preserve unrelated registry ownership. A global
+				// clear may reset the registry because the complete authoritative post
+				// inventory has already been captured from WordPress content above.
+				if ( null !== $post_ids ) {
+					foreach ( $post_ids as $post_id ) {
+						unset( $known_posts[ $post_id ], $known_posts[ (string) $post_id ] );
+						delete_post_meta( $post_id, '_generateblocks_dynamic_css_version' );
+					}
+					update_option( 'generateblocks_dynamic_css_posts', $known_posts );
+				} else {
+					delete_option( 'generateblocks_css_version' );
+					update_option( 'generateblocks_dynamic_css_posts', array() );
+				}
 
 				$warm_result = array(
 					'warmed'  => array(),
@@ -7009,7 +7065,7 @@ function mcp_abilities_generatepress_register_abilities(): void {
 
 				if ( $warm ) {
 					$limit       = isset( $input['limit'] ) ? max( 1, min( 500, (int) $input['limit'] ) ) : 100;
-					$warm_result = mcp_abilities_generatepress_warm_generateblocks_css( null === $post_ids ? $known_ids : $post_ids, $limit );
+					$warm_result = mcp_abilities_generatepress_warm_generateblocks_css( null === $post_ids ? $global_ids : $post_ids, $limit );
 				}
 
 				return array(

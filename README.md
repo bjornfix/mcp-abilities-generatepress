@@ -8,7 +8,7 @@ GeneratePress and GenerateBlocks abilities for MCP. Manage theme settings, eleme
 [![PHP](https://img.shields.io/badge/PHP-8.0%2B-purple.svg)](https://php.net)
 
 **Tested up to:** 7.0
-**Stable tag:** 1.1.36
+**Stable tag:** 1.1.37
 **License:** GPLv2 or later
 **License URI:** https://www.gnu.org/licenses/gpl-2.0.html
 
@@ -345,9 +345,12 @@ Use this ability for site-wide design decisions instead of page/block-level styl
 
 `generatepress/clear-cache` and `generateblocks/clear-cache` also accept `{"force": true}` as a compatibility alias for `{"confirm": true}`.
 
-`generateblocks/clear-cache` preserves existing generated CSS files by default and only clears cache metadata. Use `{"delete_files": true}` only for destructive file clearing; warming then verifies that the expected per-page CSS file was actually regenerated. You can also pass `post_ids` and `limit` to restrict warming.
+`generateblocks/clear-cache` preserves existing generated CSS files by default and only clears cache metadata. Use `{"delete_files": true}` only for destructive file clearing; warming then verifies that the expected per-page CSS file was actually regenerated. You can also pass `post_ids` and `limit` to restrict warming. Targeted invalidation preserves unrelated registry entries; a full clear derives its warm set from published WordPress content as well as regenerable cache metadata.
 
 ## Changelog
+
+### 1.1.37
+- Fixed targeted GenerateBlocks cache invalidation so it preserves unrelated registry entries, while a full clear rebuilds its warm set from authoritative published WordPress content instead of trusting regenerable cache metadata.
 
 ### 1.1.36
 - Added one opt-in GenerateBlocks Grid Projection Module shared by dynamic-CSS parsing, rendered blocks, and Workflow publication, with responsive LTR/RTL native spacing and no page, language, text, ID, or CSS inference.

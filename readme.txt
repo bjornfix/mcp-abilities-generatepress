@@ -3,7 +3,7 @@ Contributors: basicus
 Tags: mcp, generatepress, theme, ai, automation
 Requires at least: 6.9
 Tested up to: 7.0
-Stable tag: 1.1.36
+Stable tag: 1.1.37
 Requires PHP: 8.0
 License: GPLv2 or later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
@@ -47,6 +47,9 @@ Part of the MCP Expose Abilities ecosystem.
 4. Activate the plugin
 
 == Changelog ==
+
+= 1.1.37 =
+* Fixed: targeted GenerateBlocks cache invalidation now preserves unrelated registry entries, while a full clear rebuilds its warm set from authoritative published WordPress content instead of trusting regenerable cache metadata.
 
 = 1.1.36 =
 * Added: one opt-in GenerateBlocks Grid Projection Module is shared by dynamic-CSS parsing, rendered blocks, and Workflow publication, with responsive LTR/RTL native spacing and no page, language, text, ID, or CSS inference.
