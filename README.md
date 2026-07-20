@@ -8,7 +8,7 @@ GeneratePress and GenerateBlocks abilities for MCP. Manage theme settings, eleme
 [![PHP](https://img.shields.io/badge/PHP-8.0%2B-purple.svg)](https://php.net)
 
 **Tested up to:** 7.0
-**Stable tag:** 1.1.35
+**Stable tag:** 1.1.36
 **License:** GPLv2 or later
 **License URI:** https://www.gnu.org/licenses/gpl-2.0.html
 
@@ -348,6 +348,10 @@ Use this ability for site-wide design decisions instead of page/block-level styl
 `generateblocks/clear-cache` preserves existing generated CSS files by default and only clears cache metadata. Use `{"delete_files": true}` only for destructive file clearing; warming then verifies that the expected per-page CSS file was actually regenerated. You can also pass `post_ids` and `limit` to restrict warming.
 
 ## Changelog
+
+### 1.1.36
+- Added one opt-in GenerateBlocks Grid Projection Module shared by dynamic-CSS parsing, rendered blocks, and Workflow publication, with responsive LTR/RTL native spacing and no page, language, text, ID, or CSS inference.
+- Moved GenerateBlocks post-regeneration ownership out of Workflow and made cache clearing invalidate the actual generated-post registry before optionally warming the captured post set.
 
 ### 1.1.35
 - Fixed multi-post GenerateBlocks CSS warming so every requested post receives and verifies its own generated file instead of only the first post succeeding.

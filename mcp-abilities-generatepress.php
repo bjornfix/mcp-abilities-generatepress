@@ -3,9 +3,9 @@
  * Plugin Name: MCP Abilities - GeneratePress
  * Plugin URI: https://github.com/bjornfix/mcp-abilities-generatepress
  * Description: GeneratePress and GenerateBlocks abilities for MCP. Manage theme settings, elements, global styles, page meta, and caches.
- * Version: 1.1.35
- * Author: Devenia
- * Author URI: https://devenia.com
+ * Version: 1.1.36
+ * Author: basicus
+ * Author URI: https://profiles.wordpress.org/basicus/
  * License: GPL-2.0+
  * License URI: http://www.gnu.org/licenses/gpl-2.0.txt
  * Requires at least: 6.9
@@ -20,6 +20,9 @@ declare( strict_types=1 );
 if ( ! defined( 'ABSPATH' ) ) {
 	exit;
 }
+
+require_once __DIR__ . '/includes/class-generateblocks-grid-projection.php';
+MCP_Abilities_GeneratePress_GenerateBlocks_Grid_Projection::register();
 
 /**
  * Check if Abilities API is available.
@@ -6971,6 +6974,8 @@ function mcp_abilities_generatepress_register_abilities(): void {
 				$delete_files = isset( $input['delete_files'] ) && (bool) $input['delete_files'];
 				$has_post_ids = isset( $input['post_ids'] ) && is_array( $input['post_ids'] ) && ! empty( $input['post_ids'] );
 				$post_ids     = $has_post_ids ? array_values( array_unique( array_filter( array_map( 'intval', $input['post_ids'] ) ) ) ) : null;
+				$known_posts  = get_option( 'generateblocks_dynamic_css_posts', array() );
+				$known_ids    = array_values( array_unique( array_filter( array_map( 'intval', array_keys( is_array( $known_posts ) ? $known_posts : array() ) ) ) ) );
 
 				if ( $delete_files && is_dir( $css_dir ) ) {
 					$files = array();
@@ -6993,6 +6998,7 @@ function mcp_abilities_generatepress_register_abilities(): void {
 
 				// Clear metadata without deleting generated CSS files by default.
 				delete_option( 'generateblocks_css_version' );
+				update_option( 'generateblocks_dynamic_css_posts', array() );
 
 				$warm_result = array(
 					'warmed'  => array(),
@@ -7003,7 +7009,7 @@ function mcp_abilities_generatepress_register_abilities(): void {
 
 				if ( $warm ) {
 					$limit       = isset( $input['limit'] ) ? max( 1, min( 500, (int) $input['limit'] ) ) : 100;
-					$warm_result = mcp_abilities_generatepress_warm_generateblocks_css( $post_ids, $limit );
+					$warm_result = mcp_abilities_generatepress_warm_generateblocks_css( null === $post_ids ? $known_ids : $post_ids, $limit );
 				}
 
 				return array(

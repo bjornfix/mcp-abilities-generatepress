@@ -1,9 +1,9 @@
 === MCP Abilities - GeneratePress ===
-Contributors: devenia
+Contributors: basicus
 Tags: mcp, generatepress, theme, ai, automation
 Requires at least: 6.9
 Tested up to: 7.0
-Stable tag: 1.1.35
+Stable tag: 1.1.36
 Requires PHP: 8.0
 License: GPLv2 or later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
@@ -35,6 +35,7 @@ This add-on plugin exposes GeneratePress theme settings, elements, and GenerateB
 * GenerateBlocks Pattern Library discovery and pattern search using the same source as the editor, including custom/local libraries
 * GenerateBlocks and GenerateBlocks Pro options (list/get/update for GB-owned option prefixes)
 * GenerateBlocks CSS cache control
+* One reusable, opt-in native GenerateBlocks grid projection shared by frontend rendering and translation publication
 
 Part of the MCP Expose Abilities ecosystem.
 
@@ -46,6 +47,10 @@ Part of the MCP Expose Abilities ecosystem.
 4. Activate the plugin
 
 == Changelog ==
+
+= 1.1.36 =
+* Added: one opt-in GenerateBlocks Grid Projection Module is shared by dynamic-CSS parsing, rendered blocks, and Workflow publication, with responsive LTR/RTL native spacing and no page, language, text, ID, or CSS inference.
+* Fixed: GenerateBlocks post-regeneration ownership now lives in this GP/GB adapter, and cache clearing invalidates the actual generated-post registry before optionally warming the captured post set.
 
 = 1.1.35 =
 * Fixed: multi-post GenerateBlocks CSS warming now resets shared generation time between each frontend request, so every requested post receives and verifies its own CSS file.
