@@ -3,7 +3,7 @@
  * Plugin Name: MCP Abilities - GeneratePress
  * Plugin URI: https://github.com/bjornfix/mcp-abilities-generatepress
  * Description: GeneratePress and GenerateBlocks abilities for MCP. Manage theme settings, elements, global styles, page meta, and caches.
- * Version: 1.1.37
+ * Version: 1.1.38
  * Author: basicus
  * Author URI: https://profiles.wordpress.org/basicus/
  * License: GPL-2.0+
@@ -23,6 +23,8 @@ if ( ! defined( 'ABSPATH' ) ) {
 
 require_once __DIR__ . '/includes/class-generateblocks-grid-projection.php';
 MCP_Abilities_GeneratePress_GenerateBlocks_Grid_Projection::register();
+require_once __DIR__ . '/includes/class-generateblocks-card-projection.php';
+MCP_Abilities_GeneratePress_GenerateBlocks_Card_Projection::register();
 
 /**
  * Check if Abilities API is available.

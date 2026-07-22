@@ -8,7 +8,7 @@ GeneratePress and GenerateBlocks abilities for MCP. Manage theme settings, eleme
 [![PHP](https://img.shields.io/badge/PHP-8.0%2B-purple.svg)](https://php.net)
 
 **Tested up to:** 7.0
-**Stable tag:** 1.1.37
+**Stable tag:** 1.1.38
 **License:** GPLv2 or later
 **License URI:** https://www.gnu.org/licenses/gpl-2.0.html
 
@@ -348,6 +348,10 @@ Use this ability for site-wide design decisions instead of page/block-level styl
 `generateblocks/clear-cache` preserves existing generated CSS files by default and only clears cache metadata. Use `{"delete_files": true}` only for destructive file clearing; warming then verifies that the expected per-page CSS file was actually regenerated. You can also pass `post_ids` and `limit` to restrict warming. Targeted invalidation preserves unrelated registry entries; a full clear derives its warm set from published WordPress content as well as regenerable cache metadata.
 
 ## Changelog
+
+### 1.1.38
+- Adds an explicit-only, bounded GenerateBlocks Query card-summary contract with no generated full-content fallback.
+- Exposes token-preserving visible and accessible card actions to Devenia Workflow and validates translated direct-child inventories.
 
 ### 1.1.37
 - Fixed targeted GenerateBlocks cache invalidation so it preserves unrelated registry entries, while a full clear rebuilds its warm set from authoritative published WordPress content instead of trusting regenerable cache metadata.
