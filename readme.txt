@@ -3,7 +3,7 @@ Contributors: basicus
 Tags: mcp, generatepress, theme, ai, automation
 Requires at least: 6.9
 Tested up to: 7.0
-Stable tag: 1.1.38
+Stable tag: 1.1.39
 Requires PHP: 8.0
 License: GPLv2 or later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
@@ -47,6 +47,9 @@ Part of the MCP Expose Abilities ecosystem.
 4. Activate the plugin
 
 == Changelog ==
+
+= 1.1.39 =
+* Supply GenerateBlocks design markers through the vendor-neutral Content Write Gate Adapter.
 
 = 1.1.38 =
 * Add an explicit-only GenerateBlocks Query card-summary contract so missing excerpts never fall back to full page content.

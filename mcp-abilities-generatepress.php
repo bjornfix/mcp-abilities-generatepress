@@ -3,7 +3,7 @@
  * Plugin Name: MCP Abilities - GeneratePress
  * Plugin URI: https://github.com/bjornfix/mcp-abilities-generatepress
  * Description: GeneratePress and GenerateBlocks abilities for MCP. Manage theme settings, elements, global styles, page meta, and caches.
- * Version: 1.1.38
+ * Version: 1.1.39
  * Author: basicus
  * Author URI: https://profiles.wordpress.org/basicus/
  * License: GPL-2.0+
@@ -25,6 +25,21 @@ require_once __DIR__ . '/includes/class-generateblocks-grid-projection.php';
 MCP_Abilities_GeneratePress_GenerateBlocks_Grid_Projection::register();
 require_once __DIR__ . '/includes/class-generateblocks-card-projection.php';
 MCP_Abilities_GeneratePress_GenerateBlocks_Card_Projection::register();
+
+/**
+ * Supply GenerateBlocks design markers to the vendor-neutral content gate.
+ *
+ * @param string[] $markers Existing markers supplied by other adapters.
+ * @return string[]
+ */
+function mcp_abilities_generatepress_content_design_markers( array $markers, string $content ): array {
+	if ( false !== strpos( $content, '<!-- wp:generateblocks/' ) || preg_match( '/\bgb-(?:container|grid-wrapper|headline|button)-[a-z0-9_-]+\b/i', $content ) ) {
+		$markers[] = 'generateblocks';
+	}
+
+	return array_values( array_unique( array_filter( array_map( 'sanitize_key', $markers ) ) ) );
+}
+add_filter( 'mcp_content_design_markup_markers', 'mcp_abilities_generatepress_content_design_markers', 10, 2 );
 
 /**
  * Check if Abilities API is available.
