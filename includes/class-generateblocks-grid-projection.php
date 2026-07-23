@@ -183,8 +183,10 @@ final class MCP_Abilities_GeneratePress_GenerateBlocks_Grid_Projection {
 
 			$spacing = is_array( $source_item['attrs']['spacing'] ?? null ) ? $source_item['attrs']['spacing'] : array();
 			foreach ( $breakpoints as $breakpoint ) {
-				if ( ! self::spacing_is_zero( $spacing[ $spacing_side . $breakpoint['margin_suffix'] ] ?? '' ) ) {
-					return $block;
+				foreach ( array( 'marginLeft', 'marginRight' ) as $margin_side ) {
+					if ( ! self::spacing_is_zero( $spacing[ $margin_side . $breakpoint['margin_suffix'] ] ?? '' ) ) {
+						return $block;
+					}
 				}
 			}
 
@@ -201,14 +203,17 @@ final class MCP_Abilities_GeneratePress_GenerateBlocks_Grid_Projection {
 			$block['attrs'][ $breakpoint['gap'] ] = 0;
 			$breakpoint_widths                    = array_column( $widths, $breakpoint_name );
 			$row_ends                             = self::row_ends( $breakpoint_widths );
+			$wrapper_widths                        = self::gutter_compensated_wrapper_widths( $breakpoint_widths, $gaps[ $breakpoint_name ] );
 			$margin_key                           = $spacing_side . $breakpoint['margin_suffix'];
 			$gap_value                            = self::pixel_value( $gaps[ $breakpoint_name ] );
 
 			foreach ( $block['innerBlocks'] as $item_index => $target_item ) {
 				$target_item['attrs']            = is_array( $target_item['attrs'] ?? null ) ? $target_item['attrs'] : array();
 				$target_item['attrs']['spacing'] = is_array( $target_item['attrs']['spacing'] ?? null ) ? $target_item['attrs']['spacing'] : array();
+				$target_item['attrs']['sizing']  = is_array( $target_item['attrs']['sizing'] ?? null ) ? $target_item['attrs']['sizing'] : array();
 				$owns_gutter                    = $gaps[ $breakpoint_name ] > 0 && ! isset( $row_ends[ $item_index ] );
 				$target_item['attrs']['spacing'][ $margin_key ] = $owns_gutter ? $gap_value : '0px';
+				$target_item['attrs']['sizing'][ $breakpoint['width'] ] = (string) ( $wrapper_widths[ $item_index ] ?? $breakpoint_widths[ $item_index ] ?? '' );
 				$block['innerBlocks'][ $item_index ]            = $target_item;
 			}
 		}
@@ -249,23 +254,76 @@ final class MCP_Abilities_GeneratePress_GenerateBlocks_Grid_Projection {
 	/** @return array<int,bool> */
 	private static function row_ends( array $widths ): array {
 		$row_ends = array();
-		$row_sum  = 0.0;
-		foreach ( $widths as $index => $width ) {
-			$value = (float) rtrim( $width, '%' );
-			if ( $row_sum > 0 && $row_sum + $value > 100.0001 ) {
-				$row_ends[ $index - 1 ] = true;
-				$row_sum                = 0.0;
+		foreach ( self::percentage_width_rows( $widths ) as $row ) {
+			if ( $row ) {
+				$row_ends[ array_key_last( $row ) ] = true;
 			}
-			$row_sum += $value;
-			if ( $row_sum >= 99.9999 ) {
-				$row_ends[ $index ] = true;
-				$row_sum            = 0.0;
-			}
-		}
-		if ( $widths ) {
-			$row_ends[ array_key_last( $widths ) ] = true;
 		}
 		return $row_ends;
+	}
+
+	/**
+	 * Preserve each item's proportional share of the usable row after gutters.
+	 *
+	 * GenerateBlocks renders a grid item inside a percentage-width wrapper. A
+	 * native end margin without width compensation makes every gutter-owning
+	 * surface narrower than the row-ending peer. Compensating the wrapper widths
+	 * keeps the visible content widths proportional while one owner still emits
+	 * each physical gutter.
+	 *
+	 * @param array<int,string> $widths Percentage widths in source order.
+	 * @return array<int,string>
+	 */
+	private static function gutter_compensated_wrapper_widths( array $widths, float $gap ): array {
+		$projected = $widths;
+		foreach ( self::percentage_width_rows( $widths ) as $items ) {
+			$count   = count( $items );
+			$row_sum = array_sum( array_map( static fn( string $width ): float => (float) rtrim( $width, '%' ), $items ) );
+			if ( 2 > $count || 0.0 >= $gap || 0.0 >= $row_sum ) {
+				continue;
+			}
+			$total_gutter = $gap * ( $count - 1 );
+			$row_end      = array_key_last( $items );
+			foreach ( $items as $index => $width ) {
+				$percent   = (float) rtrim( (string) $width, '%' );
+				$share     = $total_gutter * ( $percent / $row_sum );
+				$owned_gap = $index === $row_end ? 0.0 : $gap;
+				$adjustment = $owned_gap - $share;
+				if ( abs( $adjustment ) < 0.00005 ) {
+					continue;
+				}
+				$operator = 0.0 < $adjustment ? '+' : '-';
+				$projected[ $index ] = 'calc(' . $width . ' ' . $operator . ' ' . self::pixel_value( abs( $adjustment ) ) . ')';
+			}
+		}
+
+		return $projected;
+	}
+
+	/** @param array<int,string> $widths @return array<int,array<int,string>> */
+	private static function percentage_width_rows( array $widths ): array {
+		$rows    = array();
+		$row     = array();
+		$row_sum = 0.0;
+		foreach ( $widths as $index => $width ) {
+			$value = (float) rtrim( (string) $width, '%' );
+			if ( $row && $row_sum + $value > 100.0001 ) {
+				$rows[]  = $row;
+				$row     = array();
+				$row_sum = 0.0;
+			}
+			$row[ $index ] = $width;
+			$row_sum       += $value;
+			if ( $row_sum >= 99.9999 ) {
+				$rows[]  = $row;
+				$row     = array();
+				$row_sum = 0.0;
+			}
+		}
+		if ( $row ) {
+			$rows[] = $row;
+		}
+		return $rows;
 	}
 
 	private static function spacing_is_zero( $value ): bool {

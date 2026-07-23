@@ -28,8 +28,8 @@ $items  = $grid['innerBlocks'] ?? array();
 $assert( 0 === (int) ( $grid['attrs']['horizontalGap'] ?? -1 ), 'GenerateBlocks parsed the unprojected wrapper gap.' );
 $assert( '54px' === (string) ( $items[0]['attrs']['spacing']['marginRight'] ?? '' ), 'Projected LTR native gutter is missing.' );
 $assert( '0px' === (string) ( $items[0]['attrs']['spacing']['marginRightMobile'] ?? '' ), 'Projected stacked-mobile gutter is not zero.' );
-$assert( '66%' === (string) ( $items[0]['attrs']['sizing']['width'] ?? '' ), 'Projection changed the first native width.' );
-$assert( '34%' === (string) ( $items[1]['attrs']['sizing']['width'] ?? '' ), 'Projection changed the second native width.' );
+$assert( 'calc(66% + 18.36px)' === (string) ( $items[0]['attrs']['sizing']['width'] ?? '' ), 'Projection did not combine the first visible width share with its owned gutter.' );
+$assert( 'calc(34% - 18.36px)' === (string) ( $items[1]['attrs']['sizing']['width'] ?? '' ), 'Projection did not compensate the second native width for its gutter share.' );
 
 if ( is_array( $parsed ) ) {
 	generateblocks_get_dynamic_css( $parsed );
@@ -39,7 +39,7 @@ $assert( '' !== $css, 'GenerateBlocks emitted no CSS for the projected fixture.'
 $assert( false === strpos( $css, 'margin-left:-54px' ) && false === strpos( $css, 'margin-right:-54px' ), 'Generated CSS retained a negative wrapper margin.' );
 $assert( false === strpos( $css, 'padding-left:54px' ) && false === strpos( $css, 'padding-right:54px' ), 'Generated CSS retained wrapper-compensating column padding.' );
 $assert( false !== strpos( $css, '.gb-container-mcp-grid-runtime-a' ) && false !== strpos( $css, 'margin-right:54px' ), 'Generated CSS omitted the first item native gutter.' );
-$assert( false !== strpos( $css, '.gb-grid-wrapper > .gb-grid-column-mcp-grid-runtime-a' ) && false !== strpos( $css, 'width:66%' ), 'Generated CSS omitted the first native column width.' );
+$assert( false !== strpos( $css, '.gb-grid-wrapper > .gb-grid-column-mcp-grid-runtime-a' ) && false !== strpos( $css, 'width:calc(66% + 18.36px)' ), 'Generated CSS omitted the compensated first native column width.' );
 
 if ( $failures ) {
 	fwrite( STDERR, implode( "\n", $failures ) . "\n" );

@@ -3,7 +3,7 @@ Contributors: basicus
 Tags: mcp, generatepress, theme, ai, automation
 Requires at least: 6.9
 Tested up to: 7.0
-Stable tag: 1.1.40
+Stable tag: 1.1.41
 Requires PHP: 8.0
 License: GPLv2 or later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
@@ -47,6 +47,9 @@ Part of the MCP Expose Abilities ecosystem.
 4. Activate the plugin
 
 == Changelog ==
+
+= 1.1.41 =
+* Preserve equal and proportional visible GenerateBlocks grid widths by distributing each row's native gutter across its percentage columns at every responsive breakpoint.
 
 = 1.1.40 =
 * Render caller-authorized request-local GenerateBlocks content with native inline CSS without mutating canonical generated-CSS caches.
