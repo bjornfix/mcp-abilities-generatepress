@@ -25,7 +25,8 @@ assert.doesNotMatch(moduleSource, /page_id|locale|translated text|className|cust
 assert.match(mainSource, /generateblocks_dynamic_css_posts'[\s\S]*array\(\)/, "GP-MCP cache clear must own GenerateBlocks regeneration metadata");
 assert.match(presentationSource, /mcp_abilities_generatepress_enable_grid_layout_projection'[\s\S]*__return_true/, "Site Presentation must explicitly activate the Devenia-wide policy");
 assert.doesNotMatch(workflowAdapter, /generateblocks_do_content|render_block_data|generateblocks_dynamic_css_posts|_generateblocks_dynamic_css_version|normalize_grid_gap|project_frontend_grid/, "Workflow must not own canonical frontend or GenerateBlocks cache behavior");
-assert.match(workflowMain, /mcp_abilities_generatepress_generateblocks_request_content[\s\S]*filter_staged_preview_generateblocks_request_content/, "Workflow must register staged-preview authority at the reusable GP-MCP request-content seam");
-assert.match(workflowPreview, /filter_staged_preview_generateblocks_request_content[\s\S]*source_rewrite_preview_authority[\s\S]*translation_job_preview_authority/, "Workflow must adapt both authorized preview callers without owning CSS generation");
+assert.match(workflowMain, /addons\/generateblocks\.php/, "Workflow must load its optional GenerateBlocks Adapter");
+assert.match(workflowAdapter, /mcp_abilities_generatepress_generateblocks_request_content[\s\S]*filter_staged_preview_request_content/, "Workflow's GenerateBlocks Adapter must register staged-preview authority at the reusable GP-MCP request-content seam");
+assert.match(workflowPreview, /filter_staged_preview_request_content[\s\S]*source_rewrite_preview_authority[\s\S]*translation_job_preview_authority/, "Workflow must adapt both authorized preview callers without owning CSS generation");
 
 console.log("GenerateBlocks grid ownership: OK");
