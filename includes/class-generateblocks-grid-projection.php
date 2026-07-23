@@ -17,6 +17,8 @@ if ( ! defined( 'ABSPATH' ) ) {
 final class MCP_Abilities_GeneratePress_GenerateBlocks_Grid_Projection {
 	/** Register the optional frontend, Workflow, and cache Adapters. */
 	public static function register(): void {
+		add_filter( 'generateblocks_css_print_method', array( __CLASS__, 'force_authoritative_request_content_inline_mode' ), 100 );
+		add_filter( 'generateblocks_do_content', array( __CLASS__, 'project_authoritative_request_content' ), 5 );
 		add_filter( 'generateblocks_do_content', array( __CLASS__, 'project_frontend_content' ), 30 );
 		add_filter( 'render_block_data', array( __CLASS__, 'project_rendered_block' ), 10, 3 );
 		add_filter( 'devenia_workflow_project_block_layout', array( __CLASS__, 'project_workflow_layout' ), 10, 4 );
@@ -27,6 +29,38 @@ final class MCP_Abilities_GeneratePress_GenerateBlocks_Grid_Projection {
 	/** Whether the installed site presentation owner activates this global policy. */
 	private static function enabled(): bool {
 		return (bool) apply_filters( 'mcp_abilities_generatepress_enable_grid_layout_projection', false );
+	}
+
+	/**
+	 * Use request-local CSS when a caller supplies authoritative block content.
+	 *
+	 * The caller owns authorization. This Module owns the GenerateBlocks output
+	 * mode and keeps the ephemeral projection out of the persistent CSS cache.
+	 */
+	public static function force_authoritative_request_content_inline_mode( string $method ): string {
+		return null !== self::authoritative_request_content() ? 'inline' : $method;
+	}
+
+	/** Replace canonical GenerateBlocks parser input with request-local authority. */
+	public static function project_authoritative_request_content( string $content ): string {
+		$authoritative = self::authoritative_request_content();
+		return null === $authoritative ? $content : $authoritative;
+	}
+
+	/** Return one caller-authorized request-local document or the null sentinel. */
+	private static function authoritative_request_content(): ?string {
+		static $resolved_content = null;
+		if ( is_admin() ) {
+			return null;
+		}
+		if ( is_string( $resolved_content ) ) {
+			return $resolved_content;
+		}
+		$content = apply_filters( 'mcp_abilities_generatepress_generateblocks_request_content', null );
+		if ( is_string( $content ) ) {
+			$resolved_content = $content;
+		}
+		return is_string( $content ) ? $content : null;
 	}
 
 	/**
@@ -256,4 +290,3 @@ final class MCP_Abilities_GeneratePress_GenerateBlocks_Grid_Projection {
 		update_option( 'generateblocks_dynamic_css_posts', $known_posts );
 	}
 }
-
