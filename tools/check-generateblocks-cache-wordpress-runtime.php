@@ -46,7 +46,13 @@ try {
 	$discovered = mcp_abilities_generatepress_discover_generateblocks_post_ids();
 	foreach ( $fixture_ids as $post_id ) {
 		if ( ! in_array( $post_id, $discovered, true ) ) {
-			$failures[] = "Published GenerateBlocks fixture {$post_id} was not discovered from authoritative content.";
+			$fixture = get_post( $post_id );
+			$failures[] = sprintf(
+				'Published GenerateBlocks fixture %1$d was not discovered from authoritative content (status=%2$s, marker=%3$s).',
+				$post_id,
+				$fixture ? $fixture->post_status : 'missing',
+				$fixture && false !== strpos( (string) $fixture->post_content, '<!-- wp:generateblocks/' ) ? 'present' : 'absent'
+			);
 		}
 	}
 
@@ -65,6 +71,9 @@ try {
 		$after_targeted = get_option( 'generateblocks_dynamic_css_posts', array() );
 		if ( empty( $targeted['success'] ) || isset( $after_targeted[ $fixture_ids[0] ] ) || ! isset( $after_targeted[ $fixture_ids[1] ] ) ) {
 			$failures[] = 'Targeted invalidation did not preserve the unrelated GenerateBlocks registry entry.';
+		}
+		if ( GENERATEBLOCKS_VERSION !== get_post_meta( $fixture_ids[0], '_generateblocks_dynamic_css_version', true ) ) {
+			$failures[] = 'Targeted invalidation removed the upstream GenerateBlocks regeneration marker.';
 		}
 
 		$global = $ability->execute( array( 'confirm' => true, 'delete_files' => false, 'warm' => false ) );

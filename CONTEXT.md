@@ -22,3 +22,17 @@ mobile breakpoints. Without that compensation, gutter-owning surfaces render
 narrower than row-ending peers even when their source percentages are equal.
 Site Presentation decides whether the policy is active; Workflow consumes the
 same projection and never reimplements it.
+
+## Grid Projection Rollout
+
+The generated-CSS lifecycle Adapter owned by the Grid Projection Module. Its
+versioned Interface invalidates the regenerable GenerateBlocks post registry
+once whenever projected native attributes change, while leaving canonical
+content and existing CSS files intact until upstream GenerateBlocks replaces
+them. A targeted destructive refresh preserves the upstream regeneration
+marker and snapshots the prior file, registry, and metadata state. If any
+requested warm target fails or is skipped, the Interface fails closed and
+restores that exact prior state instead of reporting a successful deletion.
+Destructive refresh requires an explicit bounded post set; global destructive
+deletion is rejected before mutation, while non-destructive global registry
+invalidation remains available.

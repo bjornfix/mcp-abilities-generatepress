@@ -49,4 +49,26 @@ if (!php.includes("false !== strpos( (string) get_post_field( 'post_content', $p
   throw new Error('Global cache warming does not recover its authoritative post set from published WordPress content.');
 }
 
+const snapshotRead = clearImplementation.indexOf('$prior_content = $filesystem->get_contents( $file )');
+const unreadableStop = clearImplementation.indexOf('false === $prior_content');
+const destructiveDelete = clearImplementation.indexOf('wp_delete_file( $file )');
+if (snapshotRead < 0 || unreadableStop < snapshotRead || destructiveDelete < unreadableStop) {
+  throw new Error('Destructive refresh can delete before every existing CSS file has a readable rollback snapshot.');
+}
+if (!clearImplementation.includes("$prior_content === $filesystem->get_contents( $restore_file )")) {
+  throw new Error('Delete-failure rollback does not verify exact restored CSS bytes.');
+}
+if (!clearImplementation.includes('if ( $exact_restore )')) {
+  throw new Error('Delete-failure rollback counts a file before exact restoration is verified.');
+}
+if (!clearImplementation.includes("$prior_content !== $filesystem->get_contents( $file )")) {
+  throw new Error('Warm-failure rollback does not verify exact restored CSS bytes.');
+}
+if (!clearImplementation.includes("! file_exists( $file ) && $rollback_ok")) {
+  throw new Error('Warm-failure rollback does not verify restoration of prior file absence.');
+}
+if (!clearImplementation.includes('Destructive CSS refresh requires explicit post_ids.')) {
+  throw new Error('Unbounded destructive global refresh is not rejected before mutation.');
+}
+
 console.log('GenerateBlocks multi-post CSS warm contract passed.');

@@ -8,7 +8,7 @@ GeneratePress and GenerateBlocks abilities for MCP. Manage theme settings, eleme
 [![PHP](https://img.shields.io/badge/PHP-8.0%2B-purple.svg)](https://php.net)
 
 **Tested up to:** 7.0
-**Stable tag:** 1.1.41
+**Stable tag:** 1.1.42
 **License:** GPLv2 or later
 **License URI:** https://www.gnu.org/licenses/gpl-2.0.html
 
@@ -345,9 +345,14 @@ Use this ability for site-wide design decisions instead of page/block-level styl
 
 `generatepress/clear-cache` and `generateblocks/clear-cache` also accept `{"force": true}` as a compatibility alias for `{"confirm": true}`.
 
-`generateblocks/clear-cache` preserves existing generated CSS files by default and only clears cache metadata. Use `{"delete_files": true}` only for destructive file clearing; warming then verifies that the expected per-page CSS file was actually regenerated. You can also pass `post_ids` and `limit` to restrict warming. Targeted invalidation preserves unrelated registry entries; a full clear derives its warm set from published WordPress content as well as regenerable cache metadata.
+`generateblocks/clear-cache` preserves existing generated CSS files by default and only clears cache metadata. Use `{"delete_files": true}` only with explicit `post_ids` for an atomic destructive refresh; global destructive deletion is rejected before mutation. Warming verifies that each expected per-page CSS file was regenerated. If any target fails or is skipped, the ability returns `success: false` and restores prior files, registry state, and regeneration metadata. You can also pass `limit` to bound warming. Targeted invalidation preserves unrelated registry entries; a non-destructive full clear derives its warm set from published WordPress content as well as regenerable cache metadata.
 
 ## Changelog
+
+### 1.1.42
+
+- Fixed targeted GenerateBlocks CSS refreshes so the upstream regeneration marker survives invalidation and warm failures fail closed with exact prior file, registry, and metadata restoration; unsafe global destructive deletion is rejected before mutation.
+- Added a versioned Grid Projection rollout that invalidates regenerable CSS registry entries once when projected native attributes change, ensuring existing pages rebuild with the current geometry.
 
 ### 1.1.41
 

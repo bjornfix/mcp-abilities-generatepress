@@ -3,7 +3,7 @@
  * Plugin Name: MCP Abilities - GeneratePress
  * Plugin URI: https://github.com/bjornfix/mcp-abilities-generatepress
  * Description: GeneratePress and GenerateBlocks abilities for MCP. Manage theme settings, elements, global styles, page meta, and caches.
- * Version: 1.1.41
+ * Version: 1.1.42
  * Author: basicus
  * Author URI: https://profiles.wordpress.org/basicus/
  * License: GPL-2.0+
@@ -7009,6 +7009,8 @@ function mcp_abilities_generatepress_register_abilities(): void {
 					),
 					'failed'  => array( 'type' => 'object' ),
 					'skipped' => array( 'type' => 'integer' ),
+					'rolled_back' => array( 'type' => 'boolean' ),
+					'restored' => array( 'type' => 'integer' ),
 					'message' => array( 'type' => 'string' ),
 				),
 			),
@@ -7033,28 +7035,113 @@ function mcp_abilities_generatepress_register_abilities(): void {
 				$delete_files = isset( $input['delete_files'] ) && (bool) $input['delete_files'];
 				$has_post_ids = isset( $input['post_ids'] ) && is_array( $input['post_ids'] ) && ! empty( $input['post_ids'] );
 				$post_ids     = $has_post_ids ? array_values( array_unique( array_filter( array_map( 'intval', $input['post_ids'] ) ) ) ) : null;
+				$warm         = isset( $input['warm'] ) ? (bool) $input['warm'] : ( $delete_files || $has_post_ids );
+				if ( $delete_files && null === $post_ids ) {
+					return array(
+						'success'      => false,
+						'deleted'      => 0,
+						'delete_files' => true,
+						'warmed'       => array(),
+						'failed'       => array( 'scope' => 'Destructive CSS refresh requires explicit post_ids.' ),
+						'skipped'      => 0,
+						'rolled_back'  => false,
+						'restored'     => 0,
+						'message'      => 'GenerateBlocks CSS refresh stopped before mutation because destructive global deletion is not supported.',
+					);
+				}
 				$known_posts  = get_option( 'generateblocks_dynamic_css_posts', array() );
 				$known_posts  = is_array( $known_posts ) ? $known_posts : array();
+				$registry_before = $known_posts;
+				$missing_option = new stdClass();
+				$css_version_before = get_option( 'generateblocks_css_version', $missing_option );
+				$css_time_before = get_option( 'generateblocks_dynamic_css_time', $missing_option );
 				$known_ids    = array_values( array_unique( array_filter( array_map( 'intval', array_keys( $known_posts ) ) ) ) );
 				$discovered_ids = mcp_abilities_generatepress_discover_generateblocks_post_ids();
 				$global_ids   = array_values( array_unique( array_merge( $known_ids, $discovered_ids ) ) );
 				sort( $global_ids );
-
-				if ( $delete_files && is_dir( $css_dir ) ) {
-					$files = array();
-					if ( null !== $post_ids ) {
-						foreach ( $post_ids as $post_id ) {
-							$files[] = mcp_abilities_generatepress_generateblocks_css_path( $post_id );
-						}
-					} else {
-						$files = glob( $css_dir . '*.css' );
+				$metadata_before = array();
+				$rollback_ids    = null === $post_ids ? $global_ids : $post_ids;
+				if ( $warm ) {
+					foreach ( $rollback_ids as $post_id ) {
+						$metadata_before[ $post_id ] = array(
+							'exists' => metadata_exists( 'post', $post_id, '_generateblocks_dynamic_css_version' ),
+							'value'  => get_post_meta( $post_id, '_generateblocks_dynamic_css_version', true ),
+						);
 					}
+				}
+				$files        = array();
+				$file_backups = array();
+				$filesystem   = null;
 
-					if ( $files ) {
-						foreach ( $files as $file ) {
-							if ( is_string( $file ) && file_exists( $file ) && wp_delete_file( $file ) ) {
-								$deleted++;
+				if ( $delete_files ) {
+					$filesystem = generateblocks_get_wp_filesystem();
+					if ( ! $filesystem ) {
+						return array(
+							'success'      => false,
+							'deleted'      => 0,
+							'delete_files' => true,
+							'warmed'       => array(),
+							'failed'       => array( 'filesystem' => 'WordPress filesystem is unavailable.' ),
+							'skipped'      => 0,
+							'rolled_back'  => false,
+							'restored'     => 0,
+							'message'      => 'GenerateBlocks CSS refresh stopped before deletion because the WordPress filesystem is unavailable.',
+						);
+					}
+					foreach ( $rollback_ids as $post_id ) {
+						$files[] = mcp_abilities_generatepress_generateblocks_css_path( $post_id );
+					}
+					foreach ( $files as $file ) {
+						$file_backups[ $file ] = null;
+						if ( ! file_exists( $file ) ) {
+							continue;
+						}
+						$prior_content = $filesystem->get_contents( $file );
+						if ( false === $prior_content ) {
+							return array(
+								'success'      => false,
+								'deleted'      => 0,
+								'delete_files' => true,
+								'warmed'       => array(),
+								'failed'       => array( 'snapshot' => 'An existing CSS file could not be read safely.' ),
+								'skipped'      => 0,
+								'rolled_back'  => false,
+								'restored'     => 0,
+								'message'      => 'GenerateBlocks CSS refresh stopped before deletion because a prior file could not be snapshotted.',
+							);
+						}
+						$file_backups[ $file ] = $prior_content;
+					}
+					foreach ( $files as $file ) {
+						if ( file_exists( $file ) && ! wp_delete_file( $file ) ) {
+							$delete_rollback_ok = true;
+							$delete_restored    = 0;
+							foreach ( $file_backups as $restore_file => $prior_content ) {
+								if ( is_string( $prior_content ) ) {
+									$put_ok = $filesystem->put_contents( $restore_file, $prior_content, defined( 'FS_CHMOD_FILE' ) ? FS_CHMOD_FILE : 0644 );
+									$exact_restore = $put_ok && $prior_content === $filesystem->get_contents( $restore_file );
+									$delete_rollback_ok = $exact_restore && $delete_rollback_ok;
+									if ( $exact_restore ) {
+										$delete_restored++;
+									}
+								}
 							}
+							return array(
+								'success'      => false,
+								'deleted'      => $deleted,
+								'delete_files' => true,
+								'warmed'       => array(),
+								'failed'       => array( 'delete' => 'A CSS file could not be deleted safely.' ),
+								'skipped'      => 0,
+								'rolled_back'  => $delete_rollback_ok,
+								'restored'     => $delete_restored,
+								'message'      => $delete_rollback_ok
+									? 'GenerateBlocks CSS refresh stopped because deletion failed; prior files were restored.'
+									: 'GenerateBlocks CSS refresh stopped because deletion failed and rollback was incomplete.',
+							);
+						}
+						if ( isset( $file_backups[ $file ] ) ) {
+							$deleted++;
 						}
 					}
 				}
@@ -7065,7 +7152,14 @@ function mcp_abilities_generatepress_register_abilities(): void {
 				if ( null !== $post_ids ) {
 					foreach ( $post_ids as $post_id ) {
 						unset( $known_posts[ $post_id ], $known_posts[ (string) $post_id ] );
-						delete_post_meta( $post_id, '_generateblocks_dynamic_css_version' );
+						if (
+							defined( 'GENERATEBLOCKS_VERSION' )
+							&& false !== strpos( (string) get_post_field( 'post_content', $post_id, 'raw' ), '<!-- wp:generateblocks/' )
+						) {
+							update_post_meta( $post_id, '_generateblocks_dynamic_css_version', sanitize_text_field( GENERATEBLOCKS_VERSION ) );
+						} else {
+							delete_post_meta( $post_id, '_generateblocks_dynamic_css_version' );
+						}
 					}
 					update_option( 'generateblocks_dynamic_css_posts', $known_posts );
 				} else {
@@ -7078,21 +7172,76 @@ function mcp_abilities_generatepress_register_abilities(): void {
 					'failed'  => array(),
 					'skipped' => 0,
 				);
-				$warm         = isset( $input['warm'] ) ? (bool) $input['warm'] : ( $delete_files || $has_post_ids );
-
 				if ( $warm ) {
 					$limit       = isset( $input['limit'] ) ? max( 1, min( 500, (int) $input['limit'] ) ) : 100;
 					$warm_result = mcp_abilities_generatepress_warm_generateblocks_css( null === $post_ids ? $global_ids : $post_ids, $limit );
 				}
+				$refresh_failed = $warm && ( ! empty( $warm_result['failed'] ) || 0 < $warm_result['skipped'] );
+				$rolled_back    = false;
+				$restored       = 0;
+				if ( $refresh_failed ) {
+					update_option( 'generateblocks_dynamic_css_posts', $registry_before );
+					$rollback_ok = $registry_before === get_option( 'generateblocks_dynamic_css_posts', array() );
+					if ( $css_version_before === $missing_option ) {
+						delete_option( 'generateblocks_css_version' );
+						$rollback_ok = $missing_option === get_option( 'generateblocks_css_version', $missing_option ) && $rollback_ok;
+					} else {
+						update_option( 'generateblocks_css_version', $css_version_before );
+						$rollback_ok = $css_version_before === get_option( 'generateblocks_css_version', $missing_option ) && $rollback_ok;
+					}
+					if ( $css_time_before === $missing_option ) {
+						delete_option( 'generateblocks_dynamic_css_time' );
+						$rollback_ok = $missing_option === get_option( 'generateblocks_dynamic_css_time', $missing_option ) && $rollback_ok;
+					} else {
+						update_option( 'generateblocks_dynamic_css_time', $css_time_before );
+						$rollback_ok = $css_time_before === get_option( 'generateblocks_dynamic_css_time', $missing_option ) && $rollback_ok;
+					}
+					foreach ( $metadata_before as $post_id => $prior_meta ) {
+						if ( ! empty( $prior_meta['exists'] ) ) {
+							update_post_meta( $post_id, '_generateblocks_dynamic_css_version', $prior_meta['value'] );
+							$rollback_ok = metadata_exists( 'post', $post_id, '_generateblocks_dynamic_css_version' )
+								&& $prior_meta['value'] === get_post_meta( $post_id, '_generateblocks_dynamic_css_version', true )
+								&& $rollback_ok;
+						} else {
+							delete_post_meta( $post_id, '_generateblocks_dynamic_css_version' );
+							$rollback_ok = ! metadata_exists( 'post', $post_id, '_generateblocks_dynamic_css_version' ) && $rollback_ok;
+						}
+					}
+					if ( $delete_files && $file_backups ) {
+						$filesystem = $filesystem ?: generateblocks_get_wp_filesystem();
+						foreach ( $file_backups as $file => $prior_content ) {
+							if ( null === $prior_content || false === $prior_content ) {
+								if ( file_exists( $file ) && ! wp_delete_file( $file ) ) {
+									$rollback_ok = false;
+								}
+								$rollback_ok = ! file_exists( $file ) && $rollback_ok;
+								continue;
+							}
+							$put_ok = $filesystem && $filesystem->put_contents( $file, $prior_content, defined( 'FS_CHMOD_FILE' ) ? FS_CHMOD_FILE : 0644 );
+							if ( ! $put_ok || $prior_content !== $filesystem->get_contents( $file ) ) {
+								$rollback_ok = false;
+							} else {
+								$restored++;
+							}
+						}
+					}
+					$rolled_back = $rollback_ok;
+				}
 
 				return array(
-					'success' => true,
+					'success' => ! $refresh_failed,
 					'deleted' => $deleted,
 					'delete_files' => $delete_files,
 					'warmed'  => $warm_result['warmed'],
 					'failed'  => $warm_result['failed'],
 					'skipped' => $warm_result['skipped'],
-					'message' => $warm
+					'rolled_back' => $rolled_back,
+					'restored' => $restored,
+					'message' => $refresh_failed
+						? ( $rolled_back
+							? 'GenerateBlocks CSS refresh failed and the prior cache state was restored.'
+							: 'GenerateBlocks CSS refresh failed and rollback was incomplete.' )
+						: ( $warm
 						? sprintf(
 							'Cleared GenerateBlocks CSS metadata; %1$d file(s) deleted; warmed %2$d post(s); %3$d failed; %4$d skipped.',
 							$deleted,
@@ -7102,7 +7251,7 @@ function mcp_abilities_generatepress_register_abilities(): void {
 						)
 						: ( $delete_files
 							? "Cleared GenerateBlocks CSS metadata and deleted {$deleted} CSS file(s)."
-							: 'Cleared GenerateBlocks CSS metadata; existing CSS files were preserved.' ),
+							: 'Cleared GenerateBlocks CSS metadata; existing CSS files were preserved.' ) ),
 				);
 			},
 			'permission_callback' => function (): bool {

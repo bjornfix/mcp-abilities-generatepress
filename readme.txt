@@ -3,7 +3,7 @@ Contributors: basicus
 Tags: mcp, generatepress, theme, ai, automation
 Requires at least: 6.9
 Tested up to: 7.0
-Stable tag: 1.1.41
+Stable tag: 1.1.42
 Requires PHP: 8.0
 License: GPLv2 or later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
@@ -47,6 +47,10 @@ Part of the MCP Expose Abilities ecosystem.
 4. Activate the plugin
 
 == Changelog ==
+
+= 1.1.42 =
+* Fixed: targeted GenerateBlocks CSS refreshes preserve the upstream regeneration marker, fail closed, and restore prior files, registry state, and metadata when warming cannot complete; unsafe global destructive deletion is rejected before mutation.
+* Added: a versioned Grid Projection rollout invalidates regenerable CSS registry entries once when the native projection contract changes, so existing pages rebuild with the current geometry.
 
 = 1.1.41 =
 * Preserve equal and proportional visible GenerateBlocks grid widths by distributing each row's native gutter across its percentage columns at every responsive breakpoint.

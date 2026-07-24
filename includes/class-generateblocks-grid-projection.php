@@ -15,8 +15,12 @@ if ( ! defined( 'ABSPATH' ) ) {
  * Owns one reusable GenerateBlocks layout and generated-CSS lifecycle Interface.
  */
 final class MCP_Abilities_GeneratePress_GenerateBlocks_Grid_Projection {
+	/** Generated-CSS contract epoch; bump whenever projected native attrs change. */
+	public const CONTRACT_VERSION = '2';
+
 	/** Register the optional frontend, Workflow, and cache Adapters. */
 	public static function register(): void {
+		add_action( 'init', array( __CLASS__, 'rollout_generated_css_contract' ), 1 );
 		add_filter( 'generateblocks_css_print_method', array( __CLASS__, 'force_authoritative_request_content_inline_mode' ), 100 );
 		add_filter( 'generateblocks_do_content', array( __CLASS__, 'project_authoritative_request_content' ), 5 );
 		add_filter( 'generateblocks_do_content', array( __CLASS__, 'project_frontend_content' ), 30 );
@@ -24,6 +28,35 @@ final class MCP_Abilities_GeneratePress_GenerateBlocks_Grid_Projection {
 		add_filter( 'devenia_workflow_project_block_layout', array( __CLASS__, 'project_workflow_layout' ), 10, 4 );
 		add_action( 'devenia_workflow_source_design_reprojected', array( __CLASS__, 'invalidate_reprojected_post_css' ) );
 		add_action( 'save_post', array( __CLASS__, 'mark_saved_post_for_css_regeneration' ), 100, 1 );
+	}
+
+	/** Invalidate regenerable CSS once when the active projection contract changes. */
+	public static function rollout_generated_css_contract(): void {
+		if ( ! self::enabled() ) {
+			return;
+		}
+
+		$option_name = 'mcp_generatepress_grid_projection_contract_version';
+		if ( self::CONTRACT_VERSION === (string) get_option( $option_name, '' ) ) {
+			return;
+		}
+
+		$registry_before = get_option( 'generateblocks_dynamic_css_posts', array() );
+		$time_before     = get_option( 'generateblocks_dynamic_css_time', 0 );
+		update_option( 'generateblocks_dynamic_css_posts', array() );
+		update_option( 'generateblocks_dynamic_css_time', 0 );
+		if (
+			array() === get_option( 'generateblocks_dynamic_css_posts', null )
+			&& 0 === (int) get_option( 'generateblocks_dynamic_css_time', -1 )
+		) {
+			update_option( $option_name, self::CONTRACT_VERSION );
+			if ( self::CONTRACT_VERSION === (string) get_option( $option_name, '' ) ) {
+				return;
+			}
+		}
+
+		update_option( 'generateblocks_dynamic_css_posts', $registry_before );
+		update_option( 'generateblocks_dynamic_css_time', $time_before );
 	}
 
 	/** Whether the installed site presentation owner activates this global policy. */
