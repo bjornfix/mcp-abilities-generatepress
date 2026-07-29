@@ -302,7 +302,7 @@ $assert(
 	'Overlong source card summary passed the Artifact policy.'
 );
 $assert(
-	true === (bool) ( MCP_Abilities_GeneratePress_GenerateBlocks_Card_Projection::validate_card_summary_contract( 'Useful source.', 'Nyttig sammendrag.', 120 )['success'] ?? false ),
+	true === (bool) ( MCP_Abilities_GeneratePress_GenerateBlocks_Card_Projection::validate_card_summary_contract( 'Useful source.', 'Résumé utile.', 120 )['success'] ?? false ),
 	'Bounded explicit source and target summaries were rejected.'
 );
 $assert(
