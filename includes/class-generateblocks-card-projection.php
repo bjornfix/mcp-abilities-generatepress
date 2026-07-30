@@ -15,6 +15,9 @@ if ( ! defined( 'ABSPATH' ) ) {
  * Owns the reusable contract between native Query cards and localized copy.
  */
 final class MCP_Abilities_GeneratePress_GenerateBlocks_Card_Projection {
+	private const ARTIFACT_SOURCE_REWRITE = 'source_rewrite';
+	private const ARTIFACT_TRANSLATION    = 'translation';
+
 	/** Register the GenerateBlocks runtime and Workflow projection Adapters. */
 	public static function register(): void {
 		add_filter( 'generateblocks_dynamic_tag_replacement', array( __CLASS__, 'filter_dynamic_tag_replacement' ), 20, 2 );
@@ -22,6 +25,7 @@ final class MCP_Abilities_GeneratePress_GenerateBlocks_Card_Projection {
 		add_filter( 'devenia_workflow_structured_text_attr_fragments', array( __CLASS__, 'structured_attr_fragments' ), 10, 3 );
 		add_filter( 'devenia_workflow_project_translatable_block_html_fragment', array( __CLASS__, 'project_workflow_html_fragment' ), 10, 4 );
 		add_filter( 'devenia_workflow_validate_localized_fragment_value', array( __CLASS__, 'validate_localized_fragment_value' ), 10, 4 );
+		add_filter( 'devenia_workflow_source_rewrite_artifact_policy', array( __CLASS__, 'validate_source_rewrite_artifact' ), 10, 4 );
 		add_filter( 'devenia_workflow_translation_job_artifact_policy', array( __CLASS__, 'validate_translation_artifact' ), 10, 4 );
 		add_filter( 'devenia_workflow_dynamic_inventory_contracts', array( __CLASS__, 'dynamic_inventory_contracts' ), 10, 2 );
 		add_filter( 'devenia_workflow_validate_dynamic_inventory', array( __CLASS__, 'validate_dynamic_inventory' ), 10, 4 );
@@ -210,6 +214,37 @@ final class MCP_Abilities_GeneratePress_GenerateBlocks_Card_Projection {
 	 */
 	public static function validate_translation_artifact( array $result, $source, array $artifact, array $job ): array {
 		unset( $job );
+		return self::validate_artifact_summaries( $result, $source, $artifact, self::ARTIFACT_TRANSLATION );
+	}
+
+	/**
+	 * Require the proposed source summary to satisfy the same declared Query
+	 * card contract before Source Rewrite creates an immutable review candidate.
+	 *
+	 * @param array<string,mixed> $result Existing policy result.
+	 * @param mixed               $source Source post.
+	 * @param array<string,mixed> $artifact Proposed source values.
+	 * @param array<string,mixed> $job Source Rewrite Job.
+	 * @return array<string,mixed>
+	 */
+	public static function validate_source_rewrite_artifact( array $result, $source, array $artifact, array $job ): array {
+		unset( $job );
+		return self::validate_artifact_summaries( $result, $source, $artifact, self::ARTIFACT_SOURCE_REWRITE );
+	}
+
+	/**
+	 * Validate summaries against every applicable parent Query card contract.
+	 *
+	 * Translation validates both the stored source and localized summary. Source
+	 * Rewrite validates only its proposed replacement, so it can repair a stale
+	 * or overlong current summary.
+	 *
+	 * @param array<string,mixed> $result Existing policy result.
+	 * @param mixed               $source Source post.
+	 * @param array<string,mixed> $artifact Proposed source or translation values.
+	 * @return array<string,mixed>
+	 */
+	private static function validate_artifact_summaries( array $result, $source, array $artifact, string $artifact_kind ): array {
 		if ( empty( $result['success'] ) || ! is_object( $source ) ) {
 			return $result;
 		}
@@ -240,17 +275,30 @@ final class MCP_Abilities_GeneratePress_GenerateBlocks_Card_Projection {
 			if ( empty( $contract['valid'] ) ) {
 				return array( 'success' => false, 'code' => 'card_query_contract_invalid', 'issues' => (array) ( $contract['issues'] ?? array() ) );
 			}
-			$summary = self::validate_card_summary_contract(
-				(string) ( $source->post_excerpt ?? '' ),
-				(string) ( $artifact['excerpt'] ?? '' ),
-				(int) $contract['max_characters']
-			);
+			$summary = self::ARTIFACT_TRANSLATION === $artifact_kind
+				? self::validate_card_summary_contract(
+					(string) ( $source->post_excerpt ?? '' ),
+					(string) ( $artifact['excerpt'] ?? '' ),
+					(int) $contract['max_characters']
+				)
+				: self::validate_source_summary_contract(
+					(string) ( $artifact['excerpt'] ?? '' ),
+					(int) $contract['max_characters']
+				);
 			if ( empty( $summary['success'] ) ) {
 				return $summary;
 			}
 		}
 
 		return $result;
+	}
+
+	/** @return array<string,mixed> */
+	private static function validate_source_summary_contract( string $source_excerpt, int $max_characters ): array {
+		$issues = self::validate_one_summary( $source_excerpt, 'source', max( 1, $max_characters ) );
+		return $issues
+			? array( 'success' => false, 'code' => 'card_summary_contract_invalid', 'issues' => $issues )
+			: array( 'success' => true );
 	}
 
 	/**

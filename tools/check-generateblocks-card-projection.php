@@ -293,6 +293,20 @@ $product_policy = MCP_Abilities_GeneratePress_GenerateBlocks_Card_Projection::va
 	array()
 );
 $assert( false === (bool) ( $product_policy['success'] ?? true ), 'Product child summary was validated against the unrelated page inventory bound.' );
+$source_rewrite_product_policy = MCP_Abilities_GeneratePress_GenerateBlocks_Card_Projection::validate_source_rewrite_artifact(
+	array( 'success' => true ),
+	$GLOBALS['mcp_card_projection_posts'][101],
+	array( 'excerpt' => str_repeat( 'z', 90 ) ),
+	array()
+);
+$assert( true === (bool) ( $source_rewrite_product_policy['success'] ?? false ), 'A Source Rewrite that repairs an overlong current summary was rejected against the stale current excerpt.' );
+$overlong_source_rewrite_product_policy = MCP_Abilities_GeneratePress_GenerateBlocks_Card_Projection::validate_source_rewrite_artifact(
+	array( 'success' => true ),
+	$GLOBALS['mcp_card_projection_posts'][101],
+	array( 'excerpt' => str_repeat( 'z', 101 ) ),
+	array()
+);
+$assert( false === (bool) ( $overlong_source_rewrite_product_policy['success'] ?? true ), 'An overlong Source Rewrite summary reached immutable review.' );
 $assert(
 	false === (bool) ( MCP_Abilities_GeneratePress_GenerateBlocks_Card_Projection::validate_card_summary_contract( 'Useful source.', '', 120 )['success'] ?? true ),
 	'Empty localized card summary passed the Artifact policy.'
