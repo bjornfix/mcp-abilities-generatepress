@@ -68,8 +68,8 @@ if (
 	|| 'core/post-featured-image' !== (string) ( $media['blockName'] ?? '' )
 	|| true !== (bool) ( $media['attrs']['isLink'] ?? false )
 	|| 'devenia-query-card-featured-image' !== (string) ( $media['attrs']['className'] ?? '' )
-	|| '1' !== (string) ( $media['attrs']['aspectRatio'] ?? '' )
-	|| 'contain' !== (string) ( $media['attrs']['scale'] ?? '' )
+	|| isset( $media['attrs']['aspectRatio'] )
+	|| isset( $media['attrs']['scale'] )
 ) {
 	fwrite( STDERR, "GenerateBlocks card runtime projection failed.\n" );
 	exit( 1 );

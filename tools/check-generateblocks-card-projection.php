@@ -104,8 +104,8 @@ $projected_card = MCP_Abilities_GeneratePress_GenerateBlocks_Card_Projection::pr
 $projected_content = $projected_card['innerBlocks'][0] ?? array();
 $assert( 'core/post-featured-image' === (string) ( $projected_content['innerBlocks'][0]['blockName'] ?? '' ), 'Complete Query card did not receive the reusable featured-image role.' );
 $assert( true === (bool) ( $projected_content['innerBlocks'][0]['attrs']['isLink'] ?? false ), 'Projected card image must link to the queried item.' );
-$assert( '1' === (string) ( $projected_content['innerBlocks'][0]['attrs']['aspectRatio'] ?? '' ), 'Projected card image must reserve one square slot.' );
-$assert( 'contain' === (string) ( $projected_content['innerBlocks'][0]['attrs']['scale'] ?? '' ), 'Projected card image must preserve the complete artwork.' );
+$assert( ! isset( $projected_content['innerBlocks'][0]['attrs']['aspectRatio'] ), 'Projected card image must not inherit the card height through an aspect-ratio slot.' );
+$assert( ! isset( $projected_content['innerBlocks'][0]['attrs']['scale'] ), 'Projected card image must keep its native square dimensions instead of forcing full flex height.' );
 $assert( 'devenia-query-card-featured-image' === (string) ( $projected_content['innerBlocks'][0]['attrs']['className'] ?? '' ), 'Projected card image must declare the reusable media-slot identity.' );
 $assert( array_key_exists( 1, $projected_content['innerContent'] ) && array_key_exists( 2, $projected_content['innerContent'] ) && null === $projected_content['innerContent'][1] && null === $projected_content['innerContent'][2], 'Projected image was not inserted inside the existing card wrapper before its first content child.' );
 $invalid_nested_link = '<figure class="wp-block-post-featured-image devenia-query-card-featured-image"><a href="https://example.com/plugin/"><a href="https://example.com/media.webp" class="foreign-wrapper"><img src="https://example.com/media-300x300.webp" alt=""></a></a></figure>';
