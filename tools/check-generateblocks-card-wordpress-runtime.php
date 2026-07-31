@@ -1,0 +1,61 @@
+<?php
+/** Run with: wp eval-file tools/check-generateblocks-card-wordpress-runtime.php */
+
+if ( ! defined( 'ABSPATH' ) ) {
+	exit( 1 );
+}
+
+$summary = array(
+	'blockName'    => 'generateblocks/text',
+	'attrs'        => array(
+		'htmlAttributes' => array(
+			'data-devenia-card-summary'     => 'explicit',
+			'data-devenia-card-summary-max' => '120',
+		),
+	),
+	'innerBlocks'  => array(),
+	'innerHTML'    => '<p>{{post_excerpt}}</p>',
+	'innerContent' => array( '<p>{{post_excerpt}}</p>' ),
+);
+$action = array(
+	'blockName'    => 'generateblocks/text',
+	'attrs'        => array(
+		'htmlAttributes' => array(
+			'href'                     => '{{post_permalink}}',
+			'aria-label'               => 'View {{post_title}} details',
+			'data-devenia-card-action' => 'plugin-details',
+		),
+	),
+	'innerBlocks'  => array(),
+	'innerHTML'    => '<a href="{{post_permalink}}">View details</a>',
+	'innerContent' => array( '<a href="{{post_permalink}}">View details</a>' ),
+);
+$content = array(
+	'blockName'    => 'generateblocks/element',
+	'attrs'        => array( 'tagName' => 'div' ),
+	'innerBlocks'  => array( $summary, $action ),
+	'innerHTML'    => '<div></div>',
+	'innerContent' => array( '<div>', null, null, '</div>' ),
+);
+$card = array(
+	'blockName'    => 'generateblocks/loop-item',
+	'attrs'        => array(),
+	'innerBlocks'  => array( $content ),
+	'innerHTML'    => '<div></div>',
+	'innerContent' => array( '<div>', null, '</div>' ),
+);
+
+$projected = apply_filters( 'render_block_data', $card, $card, null );
+$media     = $projected['innerBlocks'][0]['innerBlocks'][0] ?? array();
+if (
+	! class_exists( 'MCP_Abilities_GeneratePress_GenerateBlocks_Card_Projection' )
+	|| 'core/post-featured-image' !== (string) ( $media['blockName'] ?? '' )
+	|| true !== (bool) ( $media['attrs']['isLink'] ?? false )
+	|| '1' !== (string) ( $media['attrs']['aspectRatio'] ?? '' )
+	|| 'contain' !== (string) ( $media['attrs']['scale'] ?? '' )
+) {
+	fwrite( STDERR, "GenerateBlocks card runtime projection failed.\n" );
+	exit( 1 );
+}
+
+echo "GenerateBlocks card WordPress runtime: OK\n";

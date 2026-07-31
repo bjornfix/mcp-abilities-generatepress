@@ -20,6 +20,7 @@ final class MCP_Abilities_GeneratePress_GenerateBlocks_Card_Projection {
 
 	/** Register the GenerateBlocks runtime and Workflow projection Adapters. */
 	public static function register(): void {
+		add_filter( 'render_block_data', array( __CLASS__, 'project_rendered_card_media' ), 15, 3 );
 		add_filter( 'generateblocks_dynamic_tag_replacement', array( __CLASS__, 'filter_dynamic_tag_replacement' ), 20, 2 );
 		add_filter( 'devenia_workflow_translatable_block_html_fragments', array( __CLASS__, 'translatable_html_fragments' ), 10, 4 );
 		add_filter( 'devenia_workflow_structured_text_attr_fragments', array( __CLASS__, 'structured_attr_fragments' ), 10, 3 );
@@ -29,6 +30,128 @@ final class MCP_Abilities_GeneratePress_GenerateBlocks_Card_Projection {
 		add_filter( 'devenia_workflow_translation_job_artifact_policy', array( __CLASS__, 'validate_translation_artifact' ), 10, 4 );
 		add_filter( 'devenia_workflow_dynamic_inventory_contracts', array( __CLASS__, 'dynamic_inventory_contracts' ), 10, 2 );
 		add_filter( 'devenia_workflow_validate_dynamic_inventory', array( __CLASS__, 'validate_dynamic_inventory' ), 10, 4 );
+	}
+
+	/**
+	 * Add one native dynamic featured-image slot to every complete Query card.
+	 *
+	 * The card declares its semantic roles; this Adapter owns the reusable media
+	 * composition. No caller, page, post type, category, or language is special.
+	 *
+	 * @param array<string,mixed> $parsed_block Parsed render block.
+	 * @param array<string,mixed> $source_block Original parsed block.
+	 * @param mixed               $parent_block Parent render block.
+	 * @return array<string,mixed>
+	 * @since 1.1.44
+	 */
+	public static function project_rendered_card_media( array $parsed_block, array $source_block, $parent_block = null ): array {
+		unset( $source_block, $parent_block );
+		if ( 'generateblocks/loop-item' !== (string) ( $parsed_block['blockName'] ?? '' ) ) {
+			return $parsed_block;
+		}
+
+		return self::project_featured_image_into_card( $parsed_block );
+	}
+
+	/**
+	 * @param array<string,mixed> $block Parsed Query-card block.
+	 * @return array<string,mixed>
+	 * @since 1.1.44
+	 */
+	public static function project_featured_image_into_card( array $block ): array {
+		$target_path = self::deepest_complete_card_path( $block );
+		if ( null === $target_path || self::contains_featured_image( $block ) ) {
+			return $block;
+		}
+
+		$target =& $block;
+		foreach ( $target_path as $index ) {
+			$target =& $target['innerBlocks'][ $index ];
+		}
+		$target['innerBlocks'] = is_array( $target['innerBlocks'] ?? null ) ? $target['innerBlocks'] : array();
+		array_unshift( $target['innerBlocks'], self::featured_image_block() );
+		$target['innerContent'] = is_array( $target['innerContent'] ?? null ) ? $target['innerContent'] : array();
+		$first_child = array_search( null, $target['innerContent'], true );
+		if ( false === $first_child ) {
+			$target['innerContent'][] = null;
+		} else {
+			array_splice( $target['innerContent'], (int) $first_child, 0, array( null ) );
+		}
+		return $block;
+	}
+
+	/** @param array<string,mixed> $block @return array<int,int>|null */
+	private static function deepest_complete_card_path( array $block ): ?array {
+		$best = null;
+		$walk = static function ( array $candidate, array $path ) use ( &$walk, &$best ): void {
+			$summary = false;
+			$action  = false;
+			self::collect_card_projection_roles( array( $candidate ), $summary, $action );
+			if ( $summary && $action && ( null === $best || count( $path ) > count( $best ) ) ) {
+				$best = $path;
+			}
+			foreach ( (array) ( $candidate['innerBlocks'] ?? array() ) as $index => $child ) {
+				if ( is_array( $child ) ) {
+					$walk( $child, array_merge( $path, array( (int) $index ) ) );
+				}
+			}
+		};
+		$walk( $block, array() );
+		return $best;
+	}
+
+	private static function collect_card_projection_roles( array $blocks, bool &$summary, bool &$action ): void {
+		foreach ( $blocks as $block ) {
+			if ( ! is_array( $block ) ) {
+				continue;
+			}
+			$name  = (string) ( $block['blockName'] ?? '' );
+			$attrs = is_array( $block['attrs'] ?? null ) ? $block['attrs'] : array();
+			$html  = (string) ( $block['innerHTML'] ?? '' );
+			if ( self::is_role( $name, $attrs, 'data-devenia-card-summary', 'explicit' ) && false !== strpos( $html, '{{post_excerpt}}' ) ) {
+				$summary = true;
+			}
+			if (
+				self::is_role( $name, $attrs, 'data-devenia-card-action', 'plugin-details' )
+				&& '{{post_permalink}}' === (string) ( $attrs['htmlAttributes']['href'] ?? '' )
+				&& false !== strpos( (string) ( $attrs['htmlAttributes']['aria-label'] ?? '' ), '{{post_title}}' )
+				&& preg_match( '/<a\b[^>]*>(.*?)<\/a>/isu', $html, $matches )
+				&& self::is_plain_action_text( (string) ( $matches[1] ?? '' ) )
+			) {
+				$action = true;
+			}
+			self::collect_card_projection_roles( (array) ( $block['innerBlocks'] ?? array() ), $summary, $action );
+		}
+	}
+
+	/** @param array<string,mixed> $block */
+	private static function contains_featured_image( array $block ): bool {
+		if ( 'core/post-featured-image' === (string) ( $block['blockName'] ?? '' ) ) {
+			return true;
+		}
+		foreach ( (array) ( $block['innerBlocks'] ?? array() ) as $child ) {
+			if ( is_array( $child ) && self::contains_featured_image( $child ) ) {
+				return true;
+			}
+		}
+		return false;
+	}
+
+	/** @return array<string,mixed> */
+	private static function featured_image_block(): array {
+		return array(
+			'blockName'    => 'core/post-featured-image',
+			'attrs'        => array(
+				'isLink'      => true,
+				'aspectRatio' => '1',
+				'scale'       => 'contain',
+				'sizeSlug'    => 'medium',
+				'style'       => array( 'spacing' => array( 'margin' => array( 'top' => '0', 'bottom' => '1.25rem' ) ) ),
+			),
+			'innerBlocks'  => array(),
+			'innerHTML'    => '',
+			'innerContent' => array(),
+		);
 	}
 
 	/**

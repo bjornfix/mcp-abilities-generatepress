@@ -86,6 +86,39 @@ $card_template_block = array(
 $card_template_block_100 = $card_template_block;
 $card_template_block_100['innerBlocks'][0] = $summary_block_100;
 
+$projectable_content = array(
+	'blockName'    => 'generateblocks/element',
+	'attrs'        => array( 'tagName' => 'div' ),
+	'innerBlocks'  => array( $summary_block, $action_block ),
+	'innerHTML'    => '<div></div>',
+	'innerContent' => array( '<div>', null, "\n", null, '</div>' ),
+);
+$projectable_card = array(
+	'blockName'    => 'generateblocks/loop-item',
+	'attrs'        => array(),
+	'innerBlocks'  => array( $projectable_content ),
+	'innerHTML'    => '<div></div>',
+	'innerContent' => array( '<div>', null, '</div>' ),
+);
+$projected_card = MCP_Abilities_GeneratePress_GenerateBlocks_Card_Projection::project_featured_image_into_card( $projectable_card );
+$projected_content = $projected_card['innerBlocks'][0] ?? array();
+$assert( 'core/post-featured-image' === (string) ( $projected_content['innerBlocks'][0]['blockName'] ?? '' ), 'Complete Query card did not receive the reusable featured-image role.' );
+$assert( true === (bool) ( $projected_content['innerBlocks'][0]['attrs']['isLink'] ?? false ), 'Projected card image must link to the queried item.' );
+$assert( '1' === (string) ( $projected_content['innerBlocks'][0]['attrs']['aspectRatio'] ?? '' ), 'Projected card image must reserve one square slot.' );
+$assert( 'contain' === (string) ( $projected_content['innerBlocks'][0]['attrs']['scale'] ?? '' ), 'Projected card image must preserve the complete artwork.' );
+$assert( array_key_exists( 1, $projected_content['innerContent'] ) && array_key_exists( 2, $projected_content['innerContent'] ) && null === $projected_content['innerContent'][1] && null === $projected_content['innerContent'][2], 'Projected image was not inserted inside the existing card wrapper before its first content child.' );
+$projected_twice = MCP_Abilities_GeneratePress_GenerateBlocks_Card_Projection::project_featured_image_into_card( $projected_card );
+$featured_count = 0;
+$count_featured = static function ( array $block ) use ( &$count_featured, &$featured_count ): void {
+	if ( 'core/post-featured-image' === (string) ( $block['blockName'] ?? '' ) ) { ++$featured_count; }
+	foreach ( (array) ( $block['innerBlocks'] ?? array() ) as $child ) { if ( is_array( $child ) ) { $count_featured( $child ); } }
+};
+$count_featured( $projected_twice );
+$assert( 1 === $featured_count, 'Repeated Query card projection duplicated the featured-image role.' );
+$summary_only_card = $projectable_card;
+$summary_only_card['innerBlocks'][0]['innerBlocks'] = array( $summary_block );
+$assert( $summary_only_card === MCP_Abilities_GeneratePress_GenerateBlocks_Card_Projection::project_featured_image_into_card( $summary_only_card ), 'Incomplete card roles unexpectedly triggered media projection.' );
+
 $fragments = MCP_Abilities_GeneratePress_GenerateBlocks_Card_Projection::translatable_html_fragments(
 	array(),
 	(string) $action_block['blockName'],

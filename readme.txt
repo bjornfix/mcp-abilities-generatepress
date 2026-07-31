@@ -3,7 +3,7 @@ Contributors: basicus
 Tags: mcp, generatepress, theme, ai, automation
 Requires at least: 6.9
 Tested up to: 7.0
-Stable tag: 1.1.43
+Stable tag: 1.1.44
 Requires PHP: 8.0
 License: GPLv2 or later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
@@ -36,6 +36,7 @@ This add-on plugin exposes GeneratePress theme settings, elements, and GenerateB
 * GenerateBlocks and GenerateBlocks Pro options (list/get/update for GB-owned option prefixes)
 * GenerateBlocks CSS cache control
 * One reusable, opt-in native GenerateBlocks grid projection shared by frontend rendering and translation publication
+* Reusable Query cards with one linked, square featured-image slot whenever the card declares its summary and action roles
 
 Part of the MCP Expose Abilities ecosystem.
 
@@ -47,6 +48,9 @@ Part of the MCP Expose Abilities ecosystem.
 4. Activate the plugin
 
 == Changelog ==
+
+= 1.1.44 =
+* Added a reusable native featured-image slot to complete GenerateBlocks Query cards, with square containment and no per-card setup.
 
 = 1.1.43 =
 * Apply declared GenerateBlocks Query card-summary limits to source improvements before review, while still allowing a new summary to repair an invalid existing one.
