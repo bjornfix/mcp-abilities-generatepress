@@ -46,11 +46,28 @@ final class MCP_Abilities_GeneratePress_GenerateBlocks_Card_Projection {
 	 */
 	public static function project_rendered_card_media( array $parsed_block, array $source_block, $parent_block = null ): array {
 		unset( $source_block, $parent_block );
-		if ( 'generateblocks/loop-item' !== (string) ( $parsed_block['blockName'] ?? '' ) ) {
+		$name = (string) ( $parsed_block['blockName'] ?? '' );
+		if ( 'generateblocks/loop-item' === $name ) {
+			return self::project_featured_image_into_card( $parsed_block );
+		}
+		if ( 'generateblocks/query' !== $name ) {
 			return $parsed_block;
 		}
 
-		return self::project_featured_image_into_card( $parsed_block );
+		return self::project_query_card_media( $parsed_block );
+	}
+
+	/** Project nested cards before GenerateBlocks renders its Query subtree directly. */
+	private static function project_query_card_media( array $block ): array {
+		foreach ( (array) ( $block['innerBlocks'] ?? array() ) as $index => $child ) {
+			if ( ! is_array( $child ) ) {
+				continue;
+			}
+			$block['innerBlocks'][ $index ] = 'generateblocks/loop-item' === (string) ( $child['blockName'] ?? '' )
+				? self::project_featured_image_into_card( $child )
+				: self::project_query_card_media( $child );
+		}
+		return $block;
 	}
 
 	/**

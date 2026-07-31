@@ -45,8 +45,24 @@ $card = array(
 	'innerContent' => array( '<div>', null, '</div>' ),
 );
 
-$projected = apply_filters( 'render_block_data', $card, $card, null );
-$media     = $projected['innerBlocks'][0]['innerBlocks'][0] ?? array();
+$query = array(
+	'blockName'    => 'generateblocks/query',
+	'attrs'        => array(),
+	'innerBlocks'  => array(
+		array(
+			'blockName'    => 'generateblocks/looper',
+			'attrs'        => array(),
+			'innerBlocks'  => array( $card ),
+			'innerHTML'    => '<div></div>',
+			'innerContent' => array( '<div>', null, '</div>' ),
+		),
+	),
+	'innerHTML'    => '<section></section>',
+	'innerContent' => array( '<section>', null, '</section>' ),
+);
+
+$projected = apply_filters( 'render_block_data', $query, $query, null );
+$media     = $projected['innerBlocks'][0]['innerBlocks'][0]['innerBlocks'][0]['innerBlocks'][0] ?? array();
 if (
 	! class_exists( 'MCP_Abilities_GeneratePress_GenerateBlocks_Card_Projection' )
 	|| 'core/post-featured-image' !== (string) ( $media['blockName'] ?? '' )
