@@ -21,6 +21,7 @@ final class MCP_Abilities_GeneratePress_GenerateBlocks_Card_Projection {
 	/** Register the GenerateBlocks runtime and Workflow projection Adapters. */
 	public static function register(): void {
 		add_filter( 'render_block_data', array( __CLASS__, 'project_rendered_card_media' ), 15, 3 );
+		add_filter( 'render_block_core/post-featured-image', array( __CLASS__, 'normalize_projected_media_link' ), 20, 2 );
 		add_filter( 'generateblocks_dynamic_tag_replacement', array( __CLASS__, 'filter_dynamic_tag_replacement' ), 20, 2 );
 		add_filter( 'devenia_workflow_translatable_block_html_fragments', array( __CLASS__, 'translatable_html_fragments' ), 10, 4 );
 		add_filter( 'devenia_workflow_structured_text_attr_fragments', array( __CLASS__, 'structured_attr_fragments' ), 10, 3 );
@@ -160,6 +161,7 @@ final class MCP_Abilities_GeneratePress_GenerateBlocks_Card_Projection {
 			'blockName'    => 'core/post-featured-image',
 			'attrs'        => array(
 				'isLink'      => true,
+				'className'   => 'devenia-query-card-featured-image',
 				'aspectRatio' => '1',
 				'scale'       => 'contain',
 				'sizeSlug'    => 'medium',
@@ -169,6 +171,35 @@ final class MCP_Abilities_GeneratePress_GenerateBlocks_Card_Projection {
 			'innerHTML'    => '',
 			'innerContent' => array(),
 		);
+	}
+
+	/**
+	 * Preserve the native queried-item link when another thumbnail filter wraps
+	 * the image in a competing link during a singular page's nested Query render.
+	 *
+	 * Nested anchors are invalid HTML and can move the image out of its reserved
+	 * square in the browser. Only the media slot projected by this Module is
+	 * normalized; ordinary featured-image blocks retain their existing behavior.
+	 *
+	 * @param string              $block_content Rendered featured-image markup.
+	 * @param array<string,mixed> $block Parsed featured-image block.
+	 * @return string
+	 * @since 1.1.46
+	 */
+	public static function normalize_projected_media_link( string $block_content, array $block ): string {
+		$attrs = is_array( $block['attrs'] ?? null ) ? $block['attrs'] : $block;
+		if ( 'devenia-query-card-featured-image' !== (string) ( $attrs['className'] ?? '' ) ) {
+			return $block_content;
+		}
+
+		$normalized = preg_replace(
+			'~(<figure\b[^>]*>\s*<a\b[^>]*>)\s*<a\b[^>]*>\s*(<img\b[^>]*>)\s*</a>\s*</a>~isu',
+			'$1$2</a>',
+			$block_content,
+			1
+		);
+
+		return is_string( $normalized ) ? $normalized : $block_content;
 	}
 
 	/**

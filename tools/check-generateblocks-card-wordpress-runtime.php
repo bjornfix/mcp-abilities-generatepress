@@ -67,6 +67,7 @@ if (
 	! class_exists( 'MCP_Abilities_GeneratePress_GenerateBlocks_Card_Projection' )
 	|| 'core/post-featured-image' !== (string) ( $media['blockName'] ?? '' )
 	|| true !== (bool) ( $media['attrs']['isLink'] ?? false )
+	|| 'devenia-query-card-featured-image' !== (string) ( $media['attrs']['className'] ?? '' )
 	|| '1' !== (string) ( $media['attrs']['aspectRatio'] ?? '' )
 	|| 'contain' !== (string) ( $media['attrs']['scale'] ?? '' )
 ) {

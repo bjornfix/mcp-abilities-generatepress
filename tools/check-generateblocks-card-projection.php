@@ -106,7 +106,15 @@ $assert( 'core/post-featured-image' === (string) ( $projected_content['innerBloc
 $assert( true === (bool) ( $projected_content['innerBlocks'][0]['attrs']['isLink'] ?? false ), 'Projected card image must link to the queried item.' );
 $assert( '1' === (string) ( $projected_content['innerBlocks'][0]['attrs']['aspectRatio'] ?? '' ), 'Projected card image must reserve one square slot.' );
 $assert( 'contain' === (string) ( $projected_content['innerBlocks'][0]['attrs']['scale'] ?? '' ), 'Projected card image must preserve the complete artwork.' );
+$assert( 'devenia-query-card-featured-image' === (string) ( $projected_content['innerBlocks'][0]['attrs']['className'] ?? '' ), 'Projected card image must declare the reusable media-slot identity.' );
 $assert( array_key_exists( 1, $projected_content['innerContent'] ) && array_key_exists( 2, $projected_content['innerContent'] ) && null === $projected_content['innerContent'][1] && null === $projected_content['innerContent'][2], 'Projected image was not inserted inside the existing card wrapper before its first content child.' );
+$invalid_nested_link = '<figure class="wp-block-post-featured-image devenia-query-card-featured-image"><a href="https://example.com/plugin/"><a href="https://example.com/media.webp" class="foreign-wrapper"><img src="https://example.com/media-300x300.webp" alt=""></a></a></figure>';
+$normalized_link     = MCP_Abilities_GeneratePress_GenerateBlocks_Card_Projection::normalize_projected_media_link( $invalid_nested_link, array( 'className' => 'devenia-query-card-featured-image' ) );
+$assert( 1 === substr_count( $normalized_link, '<a ' ), 'Projected media retained nested links.' );
+$assert( false !== strpos( $normalized_link, 'href="https://example.com/plugin/"' ), 'Projected media lost the queried-item destination.' );
+$assert( false === strpos( $normalized_link, 'href="https://example.com/media.webp"' ), 'Projected media retained the competing attachment destination.' );
+$assert( false !== strpos( $normalized_link, '<img src="https://example.com/media-300x300.webp"' ), 'Projected media lost the image while normalizing its link.' );
+$assert( '<figure><a href="https://example.com/plugin/"><img></a></figure>' === MCP_Abilities_GeneratePress_GenerateBlocks_Card_Projection::normalize_projected_media_link( '<figure><a href="https://example.com/plugin/"><img></a></figure>', array() ), 'Unowned featured-image markup was changed.' );
 $projected_twice = MCP_Abilities_GeneratePress_GenerateBlocks_Card_Projection::project_featured_image_into_card( $projected_card );
 $featured_count = 0;
 $count_featured = static function ( array $block ) use ( &$count_featured, &$featured_count ): void {
