@@ -350,6 +350,10 @@ Use this ability for site-wide design decisions instead of page/block-level styl
 
 ## Changelog
 
+### 1.1.52
+
+- Targeted GenerateBlocks cache invalidation now touches only the requested posts and no longer scans unrelated published content.
+
 ### 1.1.51
 
 - Add native Content Template and other GeneratePress Block Element subtypes to the reusable Element Interface.

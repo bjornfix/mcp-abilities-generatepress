@@ -3,7 +3,7 @@
  * Plugin Name: MCP Abilities - GeneratePress
  * Plugin URI: https://github.com/bjornfix/mcp-abilities-generatepress
  * Description: GeneratePress and GenerateBlocks abilities for MCP. Manage theme settings, elements, global styles, page meta, and caches.
- * Version: 1.1.51
+ * Version: 1.1.52
  * Author: basicus
  * Author URI: https://profiles.wordpress.org/basicus/
  * License: GPL-2.0+
@@ -7066,9 +7066,12 @@ function mcp_abilities_generatepress_register_abilities(): void {
 				$missing_option = new stdClass();
 				$css_version_before = get_option( 'generateblocks_css_version', $missing_option );
 				$css_time_before = get_option( 'generateblocks_dynamic_css_time', $missing_option );
-				$known_ids    = array_values( array_unique( array_filter( array_map( 'intval', array_keys( $known_posts ) ) ) ) );
-				$discovered_ids = mcp_abilities_generatepress_discover_generateblocks_post_ids();
-				$global_ids   = array_values( array_unique( array_merge( $known_ids, $discovered_ids ) ) );
+				$global_ids   = array();
+				if ( null === $post_ids ) {
+					$known_ids      = array_values( array_unique( array_filter( array_map( 'intval', array_keys( $known_posts ) ) ) ) );
+					$discovered_ids = mcp_abilities_generatepress_discover_generateblocks_post_ids();
+					$global_ids     = array_values( array_unique( array_merge( $known_ids, $discovered_ids ) ) );
+				}
 				sort( $global_ids );
 				$metadata_before = array();
 				$rollback_ids    = null === $post_ids ? $global_ids : $post_ids;

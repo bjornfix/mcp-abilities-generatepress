@@ -45,6 +45,17 @@ for (const invariant of [
   }
 }
 
+const targetedScope = clearImplementation.indexOf('if ( null === $post_ids )');
+const globalDiscovery = clearImplementation.indexOf('mcp_abilities_generatepress_discover_generateblocks_post_ids()', targetedScope);
+const globalScopeEnd = clearImplementation.indexOf('\n\t\t\t\t}', globalDiscovery);
+if (targetedScope < 0 || globalDiscovery < targetedScope || globalScopeEnd < globalDiscovery) {
+  throw new Error('Authoritative full-content discovery is not scoped exclusively to global invalidation.');
+}
+const beforeGlobalScope = clearImplementation.slice(0, targetedScope);
+if (beforeGlobalScope.includes('mcp_abilities_generatepress_discover_generateblocks_post_ids()')) {
+  throw new Error('Targeted invalidation still performs an unbounded published-content scan.');
+}
+
 if (!php.includes("false !== strpos( (string) get_post_field( 'post_content', $post_id, 'raw' ), '<!-- wp:generateblocks/' )")) {
   throw new Error('Global cache warming does not recover its authoritative post set from published WordPress content.');
 }
