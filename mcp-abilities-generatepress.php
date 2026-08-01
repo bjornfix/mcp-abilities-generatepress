@@ -3,7 +3,7 @@
  * Plugin Name: MCP Abilities - GeneratePress
  * Plugin URI: https://github.com/bjornfix/mcp-abilities-generatepress
  * Description: GeneratePress and GenerateBlocks abilities for MCP. Manage theme settings, elements, global styles, page meta, and caches.
- * Version: 1.1.50
+ * Version: 1.1.51
  * Author: basicus
  * Author URI: https://profiles.wordpress.org/basicus/
  * License: GPL-2.0+
@@ -185,15 +185,20 @@ function mcp_abilities_generatepress_upsert_block_element( array $input ): array
 	$title              = sanitize_text_field( (string) ( $input['title'] ?? '' ) );
 	$slug               = sanitize_title( (string) ( $input['slug'] ?? '' ) );
 	$content            = (string) ( $input['content'] ?? '' );
-	$hook               = sanitize_text_field( (string) ( $input['hook'] ?? 'generate_after_header' ) );
+	$block_type         = sanitize_key( (string) ( $input['block_type'] ?? '' ) );
+	$hook               = sanitize_text_field( (string) ( $input['hook'] ?? '' ) );
 	$status             = sanitize_key( (string) ( $input['status'] ?? 'publish' ) );
 	$priority           = (int) ( $input['priority'] ?? 10 );
 	$display_conditions = is_array( $input['display_conditions'] ?? null ) ? array_values( $input['display_conditions'] ) : array();
 	$exclude_conditions = is_array( $input['exclude_conditions'] ?? null ) ? array_values( $input['exclude_conditions'] ) : array();
 	$user_conditions    = is_array( $input['user_conditions'] ?? null ) ? array_values( $input['user_conditions'] ) : array();
 
-	if ( '' === $title || '' === $slug || '' === trim( $content ) || '' === $hook || empty( $display_conditions ) ) {
-		return array( 'success' => false, 'message' => 'title, slug, content, hook, and display_conditions are required.' );
+	$block_types = array( 'hook', 'content-template', 'loop-template', 'post-meta-template', 'post-navigation-template', 'archive-navigation-template', 'site-header', 'site-footer', 'right-sidebar', 'left-sidebar', 'search-modal' );
+	if ( '' === $title || '' === $slug || '' === trim( $content ) || ! in_array( $block_type, $block_types, true ) || empty( $display_conditions ) ) {
+		return array( 'success' => false, 'message' => 'title, slug, content, a supported block_type, and display_conditions are required.' );
+	}
+	if ( 'hook' === $block_type && '' === $hook ) {
+		return array( 'success' => false, 'message' => 'hook is required when block_type is hook.' );
 	}
 	if ( ! in_array( $status, array( 'publish', 'draft' ), true ) ) {
 		return array( 'success' => false, 'message' => 'status must be publish or draft.' );
@@ -246,10 +251,27 @@ function mcp_abilities_generatepress_upsert_block_element( array $input ): array
 
 	update_post_meta( (int) $post_id, '_generate_element_type', 'block' );
 	update_post_meta( (int) $post_id, '_generate_element_content', $content );
-	update_post_meta( (int) $post_id, '_generate_block_type', 'hook' );
-	update_post_meta( (int) $post_id, '_generate_hook_type', 'hook' );
-	update_post_meta( (int) $post_id, '_generate_hook', $hook );
-	update_post_meta( (int) $post_id, '_generate_hook_priority', $priority );
+	update_post_meta( (int) $post_id, '_generate_block_type', $block_type );
+	if ( 'hook' === $block_type ) {
+		update_post_meta( (int) $post_id, '_generate_hook_type', 'hook' );
+		update_post_meta( (int) $post_id, '_generate_hook', $hook );
+		update_post_meta( (int) $post_id, '_generate_hook_priority', $priority );
+	} else {
+		delete_post_meta( (int) $post_id, '_generate_hook_type' );
+		delete_post_meta( (int) $post_id, '_generate_hook' );
+		delete_post_meta( (int) $post_id, '_generate_hook_priority' );
+	}
+	if ( 'content-template' === $block_type ) {
+		$tag_name = sanitize_key( (string) ( $input['post_loop_item_tagname'] ?? 'article' ) );
+		if ( ! in_array( $tag_name, array( 'article', 'main', 'section', 'div' ), true ) ) {
+			$tag_name = 'article';
+		}
+		update_post_meta( (int) $post_id, '_generate_use_theme_post_container', ! empty( $input['use_theme_post_container'] ) ? '1' : '' );
+		update_post_meta( (int) $post_id, '_generate_post_loop_item_tagname', $tag_name );
+	} else {
+		delete_post_meta( (int) $post_id, '_generate_use_theme_post_container' );
+		delete_post_meta( (int) $post_id, '_generate_post_loop_item_tagname' );
+	}
 	delete_post_meta( (int) $post_id, '_generate_hook_execute_php' );
 	update_post_meta( (int) $post_id, '_generate_element_display_conditions', $display_conditions );
 	update_post_meta( (int) $post_id, '_generate_element_exclude_conditions', $exclude_conditions );
@@ -261,6 +283,7 @@ function mcp_abilities_generatepress_upsert_block_element( array $input ): array
 		'success'            => true,
 		'id'                 => (int) $post_id,
 		'action'             => $action,
+		'block_type'         => $block_type,
 		'display_conditions' => $display_conditions,
 		'message'            => 'GeneratePress Block Element ' . $action . ' successfully.',
 	);
@@ -6401,7 +6424,7 @@ function mcp_abilities_generatepress_register_abilities(): void {
 			'category'            => 'site',
 			'input_schema'        => array(
 				'type'                 => 'object',
-				'required'             => array( 'title', 'slug', 'content', 'hook', 'display_conditions' ),
+				'required'             => array( 'title', 'slug', 'content', 'block_type', 'display_conditions' ),
 				'properties'           => array(
 					'title' => array(
 						'type'        => 'string',
@@ -6414,6 +6437,11 @@ function mcp_abilities_generatepress_register_abilities(): void {
 					'content' => array(
 						'type'        => 'string',
 						'description' => 'GenerateBlocks/Gutenberg block markup for the Element.',
+					),
+					'block_type' => array(
+						'type' => 'string',
+						'enum' => array( 'hook', 'content-template', 'loop-template', 'post-meta-template', 'post-navigation-template', 'archive-navigation-template', 'site-header', 'site-footer', 'right-sidebar', 'left-sidebar', 'search-modal' ),
+						'description' => 'Native GeneratePress Block Element subtype.',
 					),
 					'hook' => array(
 						'type'        => 'string',
@@ -6443,6 +6471,16 @@ function mcp_abilities_generatepress_register_abilities(): void {
 						'default'     => array(),
 						'description' => 'Exact native GeneratePress Element user conditions.',
 					),
+					'use_theme_post_container' => array(
+						'type' => 'boolean',
+						'default' => false,
+						'description' => 'Whether a content template keeps the GeneratePress inside-article container.',
+					),
+					'post_loop_item_tagname' => array(
+						'type' => 'string',
+						'default' => 'article',
+						'description' => 'Semantic wrapper tag for a content template.',
+					),
 				),
 				'additionalProperties' => false,
 			),
@@ -6452,6 +6490,7 @@ function mcp_abilities_generatepress_register_abilities(): void {
 					'success'            => array( 'type' => 'boolean' ),
 					'id'                 => array( 'type' => 'integer' ),
 					'action'             => array( 'type' => 'string' ),
+					'block_type'         => array( 'type' => 'string' ),
 					'display_conditions' => array( 'type' => 'array' ),
 					'message'            => array( 'type' => 'string' ),
 				),

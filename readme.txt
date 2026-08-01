@@ -3,7 +3,7 @@ Contributors: basicus
 Tags: mcp, generatepress, theme, ai, automation
 Requires at least: 6.9
 Tested up to: 7.0
-Stable tag: 1.1.50
+Stable tag: 1.1.51
 Requires PHP: 8.0
 License: GPLv2 or later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
@@ -48,6 +48,9 @@ Part of the MCP Expose Abilities ecosystem.
 4. Activate the plugin
 
 == Changelog ==
+
+= 1.1.51 =
+* Adds native Content Template and other GeneratePress Block Element subtypes to the reusable Element Interface.
 
 = 1.1.50 =
 * Replaced the archive-specific Element writer with one idempotent native Block Element Interface for exact GeneratePress display conditions.

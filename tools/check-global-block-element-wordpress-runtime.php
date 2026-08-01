@@ -6,7 +6,7 @@ if ( ! defined( 'ABSPATH' ) ) {
 }
 
 $current_user_before = get_current_user_id();
-$element_id          = 0;
+$element_ids         = array();
 $failures            = array();
 $administrators      = get_users( array( 'role' => 'administrator', 'number' => 1, 'fields' => 'ID' ) );
 if ( ! $administrators ) {
@@ -30,6 +30,7 @@ try {
 		'title'              => 'Temporary global Block Element',
 		'slug'               => $slug,
 		'content'            => $content,
+		'block_type'         => 'hook',
 		'hook'               => 'generate_after_header',
 		'priority'           => 10,
 		'status'             => 'draft',
@@ -40,6 +41,7 @@ try {
 		throw new RuntimeException( 'The public Interface did not create the native Block Element.' );
 	}
 	$element_id = (int) $created['id'];
+	$element_ids[] = $element_id;
 	$input['title'] = 'Updated global Block Element fixture';
 	$updated = $ability->execute( $input );
 	if ( empty( $updated['success'] ) || $element_id !== (int) ( $updated['id'] ?? 0 ) || 'updated' !== (string) ( $updated['action'] ?? '' ) ) {
@@ -58,11 +60,35 @@ try {
 			$failures[] = 'The native Element meta contract failed for ' . $key . '.';
 		}
 	}
+
+	$template_input = array(
+		'title' => 'Temporary universal Content Template',
+		'slug' => 'mcp-runtime-content-template-' . sanitize_key( wp_generate_uuid4() ),
+		'content' => '<!-- wp:generateblocks/container {"uniqueId":"mcpcontentruntime","isDynamic":true,"blockVersion":4} --><!-- wp:post-content /--><!-- /wp:generateblocks/container -->',
+		'block_type' => 'content-template',
+		'status' => 'draft',
+		'display_conditions' => array( array( 'rule' => 'post:page', 'object' => '0' ), array( 'rule' => 'general:front_page', 'object' => '0' ) ),
+		'use_theme_post_container' => false,
+		'post_loop_item_tagname' => 'main',
+	);
+	$template = $ability->execute( $template_input );
+	if ( empty( $template['success'] ) || 'content-template' !== (string) ( $template['block_type'] ?? '' ) ) {
+		throw new RuntimeException( 'The public Interface did not create a native Content Template.' );
+	}
+	$template_id = (int) $template['id'];
+	$element_ids[] = $template_id;
+	if (
+		'content-template' !== get_post_meta( $template_id, '_generate_block_type', true )
+		|| '' !== get_post_meta( $template_id, '_generate_hook', true )
+		|| 'main' !== get_post_meta( $template_id, '_generate_post_loop_item_tagname', true )
+	) {
+		$failures[] = 'The native Content Template metadata contract failed.';
+	}
 } catch ( Throwable $error ) {
 	$failures[] = $error->getMessage();
 } finally {
-	if ( $element_id > 0 ) {
-		wp_delete_post( $element_id, true );
+	foreach ( $element_ids as $element_id ) {
+		wp_delete_post( (int) $element_id, true );
 	}
 	wp_set_current_user( $current_user_before );
 }
