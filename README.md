@@ -2,13 +2,13 @@
 
 GeneratePress and GenerateBlocks abilities for MCP. Manage theme settings, elements, global styles, page meta, and caches.
 
-[![Release 1.1.49](https://img.shields.io/badge/release-1.1.49-blue.svg)](https://downloads.devenia.com/mcp-abilities-generatepress.zip)
+[![Release 1.1.50](https://img.shields.io/badge/release-1.1.50-blue.svg)](https://downloads.devenia.com/mcp-abilities-generatepress.zip)
 [![License: GPL v2](https://img.shields.io/badge/License-GPL%20v2-blue.svg)](https://www.gnu.org/licenses/gpl-2.0)
 [![WordPress](https://img.shields.io/badge/WordPress-6.9%2B-blue.svg)](https://wordpress.org)
 [![PHP](https://img.shields.io/badge/PHP-8.0%2B-purple.svg)](https://php.net)
 
 **Tested up to:** 7.0
-**Stable tag:** 1.1.49
+**Stable tag:** 1.1.50
 **Tags:** mcp, generatepress, theme, ai, automation
 **License:** GPLv2 or later
 **License URI:** https://www.gnu.org/licenses/gpl-2.0.html
@@ -145,7 +145,7 @@ If you skip base-stack verification and start with add-ons immediately, troubles
 | `generatepress/get-element` | Get a GeneratePress Element by ID |
 | `generatepress/create-element` | Create a GeneratePress Element |
 | `generatepress/update-element` | Update a GeneratePress Element |
-| `generatepress/upsert-archive-hook-element` | Create or update GeneratePress hook Elements for posts-page/archive GenerateBlocks hero/CTA bands |
+| `generatepress/upsert-block-element` | Idempotently create or update a native GeneratePress Block Element with exact display conditions |
 | `generatepress/delete-element` | Delete a GeneratePress Element |
 | `generatepress/restore-element` | Restore a trashed GeneratePress Element |
 | `generatepress/audit-featured-image-sizes` | Audit posts for missing featured-image sizes |
@@ -350,6 +350,10 @@ Use this ability for site-wide design decisions instead of page/block-level styl
 
 ## Changelog
 
+### 1.1.50
+
+- Replace the archive-specific Element writer with one idempotent native Block Element Interface for any exact GeneratePress display conditions.
+
 ### 1.1.49
 
 - Keep linked Query-card media compact beside directory copy instead of stretching it across the card.
@@ -471,13 +475,6 @@ Use this ability for site-wide design decisions instead of page/block-level styl
 
 ### 1.1.16
 - Fixed GenerateBlocks CSS generation to include matching GeneratePress Block Element content for archive contexts, so posts-page hero/CTA Elements are styled by the page CSS file.
-
-### 1.1.15
-- Fixed `generatepress/upsert-archive-hook-element` to create GeneratePress Block Elements of type hook so GenerateBlocks markup renders with its containers and generated CSS.
-
-### 1.1.14
-- Added `generatepress/upsert-archive-hook-element` for posts-page/archive hero and CTA Elements using GenerateBlocks while preserving native GeneratePress loops.
-- Added built-in guidance so agents do not put design into ignored posts-page content or solve archive design with CSS hacks.
 
 ### 1.1.13
 - Fixed featured-image audit/regeneration abilities to use the supported `site` ability category so they register reliably.

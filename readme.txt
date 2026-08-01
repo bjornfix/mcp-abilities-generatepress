@@ -3,7 +3,7 @@ Contributors: basicus
 Tags: mcp, generatepress, theme, ai, automation
 Requires at least: 6.9
 Tested up to: 7.0
-Stable tag: 1.1.49
+Stable tag: 1.1.50
 Requires PHP: 8.0
 License: GPLv2 or later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
@@ -23,7 +23,7 @@ This add-on plugin exposes GeneratePress theme settings, elements, and GenerateB
 * Module status management and module settings access
 * Full bounded GP/GP Premium module settings discovery and updates for any stored `generate_*_settings` option
 * Native blog archive settings and featured-image size diagnostics
-* Archive/page-for-posts GeneratePress Element upsert for GenerateBlocks hero/CTA bands
+* Idempotent native GeneratePress Block Element upsert with exact display conditions
 * GeneratePress options (read/write)
 * GeneratePress theme mods (read/write for GP-relevant mods)
 * WordPress Custom CSS for the active GeneratePress stylesheet (read/update/patch/clear)
@@ -48,6 +48,9 @@ Part of the MCP Expose Abilities ecosystem.
 4. Activate the plugin
 
 == Changelog ==
+
+= 1.1.50 =
+* Replaced the archive-specific Element writer with one idempotent native Block Element Interface for exact GeneratePress display conditions.
 
 = 1.1.49 =
 * Keep linked Query-card media compact beside directory copy instead of stretching it across the card.
@@ -162,13 +165,6 @@ Part of the MCP Expose Abilities ecosystem.
 
 = 1.1.16 =
 * Fixed: GenerateBlocks CSS generation now includes matching GeneratePress Block Element content for archive contexts, so posts-page hero/CTA Elements are styled by the page CSS file.
-
-= 1.1.15 =
-* Fixed: `generatepress/upsert-archive-hook-element` now creates GeneratePress Block Elements of type hook so GenerateBlocks markup renders with its containers and generated CSS.
-
-= 1.1.14 =
-* Added: `generatepress/upsert-archive-hook-element` for posts-page/archive hero and CTA Elements using GenerateBlocks while preserving native GeneratePress loops.
-* Added: built-in guidance so agents do not put design into ignored posts-page content or solve archive design with CSS hacks.
 
 = 1.1.13 =
 * Fixed: featured-image audit/regeneration abilities now use the supported `site` ability category so they register reliably.
