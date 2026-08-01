@@ -9,6 +9,7 @@ const workflowProjection = readFileSync(resolve(workspace, "devenia-workflow/inc
 const workflowJob = readFileSync(resolve(workspace, "devenia-workflow/includes/trait-translation-job.php"), "utf8");
 const workflowSourceRewrite = readFileSync(resolve(workspace, "devenia-workflow/includes/trait-source-rewrite-quality-authority.php"), "utf8");
 const sitePresentation = readFileSync(resolve(workspace, "devenia-site-presentation/devenia-site-presentation.php"), "utf8");
+const childCollectionPattern = readFileSync(resolve(workspace, "devenia-site-presentation/patterns/relationship-child-collection-v1.php"), "utf8");
 
 function assert(condition, message) {
   if (!condition) throw new Error(message);
@@ -36,6 +37,9 @@ assert.match(
 );
 assert.notMatch(workflowProjection, /data-devenia-card-(?:summary|action)/, "Workflow must not own GenerateBlocks card-role implementation");
 assert.notMatch(sitePresentation, /data-devenia-card-(?:summary|action)|generateblocks_dynamic_tag_replacement/, "Site Presentation must not own Query card data projection");
+assert.match(childCollectionPattern, /data-devenia-card-inventory":"child-pages"/, "the real shared collection pattern must use the Adapter's generic inventory role");
+assert.match(childCollectionPattern, /data-devenia-card-action":"details"/, "the real shared collection pattern must use the Adapter's generic detail role");
+assert.match(childCollectionPattern, /aria-label":"View \{\{post_title\}\} details"/, "the real shared collection pattern must satisfy the media projection Interface");
 assert.notMatch(moduleSource, /page_id|post_parent\s*===|locale|customCss|additionalCss/i, "Card projection must not infer policy from page IDs, locale, or CSS");
 
 console.log("GenerateBlocks card ownership: OK");

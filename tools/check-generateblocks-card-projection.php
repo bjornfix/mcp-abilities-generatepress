@@ -72,11 +72,11 @@ $action_block = array(
 		'tagName'        => 'a',
 		'htmlAttributes' => array(
 			'href'                     => '{{post_permalink}}',
-			'aria-label'               => 'View {{post_title}} plugin details',
-			'data-devenia-card-action' => 'plugin-details',
+			'aria-label'               => 'View {{post_title}} details',
+			'data-devenia-card-action' => 'details',
 		),
 	),
-	'innerHTML' => '<a class="gb-text" href="{{post_permalink}}" aria-label="View {{post_title}} plugin details" data-devenia-card-action="plugin-details">View plugin →</a>',
+	'innerHTML' => '<a class="gb-text" href="{{post_permalink}}" aria-label="View {{post_title}} details" data-devenia-card-action="details">View item →</a>',
 );
 $card_template_block = array(
 	'blockName' => 'generateblocks/loop-item',
@@ -134,7 +134,7 @@ $fragments = MCP_Abilities_GeneratePress_GenerateBlocks_Card_Projection::transla
 	(string) $action_block['innerHTML']
 );
 $assert( 1 === count( $fragments ), 'Card action must expose exactly one visible-copy fragment.' );
-$assert( 'View plugin →' === (string) ( $fragments[0]['source_html'] ?? '' ), 'Visible CTA fragment was not isolated from the dynamic link.' );
+$assert( 'View item →' === (string) ( $fragments[0]['source_html'] ?? '' ), 'Visible CTA fragment was not isolated from the dynamic link.' );
 
 $attr_fragments = MCP_Abilities_GeneratePress_GenerateBlocks_Card_Projection::structured_attr_fragments(
 	array(),
@@ -143,11 +143,11 @@ $attr_fragments = MCP_Abilities_GeneratePress_GenerateBlocks_Card_Projection::st
 );
 $assert( 1 === count( $attr_fragments ), 'Card action must expose exactly one accessible-name fragment.' );
 $assert( array( 'htmlAttributes', 'aria-label' ) === (array) ( $attr_fragments[0]['attr_path'] ?? array() ), 'ARIA fragment must project back to its native GenerateBlocks attribute.' );
-$assert( 'View {{post_title}} plugin details' === (string) ( $attr_fragments[0]['text'] ?? '' ), 'ARIA fragment must retain the dynamic title token.' );
+$assert( 'View {{post_title}} details' === (string) ( $attr_fragments[0]['text'] ?? '' ), 'ARIA fragment must retain the dynamic title token.' );
 $assert(
 	false === (bool) ( MCP_Abilities_GeneratePress_GenerateBlocks_Card_Projection::validate_localized_fragment_value(
 		array( 'success' => true ),
-		array( 'role' => 'devenia_generateblocks_card_accessible_name', 'source_html' => 'View {{post_title}} plugin details' ),
+		array( 'role' => 'devenia_generateblocks_card_accessible_name', 'source_html' => 'View {{post_title}} details' ),
 		array( 'text' => 'See how the plugin solves the problem' ),
 		'See how the plugin solves the problem'
 	)['success'] ?? true ),
@@ -156,7 +156,7 @@ $assert(
 $assert(
 	true === (bool) ( MCP_Abilities_GeneratePress_GenerateBlocks_Card_Projection::validate_localized_fragment_value(
 		array( 'success' => true ),
-		array( 'role' => 'devenia_generateblocks_card_accessible_name', 'source_html' => 'View {{post_title}} plugin details' ),
+		array( 'role' => 'devenia_generateblocks_card_accessible_name', 'source_html' => 'View {{post_title}} details' ),
 		array( 'text' => 'See how {{post_title}} solves the problem' ),
 		'See how {{post_title}} solves the problem'
 	)['success'] ?? false ),
@@ -165,7 +165,7 @@ $assert(
 $assert(
 	false === (bool) ( MCP_Abilities_GeneratePress_GenerateBlocks_Card_Projection::validate_localized_fragment_value(
 		array( 'success' => true ),
-		array( 'role' => 'devenia_generateblocks_card_action', 'source_html' => 'View plugin →' ),
+		array( 'role' => 'devenia_generateblocks_card_action', 'source_html' => 'View item →' ),
 		array( 'html' => '<strong>See the fit</strong>' ),
 		'<strong>See the fit</strong>'
 	)['success'] ?? true ),
@@ -174,7 +174,7 @@ $assert(
 $assert(
 	false === (bool) ( MCP_Abilities_GeneratePress_GenerateBlocks_Card_Projection::validate_localized_fragment_value(
 		array( 'success' => true ),
-		array( 'role' => 'devenia_generateblocks_card_action', 'source_html' => 'View plugin →' ),
+		array( 'role' => 'devenia_generateblocks_card_action', 'source_html' => 'View item →' ),
 		array( 'html' => 'View {{post_title}} →' ),
 		'View {{post_title}} →'
 	)['success'] ?? true ),
@@ -188,7 +188,7 @@ $localized = MCP_Abilities_GeneratePress_GenerateBlocks_Card_Projection::project
 );
 $assert( false !== strpos( $localized, 'See what it solves →' ), 'Localized action copy was not projected.' );
 $assert( false !== strpos( $localized, 'href="{{post_permalink}}"' ), 'Permalink token changed during action projection.' );
-$assert( false !== strpos( $localized, 'aria-label="View {{post_title}} plugin details"' ), 'Title token changed during visible-copy projection.' );
+$assert( false !== strpos( $localized, 'aria-label="View {{post_title}} details"' ), 'Title token changed during visible-copy projection.' );
 $escaped_localized = MCP_Abilities_GeneratePress_GenerateBlocks_Card_Projection::project_workflow_html_fragment(
 	(string) $action_block['innerHTML'],
 	(string) $fragments[0]['source_html'],
@@ -244,7 +244,7 @@ $contract = MCP_Abilities_GeneratePress_GenerateBlocks_Card_Projection::find_car
 			'attrs'     => array(
 				'query'          => array( 'post_type' => array( 'page' ), 'posts_per_page' => -1, 'post_parent__in' => array( 'current' ) ),
 				'htmlAttributes' => array(
-					'data-devenia-card-inventory'   => 'plugin-pages',
+					'data-devenia-card-inventory'   => 'child-pages',
 					'data-devenia-card-summary-max' => '120',
 				),
 			),
@@ -259,7 +259,7 @@ $invalid_contract = MCP_Abilities_GeneratePress_GenerateBlocks_Card_Projection::
 			'blockName' => 'generateblocks/query',
 			'attrs' => array(
 				'query' => array( 'post_type' => array( 'page' ), 'posts_per_page' => -1, 'post_parent__in' => array( 'current' ) ),
-				'htmlAttributes' => array( 'data-devenia-card-inventory' => 'plugin-pages', 'data-devenia-card-summary-max' => '120' ),
+				'htmlAttributes' => array( 'data-devenia-card-inventory' => 'child-pages', 'data-devenia-card-summary-max' => '120' ),
 			),
 			'innerBlocks' => array(),
 		),
@@ -272,7 +272,7 @@ $malformed_parent_contract = MCP_Abilities_GeneratePress_GenerateBlocks_Card_Pro
 			'blockName' => 'generateblocks/query',
 			'attrs' => array(
 				'query' => array( 'post_type' => array( 'product' ), 'posts_per_page' => -1, 'post_parent__in' => array() ),
-				'htmlAttributes' => array( 'data-devenia-card-inventory' => 'plugin-pages', 'data-devenia-card-summary-max' => '120' ),
+				'htmlAttributes' => array( 'data-devenia-card-inventory' => 'child-pages', 'data-devenia-card-summary-max' => '120' ),
 			),
 			'innerBlocks' => array( $card_template_block ),
 		),
@@ -290,12 +290,12 @@ $multiple_contracts = MCP_Abilities_GeneratePress_GenerateBlocks_Card_Projection
 	array(
 		array(
 			'blockName' => 'generateblocks/query',
-			'attrs' => array( 'query' => array( 'post_type' => array( 'page' ), 'posts_per_page' => -1, 'post_parent__in' => array( 'current' ) ), 'htmlAttributes' => array( 'data-devenia-card-inventory' => 'plugin-pages', 'data-devenia-card-summary-max' => '120' ) ),
+			'attrs' => array( 'query' => array( 'post_type' => array( 'page' ), 'posts_per_page' => -1, 'post_parent__in' => array( 'current' ) ), 'htmlAttributes' => array( 'data-devenia-card-inventory' => 'child-pages', 'data-devenia-card-summary-max' => '120' ) ),
 			'innerBlocks' => array( $card_template_block ),
 		),
 		array(
 			'blockName' => 'generateblocks/query',
-			'attrs' => array( 'query' => array( 'post_type' => array( 'product' ), 'posts_per_page' => -1, 'post_parent__in' => array( 'current' ) ), 'htmlAttributes' => array( 'data-devenia-card-inventory' => 'plugin-pages', 'data-devenia-card-summary-max' => '100' ) ),
+			'attrs' => array( 'query' => array( 'post_type' => array( 'product' ), 'posts_per_page' => -1, 'post_parent__in' => array( 'current' ) ), 'htmlAttributes' => array( 'data-devenia-card-inventory' => 'child-pages', 'data-devenia-card-summary-max' => '100' ) ),
 			'innerBlocks' => array( $card_template_block_100 ),
 		),
 	)
@@ -305,7 +305,7 @@ $bounded_query_contract = MCP_Abilities_GeneratePress_GenerateBlocks_Card_Projec
 	array(
 		array(
 			'blockName' => 'generateblocks/query',
-			'attrs' => array( 'query' => array( 'post_type' => array( 'page' ), 'posts_per_page' => 100, 'post_parent__in' => array( 'current' ) ), 'htmlAttributes' => array( 'data-devenia-card-inventory' => 'plugin-pages', 'data-devenia-card-summary-max' => '120' ) ),
+			'attrs' => array( 'query' => array( 'post_type' => array( 'page' ), 'posts_per_page' => 100, 'post_parent__in' => array( 'current' ) ), 'htmlAttributes' => array( 'data-devenia-card-inventory' => 'child-pages', 'data-devenia-card-summary-max' => '120' ) ),
 			'innerBlocks' => array( $card_template_block ),
 		),
 	)
@@ -315,12 +315,12 @@ $assert( false === (bool) ( $bounded_query_contract['valid'] ?? true ) && in_arr
 $parent_blocks = array(
 	array(
 		'blockName' => 'generateblocks/query',
-		'attrs' => array( 'query' => array( 'post_type' => array( 'page' ), 'posts_per_page' => -1, 'post_parent__in' => array( 'current' ) ), 'htmlAttributes' => array( 'data-devenia-card-inventory' => 'plugin-pages', 'data-devenia-card-summary-max' => '120' ) ),
+		'attrs' => array( 'query' => array( 'post_type' => array( 'page' ), 'posts_per_page' => -1, 'post_parent__in' => array( 'current' ) ), 'htmlAttributes' => array( 'data-devenia-card-inventory' => 'child-pages', 'data-devenia-card-summary-max' => '120' ) ),
 		'innerBlocks' => array( $card_template_block ),
 	),
 	array(
 		'blockName' => 'generateblocks/query',
-		'attrs' => array( 'query' => array( 'post_type' => array( 'product' ), 'posts_per_page' => -1, 'post_parent__in' => array( 'current' ) ), 'htmlAttributes' => array( 'data-devenia-card-inventory' => 'plugin-pages', 'data-devenia-card-summary-max' => '100' ) ),
+		'attrs' => array( 'query' => array( 'post_type' => array( 'product' ), 'posts_per_page' => -1, 'post_parent__in' => array( 'current' ) ), 'htmlAttributes' => array( 'data-devenia-card-inventory' => 'child-pages', 'data-devenia-card-summary-max' => '100' ) ),
 		'innerBlocks' => array( $card_template_block_100 ),
 	),
 );
@@ -373,7 +373,7 @@ $foreign_parent_contract = MCP_Abilities_GeneratePress_GenerateBlocks_Card_Proje
 	array(
 		array(
 			'blockName' => 'generateblocks/query',
-			'attrs' => array( 'query' => array( 'post_type' => array( 'page' ), 'posts_per_page' => -1, 'post_parent__in' => array( 'current', 123 ) ), 'htmlAttributes' => array( 'data-devenia-card-inventory' => 'plugin-pages', 'data-devenia-card-summary-max' => '120' ) ),
+			'attrs' => array( 'query' => array( 'post_type' => array( 'page' ), 'posts_per_page' => -1, 'post_parent__in' => array( 'current', 123 ) ), 'htmlAttributes' => array( 'data-devenia-card-inventory' => 'child-pages', 'data-devenia-card-summary-max' => '120' ) ),
 			'innerBlocks' => array( $card_template_block ),
 		),
 	)
@@ -381,14 +381,14 @@ $foreign_parent_contract = MCP_Abilities_GeneratePress_GenerateBlocks_Card_Proje
 $assert( false === (bool) ( $foreign_parent_contract['valid'] ?? true ) && in_array( 'current_parent_query_required', (array) ( $foreign_parent_contract['issues'] ?? array() ), true ), 'Inventory Query was allowed to include cards from a foreign parent.' );
 
 $nested_action_block = $action_block;
-$nested_action_block['innerHTML'] = '<a class="gb-text" href="{{post_permalink}}" aria-label="View {{post_title}} plugin details" data-devenia-card-action="plugin-details"><span>View plugin</span> →</a>';
+$nested_action_block['innerHTML'] = '<a class="gb-text" href="{{post_permalink}}" aria-label="View {{post_title}} details" data-devenia-card-action="details"><span>View item</span> →</a>';
 $nested_action_template = $card_template_block;
 $nested_action_template['innerBlocks'][1] = $nested_action_block;
 $nested_action_contract = MCP_Abilities_GeneratePress_GenerateBlocks_Card_Projection::find_card_inventory_contract(
 	array(
 		array(
 			'blockName' => 'generateblocks/query',
-			'attrs' => array( 'query' => array( 'post_type' => array( 'page' ), 'posts_per_page' => -1, 'post_parent__in' => array( 'current' ) ), 'htmlAttributes' => array( 'data-devenia-card-inventory' => 'plugin-pages', 'data-devenia-card-summary-max' => '120' ) ),
+			'attrs' => array( 'query' => array( 'post_type' => array( 'page' ), 'posts_per_page' => -1, 'post_parent__in' => array( 'current' ) ), 'htmlAttributes' => array( 'data-devenia-card-inventory' => 'child-pages', 'data-devenia-card-summary-max' => '120' ) ),
 			'innerBlocks' => array( $nested_action_template ),
 		),
 	)
@@ -399,7 +399,7 @@ $nested_unrelated_query_contract = MCP_Abilities_GeneratePress_GenerateBlocks_Ca
 	array(
 		array(
 			'blockName' => 'generateblocks/query',
-			'attrs' => array( 'query' => array( 'post_type' => array( 'page' ), 'posts_per_page' => -1, 'post_parent__in' => array( 'current' ) ), 'htmlAttributes' => array( 'data-devenia-card-inventory' => 'plugin-pages', 'data-devenia-card-summary-max' => '120' ) ),
+			'attrs' => array( 'query' => array( 'post_type' => array( 'page' ), 'posts_per_page' => -1, 'post_parent__in' => array( 'current' ) ), 'htmlAttributes' => array( 'data-devenia-card-inventory' => 'child-pages', 'data-devenia-card-summary-max' => '120' ) ),
 			'innerBlocks' => array(
 				array(
 					'blockName' => 'generateblocks/query',
@@ -418,7 +418,7 @@ $mixed_template_contract = MCP_Abilities_GeneratePress_GenerateBlocks_Card_Proje
 	array(
 		array(
 			'blockName' => 'generateblocks/query',
-			'attrs' => array( 'query' => array( 'post_type' => array( 'page' ), 'posts_per_page' => -1, 'post_parent__in' => array( 'current' ) ), 'htmlAttributes' => array( 'data-devenia-card-inventory' => 'plugin-pages', 'data-devenia-card-summary-max' => '120' ) ),
+			'attrs' => array( 'query' => array( 'post_type' => array( 'page' ), 'posts_per_page' => -1, 'post_parent__in' => array( 'current' ) ), 'htmlAttributes' => array( 'data-devenia-card-inventory' => 'child-pages', 'data-devenia-card-summary-max' => '120' ) ),
 			'innerBlocks' => array( $card_template_block, $summary_only_template ),
 		),
 	)

@@ -130,7 +130,7 @@ final class MCP_Abilities_GeneratePress_GenerateBlocks_Card_Projection {
 				$summary = true;
 			}
 			if (
-				self::is_role( $name, $attrs, 'data-devenia-card-action', 'plugin-details' )
+				self::is_role( $name, $attrs, 'data-devenia-card-action', 'details' )
 				&& '{{post_permalink}}' === (string) ( $attrs['htmlAttributes']['href'] ?? '' )
 				&& false !== strpos( (string) ( $attrs['htmlAttributes']['aria-label'] ?? '' ), '{{post_title}}' )
 				&& preg_match( '/<a\b[^>]*>(.*?)<\/a>/isu', $html, $matches )
@@ -248,7 +248,7 @@ final class MCP_Abilities_GeneratePress_GenerateBlocks_Card_Projection {
 	 * @return array<int,array<string,mixed>>
 	 */
 	public static function translatable_html_fragments( array $fragments, string $block_name, array $attrs, string $html ): array {
-		if ( ! self::is_role( $block_name, $attrs, 'data-devenia-card-action', 'plugin-details' ) ) {
+		if ( ! self::is_role( $block_name, $attrs, 'data-devenia-card-action', 'details' ) ) {
 			return $fragments;
 		}
 
@@ -281,7 +281,7 @@ final class MCP_Abilities_GeneratePress_GenerateBlocks_Card_Projection {
 	 * @return array<int,array<string,mixed>>
 	 */
 	public static function structured_attr_fragments( array $fragments, string $block_name, array $attrs ): array {
-		if ( ! self::is_role( $block_name, $attrs, 'data-devenia-card-action', 'plugin-details' ) ) {
+		if ( ! self::is_role( $block_name, $attrs, 'data-devenia-card-action', 'details' ) ) {
 			return $fragments;
 		}
 
@@ -495,7 +495,7 @@ final class MCP_Abilities_GeneratePress_GenerateBlocks_Card_Projection {
 			$query = is_array( $attrs['query'] ?? null ) ? $attrs['query'] : array();
 			if (
 				'generateblocks/query' === (string) ( $block['blockName'] ?? '' )
-				&& 'plugin-pages' === (string) ( $html_attributes['data-devenia-card-inventory'] ?? '' )
+				&& 'child-pages' === (string) ( $html_attributes['data-devenia-card-inventory'] ?? '' )
 			) {
 				$max        = max( 1, min( 300, (int) ( $html_attributes['data-devenia-card-summary-max'] ?? 120 ) ) );
 				$post_types = self::query_post_types( $query );
@@ -714,7 +714,7 @@ final class MCP_Abilities_GeneratePress_GenerateBlocks_Card_Projection {
 					&& $max_characters === self::summary_max_characters( $attrs )
 				);
 			}
-			if ( self::is_role( $name, $attrs, 'data-devenia-card-action', 'plugin-details' ) ) {
+			if ( self::is_role( $name, $attrs, 'data-devenia-card-action', 'details' ) ) {
 				$action_match = array();
 				preg_match( '/<a\b[^>]*>(.*?)<\/a>/isu', $html, $action_match );
 				$action_text = (string) ( $action_match[1] ?? '' );

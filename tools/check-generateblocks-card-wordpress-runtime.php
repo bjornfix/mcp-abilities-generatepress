@@ -23,7 +23,7 @@ $action = array(
 		'htmlAttributes' => array(
 			'href'                     => '{{post_permalink}}',
 			'aria-label'               => 'View {{post_title}} details',
-			'data-devenia-card-action' => 'plugin-details',
+			'data-devenia-card-action' => 'details',
 		),
 	),
 	'innerBlocks'  => array(),
