@@ -68,6 +68,8 @@ if (
 	|| 'core/post-featured-image' !== (string) ( $media['blockName'] ?? '' )
 	|| true !== (bool) ( $media['attrs']['isLink'] ?? false )
 	|| 'devenia-query-card-featured-image' !== (string) ( $media['attrs']['className'] ?? '' )
+	|| '160px' !== (string) ( $media['attrs']['width'] ?? '' )
+	|| 'left' !== (string) ( $media['attrs']['align'] ?? '' )
 	|| isset( $media['attrs']['aspectRatio'] )
 	|| isset( $media['attrs']['scale'] )
 ) {

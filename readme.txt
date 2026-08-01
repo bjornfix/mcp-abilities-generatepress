@@ -3,7 +3,7 @@ Contributors: basicus
 Tags: mcp, generatepress, theme, ai, automation
 Requires at least: 6.9
 Tested up to: 7.0
-Stable tag: 1.1.48
+Stable tag: 1.1.49
 Requires PHP: 8.0
 License: GPLv2 or later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
@@ -48,6 +48,9 @@ Part of the MCP Expose Abilities ecosystem.
 4. Activate the plugin
 
 == Changelog ==
+
+= 1.1.49 =
+* Keep linked Query-card media compact beside directory copy instead of stretching it across the card.
 
 = 1.1.48 =
 * Standardize Query-card inventory and detail roles so reusable child collections receive their linked featured images.

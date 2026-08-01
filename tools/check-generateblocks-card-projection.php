@@ -104,6 +104,8 @@ $projected_card = MCP_Abilities_GeneratePress_GenerateBlocks_Card_Projection::pr
 $projected_content = $projected_card['innerBlocks'][0] ?? array();
 $assert( 'core/post-featured-image' === (string) ( $projected_content['innerBlocks'][0]['blockName'] ?? '' ), 'Complete Query card did not receive the reusable featured-image role.' );
 $assert( true === (bool) ( $projected_content['innerBlocks'][0]['attrs']['isLink'] ?? false ), 'Projected card image must link to the queried item.' );
+$assert( '160px' === (string) ( $projected_content['innerBlocks'][0]['attrs']['width'] ?? '' ), 'Projected card image must use the compact native directory slot instead of filling the card.' );
+$assert( 'left' === (string) ( $projected_content['innerBlocks'][0]['attrs']['align'] ?? '' ), 'Projected card image must sit beside directory copy when space allows.' );
 $assert( ! isset( $projected_content['innerBlocks'][0]['attrs']['aspectRatio'] ), 'Projected card image must not inherit the card height through an aspect-ratio slot.' );
 $assert( ! isset( $projected_content['innerBlocks'][0]['attrs']['scale'] ), 'Projected card image must keep its native square dimensions instead of forcing full flex height.' );
 $assert( 'devenia-query-card-featured-image' === (string) ( $projected_content['innerBlocks'][0]['attrs']['className'] ?? '' ), 'Projected card image must declare the reusable media-slot identity.' );
