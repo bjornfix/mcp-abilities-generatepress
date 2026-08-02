@@ -3,7 +3,7 @@ Contributors: basicus
 Tags: mcp, generatepress, theme, ai, automation
 Requires at least: 6.9
 Tested up to: 7.0
-Stable tag: 1.1.56
+Stable tag: 1.1.57
 Requires PHP: 8.0
 License: GPLv2 or later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
@@ -49,6 +49,9 @@ Part of the MCP Expose Abilities ecosystem.
 4. Activate the plugin
 
 == Changelog ==
+
+= 1.1.57 =
+* Keep Query-card media projection semantic and delegate its visual geometry to the native GenerateBlocks Global Style owner.
 
 = 1.1.56 =
 * Support current GenerateBlocks compound Global Style selectors through the same native synchronization interface.
