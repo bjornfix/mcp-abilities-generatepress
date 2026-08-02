@@ -80,7 +80,7 @@ final class MCP_Abilities_GeneratePress_GenerateBlocks_Global_Styles {
 
 			$selector = self::normalize_selector( (string) ( $style['selector'] ?? '' ) );
 			if ( '' === $selector ) {
-				return self::invalid( $index, 'selector must be one valid CSS class' );
+				return self::invalid( $index, 'selector must be one valid GenerateBlocks CSS selector' );
 			}
 
 			if ( isset( $normalized[ $selector ] ) ) {
@@ -115,7 +115,7 @@ final class MCP_Abilities_GeneratePress_GenerateBlocks_Global_Styles {
 		foreach ( $delete_selectors as $index => $selector ) {
 			$selector = self::normalize_selector( (string) $selector );
 			if ( '' === $selector ) {
-				return self::invalid( $index, 'delete selector must be one valid CSS class' );
+				return self::invalid( $index, 'delete selector must be one valid GenerateBlocks CSS selector' );
 			}
 
 			if ( isset( $normalized[ $selector ] ) ) {
@@ -324,11 +324,17 @@ final class MCP_Abilities_GeneratePress_GenerateBlocks_Global_Styles {
 	}
 
 	/**
-	 * Normalize one native Global Style class selector.
+	 * Normalize one current Global Style selector, including documented compound selectors.
 	 */
 	private static function normalize_selector( string $selector ): string {
 		$selector = trim( $selector );
-		if ( 1 !== preg_match( '/^\.[A-Za-z_][A-Za-z0-9_-]*$/', $selector ) ) {
+		if (
+			'' === $selector
+			|| strlen( $selector ) > 512
+			|| '.' !== $selector[0]
+			|| 1 === preg_match( '/[\x00-\x1F\x7F{};@]/', $selector )
+			|| 1 !== preg_match( '/^[A-Za-z0-9_.*#:\-\[\]()="\x27,\s>+~|^$]+$/', $selector )
+		) {
 			return '';
 		}
 

@@ -3,7 +3,7 @@
  * Plugin Name: MCP Abilities - GeneratePress
  * Plugin URI: https://github.com/bjornfix/mcp-abilities-generatepress
  * Description: GeneratePress and GenerateBlocks abilities for MCP. Manage theme settings, elements, global styles, page meta, and caches.
- * Version: 1.1.55
+ * Version: 1.1.56
  * Author: basicus
  * Author URI: https://profiles.wordpress.org/basicus/
  * License: GPL-2.0+
@@ -4453,7 +4453,7 @@ function mcp_abilities_generatepress_register_abilities(): void {
 					),
 					'delete_selectors' => array(
 						'type'        => 'array',
-						'description' => 'Exact current Global Style class selectors to delete.',
+						'description' => 'Exact current Global Style selectors to delete, including compound selectors.',
 						'items'       => array( 'type' => 'string' ),
 					),
 				),

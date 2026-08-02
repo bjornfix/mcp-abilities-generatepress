@@ -24,6 +24,16 @@ function wp_strip_all_tags( string $value ): string {
 require_once dirname( __DIR__ ) . '/includes/class-generateblocks-global-styles.php';
 
 $method = new ReflectionMethod( MCP_Abilities_GeneratePress_GenerateBlocks_Global_Styles::class, 'compile_css' );
+$normalize = new ReflectionMethod( MCP_Abilities_GeneratePress_GenerateBlocks_Global_Styles::class, 'normalize_selector' );
+if ( '.gb-button.dv-link--hero' !== $normalize->invoke( null, '.gb-button.dv-link--hero' ) ) {
+	fwrite( STDERR, "Global Styles selector normalization rejected a current compound selector.\n" );
+	exit( 1 );
+}
+if ( '' !== $normalize->invoke( null, '.safe{color:red}' ) ) {
+	fwrite( STDERR, "Global Styles selector normalization accepted rule injection.\n" );
+	exit( 1 );
+}
+
 $styles = array(
 	'display' => 'grid',
 	'gridTemplateColumns' => 'minmax(0,1fr)',
@@ -35,6 +45,12 @@ $expected = '.example{display:grid;grid-template-columns:minmax(0,1fr);}.example
 
 if ( $expected !== $actual ) {
 	fwrite( STDERR, "Global Styles compiler output mismatch.\n" );
+	exit( 1 );
+}
+
+$compound = $method->invoke( null, '.gb-button.dv-link--hero', array( 'color' => '#fff4e8' ) );
+if ( '.gb-button.dv-link--hero{color:#fff4e8;}' !== $compound ) {
+	fwrite( STDERR, "Global Styles compiler rejected a current compound selector.\n" );
 	exit( 1 );
 }
 

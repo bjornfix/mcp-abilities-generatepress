@@ -28,6 +28,7 @@ assert.match(adapter, /gb_style_css/, 'Adapter must persist the native generated
 assert.match(adapter, /GenerateBlocks_Pro_Enqueue_Styles::get_instance\(\)->build_css\(\)/, 'Adapter must ask GenerateBlocks Pro to rebuild its external global stylesheet');
 assert.match(adapter, /self::compile_css\( \$selector, \$style_data \)/, 'Adapter must derive the required CSS cache from native style data');
 assert.match(adapter, /global_style_value_invalid/, 'compiled CSS values must reject rule injection');
+assert.match(adapter, /documented compound selectors/, 'the current Adapter must support GenerateBlocks compound selectors');
 assert.match(adapter, /\$existing_by_selector = self::index_by_selector\(\)/, 'synchronization must read the native inventory once');
 assert.doesNotMatch(adapter, /private static function get_by_selector/, 'synchronization must not query the full inventory once per selector');
 assert.doesNotMatch(adapter, /generateblocks_global_styles|gblocks_global_style['"]/, 'Adapter must not retain the deprecated Global Styles model');
