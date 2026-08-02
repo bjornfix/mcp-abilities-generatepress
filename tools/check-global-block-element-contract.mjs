@@ -23,5 +23,16 @@ assert.doesNotMatch(
 	/upsert-archive-hook-element|archive_element_guidance|context_display_condition/,
 	"archive-specific Element ownership must not survive the clean cut",
 );
+assert.match(
+	plugin,
+	/function mcp_abilities_generatepress_invalidate_dynamic_css_cache\(\): void[\s\S]*delete_option\( 'generate_dynamic_css_output' \)[\s\S]*update_option\( 'generateblocks_dynamic_css_time', 0, false \)/,
+	"the Adapter must expose invalidation without synchronous global regeneration",
+);
+const upsertStart = plugin.indexOf("function mcp_abilities_generatepress_upsert_block_element");
+const upsertEnd = plugin.indexOf("\nfunction mcp_abilities_generatepress_current_display_rules", upsertStart);
+const upsert = plugin.slice(upsertStart, upsertEnd);
+assert.match(upsert, /'action'\s*=>\s*'unchanged'/, "an exact Element contract must return without rewriting it");
+assert.match(upsert, /mcp_abilities_generatepress_invalidate_dynamic_css_cache\(\)/, "a changed Element must invalidate CSS asynchronously");
+assert.doesNotMatch(upsert, /mcp_abilities_generatepress_clear_dynamic_css_cache\(\)/, "Element upsert must not synchronously regenerate global CSS");
 
 console.log("GeneratePress global Block Element contract passed.");

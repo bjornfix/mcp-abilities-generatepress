@@ -8,6 +8,12 @@ if ( ! defined( 'ABSPATH' ) ) {
 $current_user_before = get_current_user_id();
 $element_ids         = array();
 $failures            = array();
+$missing             = new stdClass();
+$cache_options       = array(
+	'generate_dynamic_css_output'         => get_option( 'generate_dynamic_css_output', $missing ),
+	'generate_dynamic_css_cached_version' => get_option( 'generate_dynamic_css_cached_version', $missing ),
+	'generateblocks_dynamic_css_time'      => get_option( 'generateblocks_dynamic_css_time', $missing ),
+);
 $administrators      = get_users( array( 'role' => 'administrator', 'number' => 1, 'fields' => 'ID' ) );
 if ( ! $administrators ) {
 	fwrite( STDERR, "No administrator is available for the Block Element runtime test.\n" );
@@ -20,7 +26,7 @@ try {
 	if ( ! $ability ) {
 		throw new RuntimeException( 'The global Block Element ability is not registered.' );
 	}
-	if ( function_exists( 'wp_get_ability' ) && wp_get_ability( 'generatepress/upsert-archive-hook-element' ) ) {
+	if ( function_exists( 'wp_has_ability' ) && wp_has_ability( 'generatepress/upsert-archive-hook-element' ) ) {
 		throw new RuntimeException( 'The removed archive-specific Element ability is still registered.' );
 	}
 
@@ -42,10 +48,58 @@ try {
 	}
 	$element_id = (int) $created['id'];
 	$element_ids[] = $element_id;
+	update_option( 'generate_dynamic_css_output', 'mcp-runtime-stale-output', false );
+	update_option( 'generate_dynamic_css_cached_version', 'mcp-runtime-stale-version', false );
+	update_option( 'generateblocks_dynamic_css_time', 731, false );
 	$input['title'] = 'Updated global Block Element fixture';
 	$updated = $ability->execute( $input );
 	if ( empty( $updated['success'] ) || $element_id !== (int) ( $updated['id'] ?? 0 ) || 'updated' !== (string) ( $updated['action'] ?? '' ) ) {
 		$failures[] = 'A repeated stable-slug call did not update the same Element.';
+	}
+	if (
+		false !== get_option( 'generate_dynamic_css_output', false )
+		|| false !== get_option( 'generate_dynamic_css_cached_version', false )
+		|| 0 !== (int) get_option( 'generateblocks_dynamic_css_time', -1 )
+	) {
+		$failures[] = 'A changed Element did not invalidate both dynamic CSS caches.';
+	}
+
+	update_option( 'generate_dynamic_css_output', 'mcp-runtime-current-output', false );
+	update_option( 'generate_dynamic_css_cached_version', 'mcp-runtime-current-version', false );
+	update_option( 'generateblocks_dynamic_css_time', 947, false );
+	$post_writes = 0;
+	$meta_writes = 0;
+	$post_write_guard = static function ( array $data ) use ( &$post_writes ): array {
+		++$post_writes;
+		return $data;
+	};
+	$meta_update_guard = static function ( $check ) use ( &$meta_writes ) {
+		++$meta_writes;
+		return $check;
+	};
+	$meta_delete_guard = static function ( $check ) use ( &$meta_writes ) {
+		++$meta_writes;
+		return $check;
+	};
+	add_filter( 'wp_insert_post_data', $post_write_guard, 1, 1 );
+	add_filter( 'update_post_metadata', $meta_update_guard, 1, 1 );
+	add_filter( 'delete_post_metadata', $meta_delete_guard, 1, 1 );
+	try {
+		$unchanged = $ability->execute( $input );
+	} finally {
+		remove_filter( 'wp_insert_post_data', $post_write_guard, 1 );
+		remove_filter( 'update_post_metadata', $meta_update_guard, 1 );
+		remove_filter( 'delete_post_metadata', $meta_delete_guard, 1 );
+	}
+	if ( empty( $unchanged['success'] ) || 'unchanged' !== (string) ( $unchanged['action'] ?? '' ) || 0 !== $post_writes || 0 !== $meta_writes ) {
+		$failures[] = 'An exact repeated Element contract was not a write-free no-op.';
+	}
+	if (
+		'mcp-runtime-current-output' !== get_option( 'generate_dynamic_css_output', '' )
+		|| 'mcp-runtime-current-version' !== get_option( 'generate_dynamic_css_cached_version', '' )
+		|| 947 !== (int) get_option( 'generateblocks_dynamic_css_time', -1 )
+	) {
+		$failures[] = 'An unchanged Element invalidated dynamic CSS.';
 	}
 
 	$expected_meta = array(
@@ -89,6 +143,13 @@ try {
 } finally {
 	foreach ( $element_ids as $element_id ) {
 		wp_delete_post( (int) $element_id, true );
+	}
+	foreach ( $cache_options as $option_name => $option_value ) {
+		if ( $missing === $option_value ) {
+			delete_option( $option_name );
+		} else {
+			update_option( $option_name, $option_value );
+		}
 	}
 	wp_set_current_user( $current_user_before );
 }

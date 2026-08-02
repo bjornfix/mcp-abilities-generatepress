@@ -3,7 +3,7 @@
  * Plugin Name: MCP Abilities - GeneratePress
  * Plugin URI: https://github.com/bjornfix/mcp-abilities-generatepress
  * Description: GeneratePress and GenerateBlocks abilities for MCP. Manage theme settings, elements, global styles, page meta, and caches.
- * Version: 1.1.52
+ * Version: 1.1.53
  * Author: basicus
  * Author URI: https://profiles.wordpress.org/basicus/
  * License: GPL-2.0+
@@ -239,6 +239,68 @@ function mcp_abilities_generatepress_upsert_block_element( array $input ): array
 		'post_name'    => $slug,
 		'post_content' => $content,
 	);
+	$meta_values = array(
+		'_generate_element_type'               => 'block',
+		'_generate_element_content'            => $content,
+		'_generate_block_type'                  => $block_type,
+		'_generate_element_display_conditions' => $display_conditions,
+		'_generate_element_exclude_conditions' => $exclude_conditions,
+		'_generate_element_user_conditions'    => $user_conditions,
+	);
+	$absent_meta = array( '_generate_hook_execute_php' );
+	if ( 'hook' === $block_type ) {
+		$meta_values['_generate_hook_type']     = 'hook';
+		$meta_values['_generate_hook']          = $hook;
+		$meta_values['_generate_hook_priority'] = (string) $priority;
+	} else {
+		$absent_meta[] = '_generate_hook_type';
+		$absent_meta[] = '_generate_hook';
+		$absent_meta[] = '_generate_hook_priority';
+	}
+	if ( 'content-template' === $block_type ) {
+		$tag_name = sanitize_key( (string) ( $input['post_loop_item_tagname'] ?? 'article' ) );
+		if ( ! in_array( $tag_name, array( 'article', 'main', 'section', 'div' ), true ) ) {
+			$tag_name = 'article';
+		}
+		$meta_values['_generate_use_theme_post_container'] = ! empty( $input['use_theme_post_container'] ) ? '1' : '';
+		$meta_values['_generate_post_loop_item_tagname']   = $tag_name;
+	} else {
+		$absent_meta[] = '_generate_use_theme_post_container';
+		$absent_meta[] = '_generate_post_loop_item_tagname';
+	}
+
+	if ( $existing instanceof WP_Post ) {
+		$matches =
+			$status === $existing->post_status
+			&& $title === $existing->post_title
+			&& $slug === $existing->post_name
+			&& $content === $existing->post_content;
+		foreach ( $meta_values as $meta_key => $meta_value ) {
+			if ( ! metadata_exists( 'post', $existing->ID, $meta_key ) || $meta_value !== get_post_meta( $existing->ID, $meta_key, true ) ) {
+				$matches = false;
+				break;
+			}
+		}
+		if ( $matches ) {
+			foreach ( $absent_meta as $meta_key ) {
+				if ( metadata_exists( 'post', $existing->ID, $meta_key ) ) {
+					$matches = false;
+					break;
+				}
+			}
+		}
+		if ( $matches ) {
+			return array(
+				'success'            => true,
+				'id'                 => (int) $existing->ID,
+				'action'             => 'unchanged',
+				'block_type'         => $block_type,
+				'display_conditions' => $display_conditions,
+				'message'            => 'GeneratePress Block Element is already current.',
+			);
+		}
+	}
+
 	$action = 'created';
 	if ( $existing instanceof WP_Post ) {
 		$post_data['ID'] = $existing->ID;
@@ -249,35 +311,13 @@ function mcp_abilities_generatepress_upsert_block_element( array $input ): array
 		return array( 'success' => false, 'message' => $post_id->get_error_message() );
 	}
 
-	update_post_meta( (int) $post_id, '_generate_element_type', 'block' );
-	update_post_meta( (int) $post_id, '_generate_element_content', $content );
-	update_post_meta( (int) $post_id, '_generate_block_type', $block_type );
-	if ( 'hook' === $block_type ) {
-		update_post_meta( (int) $post_id, '_generate_hook_type', 'hook' );
-		update_post_meta( (int) $post_id, '_generate_hook', $hook );
-		update_post_meta( (int) $post_id, '_generate_hook_priority', $priority );
-	} else {
-		delete_post_meta( (int) $post_id, '_generate_hook_type' );
-		delete_post_meta( (int) $post_id, '_generate_hook' );
-		delete_post_meta( (int) $post_id, '_generate_hook_priority' );
+	foreach ( $meta_values as $meta_key => $meta_value ) {
+		update_post_meta( (int) $post_id, $meta_key, $meta_value );
 	}
-	if ( 'content-template' === $block_type ) {
-		$tag_name = sanitize_key( (string) ( $input['post_loop_item_tagname'] ?? 'article' ) );
-		if ( ! in_array( $tag_name, array( 'article', 'main', 'section', 'div' ), true ) ) {
-			$tag_name = 'article';
-		}
-		update_post_meta( (int) $post_id, '_generate_use_theme_post_container', ! empty( $input['use_theme_post_container'] ) ? '1' : '' );
-		update_post_meta( (int) $post_id, '_generate_post_loop_item_tagname', $tag_name );
-	} else {
-		delete_post_meta( (int) $post_id, '_generate_use_theme_post_container' );
-		delete_post_meta( (int) $post_id, '_generate_post_loop_item_tagname' );
+	foreach ( $absent_meta as $meta_key ) {
+		delete_post_meta( (int) $post_id, $meta_key );
 	}
-	delete_post_meta( (int) $post_id, '_generate_hook_execute_php' );
-	update_post_meta( (int) $post_id, '_generate_element_display_conditions', $display_conditions );
-	update_post_meta( (int) $post_id, '_generate_element_exclude_conditions', $exclude_conditions );
-	update_post_meta( (int) $post_id, '_generate_element_user_conditions', $user_conditions );
-	mcp_abilities_generatepress_clear_dynamic_css_cache();
-	update_option( 'generateblocks_dynamic_css_time', 0, false );
+	mcp_abilities_generatepress_invalidate_dynamic_css_cache();
 
 	return array(
 		'success'            => true,
@@ -287,6 +327,15 @@ function mcp_abilities_generatepress_upsert_block_element( array $input ): array
 		'display_conditions' => $display_conditions,
 		'message'            => 'GeneratePress Block Element ' . $action . ' successfully.',
 	);
+}
+
+/**
+ * Invalidate GeneratePress and GenerateBlocks dynamic CSS without a synchronous site-wide rebuild.
+ */
+function mcp_abilities_generatepress_invalidate_dynamic_css_cache(): void {
+	delete_option( 'generate_dynamic_css_output' );
+	delete_option( 'generate_dynamic_css_cached_version' );
+	update_option( 'generateblocks_dynamic_css_time', 0, false );
 }
 
 /**
