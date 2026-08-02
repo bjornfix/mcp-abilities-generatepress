@@ -92,9 +92,9 @@ final class MCP_Abilities_GeneratePress_GenerateBlocks_Global_Styles {
 				return self::invalid( $index, 'styles must be an object' );
 			}
 
-			$css = trim( wp_strip_all_tags( (string) ( $style['css'] ?? '' ) ) );
-			if ( '' === $css || false === strpos( $css, $selector ) ) {
-				return self::invalid( $index, 'css must contain its selector' );
+			$css = self::compile_css( $selector, $style_data );
+			if ( is_wp_error( $css ) ) {
+				return self::invalid( $index, $css->get_error_message() );
 			}
 
 			$status = (string) ( $style['status'] ?? 'publish' );
@@ -129,9 +129,10 @@ final class MCP_Abilities_GeneratePress_GenerateBlocks_Global_Styles {
 		$updated = array();
 		$unchanged = array();
 		$deleted = array();
+		$existing_by_selector = self::index_by_selector();
 
 		foreach ( $normalized as $selector => $style ) {
-			$existing = self::get_by_selector( $selector );
+			$existing = $existing_by_selector[ $selector ] ?? null;
 			if ( $existing instanceof WP_Post && self::matches( $existing, $style ) ) {
 				$unchanged[] = $selector;
 				continue;
@@ -166,10 +167,15 @@ final class MCP_Abilities_GeneratePress_GenerateBlocks_Global_Styles {
 			} else {
 				$created[] = $selector;
 			}
+
+			$stored = get_post( $post_id );
+			if ( $stored instanceof WP_Post ) {
+				$existing_by_selector[ $selector ] = $stored;
+			}
 		}
 
 		foreach ( array_keys( $delete ) as $selector ) {
-			$existing = self::get_by_selector( $selector );
+			$existing = $existing_by_selector[ $selector ] ?? null;
 			if ( ! $existing instanceof WP_Post ) {
 				continue;
 			}
@@ -200,9 +206,11 @@ final class MCP_Abilities_GeneratePress_GenerateBlocks_Global_Styles {
 	}
 
 	/**
-	 * Find one current Global Style by its exact selector.
+	 * Index the current native Global Style inventory by selector in one read.
+	 *
+	 * @return array<string, WP_Post>
 	 */
-	private static function get_by_selector( string $selector ): ?WP_Post {
+	private static function index_by_selector(): array {
 		$query = new WP_Query(
 			array(
 				'post_type'              => self::POST_TYPE,
@@ -213,13 +221,92 @@ final class MCP_Abilities_GeneratePress_GenerateBlocks_Global_Styles {
 			)
 		);
 
+		$indexed = array();
 		foreach ( $query->posts as $post ) {
-			if ( $post instanceof WP_Post && $selector === (string) get_post_meta( $post->ID, 'gb_style_selector', true ) ) {
-				return $post;
+			if ( ! $post instanceof WP_Post ) {
+				continue;
+			}
+
+			$selector = (string) get_post_meta( $post->ID, 'gb_style_selector', true );
+			if ( '' !== self::normalize_selector( $selector ) ) {
+				$indexed[ $selector ] = $post;
 			}
 		}
 
-		return null;
+		return $indexed;
+	}
+
+	/**
+	 * Compile the native Global Styles object into GenerateBlocks' required CSS cache.
+	 *
+	 * @param array<string, mixed> $styles Native style data.
+	 * @return string|WP_Error
+	 */
+	private static function compile_css( string $selector, array $styles ) {
+		$declarations = '';
+		$nested = '';
+
+		foreach ( $styles as $key => $value ) {
+			$key = (string) $key;
+			if ( is_array( $value ) ) {
+				if ( 0 === strpos( $key, '@media ' ) ) {
+					if ( 1 !== preg_match( '/^@media \\(\s*(?:min|max)-width:\s*[0-9.]+(?:px|em|rem)\s*\\)$/', $key ) ) {
+						return new WP_Error( 'global_style_media_invalid', 'contains an invalid media query' );
+					}
+
+					$compiled = self::compile_css( $selector, $value );
+					if ( is_wp_error( $compiled ) ) {
+						return $compiled;
+					}
+
+					$nested .= $key . '{' . $compiled . '}';
+					continue;
+				}
+
+				if ( false !== strpos( $key, '{' ) || false !== strpos( $key, '}' ) || false !== strpos( $key, ';' ) || false !== strpos( $key, '@' ) ) {
+					return new WP_Error( 'global_style_nested_selector_invalid', 'contains an invalid nested selector' );
+				}
+
+				$nested_selector = false !== strpos( $key, '&' )
+					? str_replace( '&', $selector, $key )
+					: $selector . ' ' . $key;
+				$compiled = self::compile_css( trim( $nested_selector ), $value );
+				if ( is_wp_error( $compiled ) ) {
+					return $compiled;
+				}
+
+				$nested .= $compiled;
+				continue;
+			}
+
+			$property = self::css_property_name( $key );
+			if ( '' === $property ) {
+				return new WP_Error( 'global_style_property_invalid', 'contains an invalid style property' );
+			}
+
+			$css_value = trim( wp_strip_all_tags( (string) $value ) );
+			if ( '' === $css_value || false !== strpos( $css_value, '{' ) || false !== strpos( $css_value, '}' ) || false !== strpos( $css_value, ';' ) ) {
+				return new WP_Error( 'global_style_value_invalid', 'contains an invalid style value' );
+			}
+
+			$declarations .= $property . ':' . $css_value . ';';
+		}
+
+		$css = '' !== $declarations ? $selector . '{' . $declarations . '}' : '';
+		return $css . $nested;
+	}
+
+	/** Convert a native camelCase style key to a CSS property name. */
+	private static function css_property_name( string $key ): string {
+		if ( 0 === strpos( $key, '--' ) ) {
+			return 1 === preg_match( '/^--[A-Za-z0-9_-]+$/', $key ) ? $key : '';
+		}
+
+		if ( 1 !== preg_match( '/^[A-Za-z][A-Za-z0-9]*$/', $key ) ) {
+			return '';
+		}
+
+		return strtolower( (string) preg_replace( '/([a-z0-9])([A-Z])/', '$1-$2', $key ) );
 	}
 
 	/**

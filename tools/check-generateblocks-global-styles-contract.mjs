@@ -19,12 +19,17 @@ assert.match(abilities, /MCP_Abilities_GeneratePress_GenerateBlocks_Global_Style
 assert.match(abilities, /MCP_Abilities_GeneratePress_GenerateBlocks_Global_Styles::synchronize\(/, 'write ability must use the current Global Styles Adapter');
 assert.doesNotMatch(abilities, /generateblocks_global_styles|generateblocks_global_style_attrs/, 'abilities must not use the legacy option-backed Global Styles model');
 assert.doesNotMatch(abilities, /generateblocks_defaults|update_option\(\s*'generateblocks'/, 'Global Styles must not multiplex unrelated settings/options');
+assert.doesNotMatch(abilities, /'css'\s*=>\s*array/, 'callers must supply native style data only, never a duplicate CSS representation');
 
 assert.match(adapter, /private const POST_TYPE = 'gblocks_styles'/, 'Adapter must own the current native Global Styles post type');
 assert.match(adapter, /gb_style_selector/, 'Adapter must persist the native selector field');
 assert.match(adapter, /gb_style_data/, 'Adapter must persist the native style-data field');
 assert.match(adapter, /gb_style_css/, 'Adapter must persist the native generated-CSS field');
 assert.match(adapter, /GenerateBlocks_Pro_Enqueue_Styles::get_instance\(\)->build_css\(\)/, 'Adapter must ask GenerateBlocks Pro to rebuild its external global stylesheet');
+assert.match(adapter, /self::compile_css\( \$selector, \$style_data \)/, 'Adapter must derive the required CSS cache from native style data');
+assert.match(adapter, /global_style_value_invalid/, 'compiled CSS values must reject rule injection');
+assert.match(adapter, /\$existing_by_selector = self::index_by_selector\(\)/, 'synchronization must read the native inventory once');
+assert.doesNotMatch(adapter, /private static function get_by_selector/, 'synchronization must not query the full inventory once per selector');
 assert.doesNotMatch(adapter, /generateblocks_global_styles|gblocks_global_style['"]/, 'Adapter must not retain the deprecated Global Styles model');
 assert.doesNotMatch(adapter, /meta_query/, 'Global Style selector lookup must not issue a slow metadata query');
 assert.match(adapter, /self::matches\( \$existing, \$style \)/, 'exact Global Styles must perform no write');
