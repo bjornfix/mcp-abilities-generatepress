@@ -53,6 +53,7 @@ Part of the MCP Expose Abilities ecosystem.
 = 1.1.54 =
 * Changed: Global Styles abilities now use the current GenerateBlocks Pro global-class model instead of the deprecated option-backed model.
 * Changed: Global Styles mutations upsert exact native classes, support explicit deletion, and rebuild the GenerateBlocks global stylesheet.
+* Fixed: Exact Global Styles perform no write, and selector lookup avoids metadata queries.
 
 = 1.1.53 =
 * Fixed: exact Block Element upserts perform no writes or cache invalidation, while changed Elements invalidate dynamic CSS without a synchronous site-wide rebuild.

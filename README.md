@@ -380,6 +380,7 @@ The response uses the current GenerateBlocks Pro global-class model. Each item i
 
 - Move Global Styles abilities to the current GenerateBlocks Pro global-class model and remove the deprecated option-backed implementation.
 - Upsert exact native classes, support explicit selector deletion, and rebuild the GenerateBlocks global stylesheet through its owning implementation.
+- Keep exact Global Styles write-free and resolve selectors without metadata queries.
 
 ### 1.1.53
 

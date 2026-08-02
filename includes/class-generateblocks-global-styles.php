@@ -127,10 +127,16 @@ final class MCP_Abilities_GeneratePress_GenerateBlocks_Global_Styles {
 
 		$created = array();
 		$updated = array();
+		$unchanged = array();
 		$deleted = array();
 
 		foreach ( $normalized as $selector => $style ) {
 			$existing = self::get_by_selector( $selector );
+			if ( $existing instanceof WP_Post && self::matches( $existing, $style ) ) {
+				$unchanged[] = $selector;
+				continue;
+			}
+
 			$postarr  = array(
 				'post_type'   => self::POST_TYPE,
 				'post_title'  => $selector,
@@ -186,6 +192,7 @@ final class MCP_Abilities_GeneratePress_GenerateBlocks_Global_Styles {
 			'success' => true,
 			'created' => $created,
 			'updated' => $updated,
+			'unchanged' => $unchanged,
 			'deleted' => $deleted,
 			'styles'  => self::get_all(),
 			'message' => 'GenerateBlocks current Global Styles synchronized successfully',
@@ -200,22 +207,33 @@ final class MCP_Abilities_GeneratePress_GenerateBlocks_Global_Styles {
 			array(
 				'post_type'              => self::POST_TYPE,
 				'post_status'            => array( 'publish', 'draft', 'private' ),
-				'posts_per_page'         => 1,
+				'posts_per_page'         => -1,
 				'no_found_rows'          => true,
-				'update_post_meta_cache' => false,
 				'update_post_term_cache' => false,
-				'meta_query'             => array(
-					array(
-						'key'     => 'gb_style_selector',
-						'value'   => $selector,
-						'compare' => '=',
-					),
-				),
 			)
 		);
 
-		$post = $query->posts[0] ?? null;
-		return $post instanceof WP_Post ? $post : null;
+		foreach ( $query->posts as $post ) {
+			if ( $post instanceof WP_Post && $selector === (string) get_post_meta( $post->ID, 'gb_style_selector', true ) ) {
+				return $post;
+			}
+		}
+
+		return null;
+	}
+
+	/**
+	 * Determine whether a native Global Style already matches exactly.
+	 *
+	 * @param WP_Post              $post  Existing style post.
+	 * @param array<string, mixed> $style Normalized desired style.
+	 */
+	private static function matches( WP_Post $post, array $style ): bool {
+		return (string) $post->post_title === (string) $style['selector']
+			&& (string) $post->post_status === (string) $style['status']
+			&& (int) $post->menu_order === (int) $style['menu_order']
+			&& (array) get_post_meta( $post->ID, 'gb_style_data', true ) === (array) $style['styles']
+			&& (string) get_post_meta( $post->ID, 'gb_style_css', true ) === (string) $style['css'];
 	}
 
 	/**

@@ -26,5 +26,7 @@ assert.match(adapter, /gb_style_data/, 'Adapter must persist the native style-da
 assert.match(adapter, /gb_style_css/, 'Adapter must persist the native generated-CSS field');
 assert.match(adapter, /GenerateBlocks_Pro_Enqueue_Styles::get_instance\(\)->build_css\(\)/, 'Adapter must ask GenerateBlocks Pro to rebuild its external global stylesheet');
 assert.doesNotMatch(adapter, /generateblocks_global_styles|gblocks_global_style['"]/, 'Adapter must not retain the deprecated Global Styles model');
+assert.doesNotMatch(adapter, /meta_query/, 'Global Style selector lookup must not issue a slow metadata query');
+assert.match(adapter, /self::matches\( \$existing, \$style \)/, 'exact Global Styles must perform no write');
 
 console.log('GenerateBlocks current Global Styles contract passed.');

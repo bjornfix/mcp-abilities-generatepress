@@ -4466,6 +4466,7 @@ function mcp_abilities_generatepress_register_abilities(): void {
 					'success' => array( 'type' => 'boolean' ),
 					'created' => array( 'type' => 'array', 'items' => array( 'type' => 'string' ) ),
 					'updated' => array( 'type' => 'array', 'items' => array( 'type' => 'string' ) ),
+					'unchanged' => array( 'type' => 'array', 'items' => array( 'type' => 'string' ) ),
 					'deleted' => array( 'type' => 'array', 'items' => array( 'type' => 'string' ) ),
 					'styles'  => array( 'type' => 'array' ),
 					'message' => array( 'type' => 'string' ),
