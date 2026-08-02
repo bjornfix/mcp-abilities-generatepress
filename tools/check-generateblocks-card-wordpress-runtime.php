@@ -72,7 +72,7 @@ if (
 	|| isset( $media['attrs']['width'] )
 	|| isset( $media['attrs']['style'] )
 	|| isset( $media['attrs']['aspectRatio'] )
-	|| isset( $media['attrs']['scale'] )
+	|| '' !== (string) ( $media['attrs']['scale'] ?? null )
 ) {
 	fwrite( STDERR, "GenerateBlocks card runtime projection failed.\n" );
 	exit( 1 );

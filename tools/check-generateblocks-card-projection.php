@@ -108,7 +108,7 @@ $assert( 'left' === (string) ( $projected_content['innerBlocks'][0]['attrs']['al
 $assert( ! isset( $projected_content['innerBlocks'][0]['attrs']['width'] ), 'Projected card image must not encode presentation width inline.' );
 $assert( ! isset( $projected_content['innerBlocks'][0]['attrs']['style'] ), 'Projected card image must not encode presentation styles inline.' );
 $assert( ! isset( $projected_content['innerBlocks'][0]['attrs']['aspectRatio'] ), 'Projected card image must not inherit the card height through an aspect-ratio slot.' );
-$assert( ! isset( $projected_content['innerBlocks'][0]['attrs']['scale'] ), 'Projected card image must keep its native square dimensions instead of forcing full flex height.' );
+$assert( '' === (string) ( $projected_content['innerBlocks'][0]['attrs']['scale'] ?? null ), 'Projected card image must explicitly disable the core block default that emits inline object-fit styling.' );
 $assert( 'devenia-query-card-featured-image' === (string) ( $projected_content['innerBlocks'][0]['attrs']['className'] ?? '' ), 'Projected card image must declare the reusable media-slot identity.' );
 $assert( array_key_exists( 1, $projected_content['innerContent'] ) && array_key_exists( 2, $projected_content['innerContent'] ) && null === $projected_content['innerContent'][1] && null === $projected_content['innerContent'][2], 'Projected image was not inserted inside the existing card wrapper before its first content child.' );
 $invalid_nested_link = '<figure class="wp-block-post-featured-image devenia-query-card-featured-image"><a href="https://example.com/plugin/"><a href="https://example.com/media.webp" class="foreign-wrapper"><img src="https://example.com/media-300x300.webp" alt=""></a></a></figure>';

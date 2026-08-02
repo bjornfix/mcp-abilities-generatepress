@@ -164,6 +164,7 @@ final class MCP_Abilities_GeneratePress_GenerateBlocks_Card_Projection {
 				'align'       => 'left',
 				'className'   => 'devenia-query-card-featured-image',
 				'sizeSlug'    => 'medium',
+				'scale'       => '',
 			),
 			'innerBlocks'  => array(),
 			'innerHTML'    => '',
