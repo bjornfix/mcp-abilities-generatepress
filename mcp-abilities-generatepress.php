@@ -3,7 +3,7 @@
  * Plugin Name: MCP Abilities - GeneratePress
  * Plugin URI: https://github.com/bjornfix/mcp-abilities-generatepress
  * Description: GeneratePress and GenerateBlocks abilities for MCP. Manage theme settings, elements, global styles, page meta, and caches.
- * Version: 1.1.53
+ * Version: 1.1.54
  * Author: basicus
  * Author URI: https://profiles.wordpress.org/basicus/
  * License: GPL-2.0+
@@ -25,6 +25,7 @@ require_once __DIR__ . '/includes/class-generateblocks-grid-projection.php';
 MCP_Abilities_GeneratePress_GenerateBlocks_Grid_Projection::register();
 require_once __DIR__ . '/includes/class-generateblocks-card-projection.php';
 MCP_Abilities_GeneratePress_GenerateBlocks_Card_Projection::register();
+require_once __DIR__ . '/includes/class-generateblocks-global-styles.php';
 
 /**
  * Supply GenerateBlocks design markers to the vendor-neutral content gate.
@@ -2657,7 +2658,7 @@ function mcp_abilities_generatepress_register_abilities(): void {
 						'counts'           => $element_counts,
 					),
 					'generateblocks'  => array(
-						'global_styles_count' => count( (array) get_option( 'generateblocks_global_styles', array() ) ),
+						'global_styles_count' => count( MCP_Abilities_GeneratePress_GenerateBlocks_Global_Styles::get_all() ),
 						'defaults_keys'       => array_values( array_map( 'strval', array_keys( (array) get_option( 'generateblocks_defaults', array() ) ) ) ),
 						'settings_keys'       => array_values( array_map( 'strval', array_keys( (array) get_option( 'generateblocks', array() ) ) ) ),
 						'dynamic_css_posts'   => is_array( $gb_known_posts ) ? count( $gb_known_posts ) : 0,
@@ -4381,22 +4382,17 @@ function mcp_abilities_generatepress_register_abilities(): void {
 	);
 
 	// =========================================================================
-	// GENERATEBLOCKS - Get Global Styles
+	// GENERATEBLOCKS - Get current Global Styles.
 	// =========================================================================
 	mcp_abilities_generatepress_register_ability(
 		'generateblocks/get-global-styles',
 		array(
 			'label'               => 'Get GenerateBlocks Global Styles',
-			'description'         => 'Retrieves GenerateBlocks global styles, defaults, and settings.',
+			'description'         => 'Retrieves current GenerateBlocks Pro Global Styles backed by native global classes.',
 			'category'            => 'site',
 			'input_schema'        => array(
 				'type'                 => 'object',
 				'properties'           => array(
-					'include_defaults' => array(
-						'type'        => 'boolean',
-						'default'     => true,
-						'description' => 'Include default settings in response.',
-					),
 				),
 				'additionalProperties' => false,
 			),
@@ -4405,22 +4401,14 @@ function mcp_abilities_generatepress_register_abilities(): void {
 				'properties' => array(
 					'success'       => array( 'type' => 'boolean' ),
 					'global_styles' => array( 'type' => 'array' ),
-					'defaults'      => array( 'type' => 'object' ),
-					'settings'      => array( 'type' => 'object' ),
 					'message'       => array( 'type' => 'string' ),
 				),
 			),
 			'execute_callback'    => function ( $input = array() ): array {
-				$global_styles = get_option( 'generateblocks_global_styles', array() );
-				$defaults      = get_option( 'generateblocks_defaults', array() );
-				$settings      = get_option( 'generateblocks', array() );
-
 				return array(
 					'success'       => true,
-					'global_styles' => $global_styles,
-					'defaults'      => $defaults,
-					'settings'      => $settings,
-					'message'       => 'GenerateBlocks settings retrieved successfully',
+					'global_styles' => MCP_Abilities_GeneratePress_GenerateBlocks_Global_Styles::get_all(),
+					'message'       => 'GenerateBlocks current Global Styles retrieved successfully',
 				);
 			},
 			'permission_callback' => function (): bool {
@@ -4437,28 +4425,37 @@ function mcp_abilities_generatepress_register_abilities(): void {
 	);
 
 	// =========================================================================
-	// GENERATEBLOCKS - Update Global Styles
+	// GENERATEBLOCKS - Synchronize current Global Styles.
 	// =========================================================================
 	mcp_abilities_generatepress_register_ability(
 		'generateblocks/update-global-styles',
 		array(
 			'label'               => 'Update GenerateBlocks Global Styles',
-			'description'         => 'Updates GenerateBlocks global styles, defaults, and settings. Global styles are replaced entirely.',
+			'description'         => 'Upserts current GenerateBlocks Pro Global Styles and explicitly deletes named class selectors.',
 			'category'            => 'site',
 			'input_schema'        => array(
 				'type'                 => 'object',
 				'properties'           => array(
 					'global_styles' => array(
 						'type'        => 'array',
-						'description' => 'Complete global styles array to save.',
+						'description' => 'Current Global Styles to create or update.',
+						'items'       => array(
+							'type'                 => 'object',
+							'properties'           => array(
+								'selector'   => array( 'type' => 'string' ),
+								'status'     => array( 'type' => 'string', 'enum' => array( 'publish', 'draft', 'private' ) ),
+								'menu_order' => array( 'type' => 'integer', 'minimum' => 0 ),
+								'styles'     => array( 'type' => 'object' ),
+								'css'        => array( 'type' => 'string' ),
+							),
+							'required'             => array( 'selector', 'styles', 'css' ),
+							'additionalProperties' => false,
+						),
 					),
-					'defaults' => array(
-						'type'        => 'object',
-						'description' => 'Default settings object to save.',
-					),
-					'settings' => array(
-						'type'        => 'object',
-						'description' => 'GenerateBlocks settings object to save.',
+					'delete_selectors' => array(
+						'type'        => 'array',
+						'description' => 'Exact current Global Style class selectors to delete.',
+						'items'       => array( 'type' => 'string' ),
 					),
 				),
 				'additionalProperties' => false,
@@ -4467,31 +4464,23 @@ function mcp_abilities_generatepress_register_abilities(): void {
 				'type'       => 'object',
 				'properties' => array(
 					'success' => array( 'type' => 'boolean' ),
+					'created' => array( 'type' => 'array', 'items' => array( 'type' => 'string' ) ),
+					'updated' => array( 'type' => 'array', 'items' => array( 'type' => 'string' ) ),
+					'deleted' => array( 'type' => 'array', 'items' => array( 'type' => 'string' ) ),
+					'styles'  => array( 'type' => 'array' ),
 					'message' => array( 'type' => 'string' ),
 				),
 			),
 			'execute_callback'    => function ( $input = array() ): array {
 				$input = is_array( $input ) ? $input : array();
 
-				if ( empty( $input['global_styles'] ) && empty( $input['defaults'] ) && empty( $input['settings'] ) ) {
-					return array( 'success' => false, 'message' => 'No styles, defaults, or settings provided to update' );
+				if ( empty( $input['global_styles'] ) && empty( $input['delete_selectors'] ) ) {
+					return array( 'success' => false, 'message' => 'No Global Styles or selectors provided to synchronize' );
 				}
 
-				if ( isset( $input['global_styles'] ) ) {
-					update_option( 'generateblocks_global_styles', $input['global_styles'] );
-				}
-
-				if ( isset( $input['defaults'] ) ) {
-					update_option( 'generateblocks_defaults', $input['defaults'] );
-				}
-
-				if ( isset( $input['settings'] ) ) {
-					update_option( 'generateblocks', $input['settings'] );
-				}
-
-				return array(
-					'success' => true,
-					'message' => 'GenerateBlocks settings updated successfully',
+				return MCP_Abilities_GeneratePress_GenerateBlocks_Global_Styles::synchronize(
+					(array) ( $input['global_styles'] ?? array() ),
+					(array) ( $input['delete_selectors'] ?? array() )
 				);
 			},
 			'permission_callback' => function (): bool {
@@ -4500,7 +4489,7 @@ function mcp_abilities_generatepress_register_abilities(): void {
 				'meta'                => array(
 					'annotations' => array(
 						'readonly'    => false,
-						'destructive' => true,
+						'destructive' => false,
 						'idempotent'  => true,
 					),
 				),
@@ -4806,7 +4795,7 @@ function mcp_abilities_generatepress_register_abilities(): void {
 			'execute_callback'    => function ( array $input = array() ): array {
 				$include_values = ! empty( $input['include_values'] );
 				$options        = array(
-					'generateblocks_global_styles' => get_option( 'generateblocks_global_styles', array() ),
+					'generateblocks_global_styles' => MCP_Abilities_GeneratePress_GenerateBlocks_Global_Styles::get_all(),
 					'generateblocks_defaults'      => get_option( 'generateblocks_defaults', array() ),
 					'generateblocks'               => get_option( 'generateblocks', array() ),
 					'generateblocks_dynamic_css_posts' => get_option( 'generateblocks_dynamic_css_posts', array() ),

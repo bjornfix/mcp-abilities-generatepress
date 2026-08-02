@@ -2,13 +2,13 @@
 
 GeneratePress and GenerateBlocks abilities for MCP. Manage theme settings, elements, global styles, page meta, and caches.
 
-[![Release 1.1.53](https://img.shields.io/badge/release-1.1.53-blue.svg)](https://downloads.devenia.com/mcp-abilities-generatepress.zip)
+[![Release 1.1.54](https://img.shields.io/badge/release-1.1.54-blue.svg)](https://downloads.devenia.com/mcp-abilities-generatepress.zip)
 [![License: GPL v2](https://img.shields.io/badge/License-GPL%20v2-blue.svg)](https://www.gnu.org/licenses/gpl-2.0)
 [![WordPress](https://img.shields.io/badge/WordPress-6.9%2B-blue.svg)](https://wordpress.org)
 [![PHP](https://img.shields.io/badge/PHP-8.0%2B-purple.svg)](https://php.net)
 
 **Tested up to:** 7.0
-**Stable tag:** 1.1.53
+**Stable tag:** 1.1.54
 **Tags:** mcp, generatepress, theme, ai, automation
 **License:** GPLv2 or later
 **License URI:** https://www.gnu.org/licenses/gpl-2.0.html
@@ -150,8 +150,8 @@ If you skip base-stack verification and start with add-ons immediately, troubles
 | `generatepress/restore-element` | Restore a trashed GeneratePress Element |
 | `generatepress/audit-featured-image-sizes` | Audit posts for missing featured-image sizes |
 | `generatepress/regenerate-featured-image-sizes` | Regenerate featured-image attachment metadata |
-| `generateblocks/get-global-styles` | Get GenerateBlocks global styles |
-| `generateblocks/update-global-styles` | Update GenerateBlocks global styles |
+| `generateblocks/get-global-styles` | Get current GenerateBlocks Pro Global Styles |
+| `generateblocks/update-global-styles` | Upsert or explicitly delete current GenerateBlocks Pro Global Styles |
 | `generateblocks/list-options` | List GenerateBlocks and GenerateBlocks Pro options |
 | `generateblocks/get-options` | Get GenerateBlocks and GenerateBlocks Pro options |
 | `generateblocks/update-options` | Update or delete GenerateBlocks and GenerateBlocks Pro options |
@@ -290,6 +290,32 @@ Use this ability for site-wide design decisions instead of page/block-level styl
 }
 ```
 
+The response uses the current GenerateBlocks Pro global-class model. Each item includes its native selector, style data, generated CSS, status, and menu order.
+
+### Update GenerateBlocks global styles
+
+```json
+{
+  "ability_name": "generateblocks/update-global-styles",
+  "parameters": {
+    "global_styles": [
+      {
+        "selector": ".content-width",
+        "status": "publish",
+        "menu_order": 10,
+        "styles": {
+          "maxWidth": "1140px",
+          "marginLeft": "auto",
+          "marginRight": "auto"
+        },
+        "css": ".content-width{margin-left:auto;margin-right:auto;max-width:1140px}"
+      }
+    ],
+    "delete_selectors": []
+  }
+}
+```
+
 ### Discover the full control surface
 
 ```json
@@ -349,6 +375,11 @@ Use this ability for site-wide design decisions instead of page/block-level styl
 `generateblocks/clear-cache` preserves existing generated CSS files by default and only clears cache metadata. Use `{"delete_files": true}` only with explicit `post_ids` for an atomic destructive refresh; global destructive deletion is rejected before mutation. Warming verifies that each expected per-page CSS file was regenerated. If any target fails or is skipped, the ability returns `success: false` and restores prior files, registry state, and regeneration metadata. You can also pass `limit` to bound warming. Targeted invalidation preserves unrelated registry entries; a non-destructive full clear derives its warm set from published WordPress content as well as regenerable cache metadata.
 
 ## Changelog
+
+### 1.1.54
+
+- Move Global Styles abilities to the current GenerateBlocks Pro global-class model and remove the deprecated option-backed implementation.
+- Upsert exact native classes, support explicit selector deletion, and rebuild the GenerateBlocks global stylesheet through its owning implementation.
 
 ### 1.1.53
 
