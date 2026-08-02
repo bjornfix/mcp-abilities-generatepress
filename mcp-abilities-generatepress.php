@@ -3,7 +3,7 @@
  * Plugin Name: MCP Abilities - GeneratePress
  * Plugin URI: https://github.com/bjornfix/mcp-abilities-generatepress
  * Description: GeneratePress and GenerateBlocks abilities for MCP. Manage theme settings, elements, global styles, page meta, and caches.
- * Version: 1.1.58
+ * Version: 1.1.59
  * Author: basicus
  * Author URI: https://profiles.wordpress.org/basicus/
  * License: GPL-2.0+
@@ -328,6 +328,142 @@ function mcp_abilities_generatepress_upsert_block_element( array $input ): array
 		'display_conditions' => $display_conditions,
 		'message'            => 'GeneratePress Block Element ' . $action . ' successfully.',
 	);
+}
+
+/**
+ * Return whether the current GenerateBlocks Pro runtime exposes Overlay Panels.
+ */
+function mcp_abilities_generatepress_overlay_panels_available(): bool {
+	return post_type_exists( 'gblocks_overlay' ) && post_type_exists( 'nav_menu_item' );
+}
+
+/**
+ * Idempotently persist one native GenerateBlocks Pro Overlay Panel.
+ *
+ * @param array<string,mixed> $input Overlay specification.
+ * @return array<string,mixed>
+ */
+function mcp_abilities_generatepress_upsert_overlay_panel( array $input ): array {
+	if ( ! mcp_abilities_generatepress_overlay_panels_available() ) {
+		return array( 'success' => false, 'message' => 'GenerateBlocks Pro Overlay Panels are not available.' );
+	}
+
+	$title      = sanitize_text_field( (string) ( $input['title'] ?? '' ) );
+	$slug       = sanitize_title( (string) ( $input['slug'] ?? '' ) );
+	$content    = (string) ( $input['content'] ?? '' );
+	$status     = sanitize_key( (string) ( $input['status'] ?? 'publish' ) );
+	$type       = sanitize_key( (string) ( $input['type'] ?? 'mega-menu' ) );
+	$placement  = sanitize_key( (string) ( $input['placement'] ?? 'bottom-start' ) );
+	$parent     = sanitize_text_field( (string) ( $input['position_to_parent'] ?? '' ) );
+	$width_mode = sanitize_key( (string) ( $input['width_mode'] ?? '' ) );
+	$hover      = max( 0, min( 100, (int) ( $input['hover_buffer'] ?? 20 ) ) );
+
+	if ( '' === $title || '' === $slug || '' === trim( $content ) ) {
+		return array( 'success' => false, 'message' => 'title, slug, and content are required.' );
+	}
+	if ( ! in_array( $status, array( 'publish', 'draft' ), true ) ) {
+		return array( 'success' => false, 'message' => 'status must be publish or draft.' );
+	}
+	if ( ! in_array( $type, array( 'standard', 'anchored', 'mega-menu' ), true ) ) {
+		return array( 'success' => false, 'message' => 'type must be standard, anchored, or mega-menu.' );
+	}
+	if ( ! in_array( $placement, array( 'bottom-start', 'bottom', 'bottom-end', 'left-start', 'left', 'left-end', 'right-start', 'right', 'right-end', 'top-start', 'top', 'top-end' ), true ) ) {
+		return array( 'success' => false, 'message' => 'placement is not supported by GenerateBlocks Pro.' );
+	}
+	if ( ! in_array( $width_mode, array( '', 'full' ), true ) ) {
+		return array( 'success' => false, 'message' => 'width_mode must be empty or full.' );
+	}
+	if ( false === strpos( $content, '<!-- wp:generateblocks/' ) && false === strpos( $content, '<!-- wp:generateblocks-pro/' ) ) {
+		return array( 'success' => false, 'message' => 'Overlay Panels must use native GenerateBlocks markup.' );
+	}
+
+	$existing = get_page_by_path( $slug, OBJECT, 'gblocks_overlay' );
+	$post_data = array(
+		'post_type'    => 'gblocks_overlay',
+		'post_status'  => $status,
+		'post_title'   => $title,
+		'post_name'    => $slug,
+		'post_content' => $content,
+	);
+	$meta = array(
+		'_gb_overlay_type'               => $type,
+		'_gb_overlay_trigger_type'       => 'click',
+		'_gb_overlay_placement'          => $placement,
+		'_gb_overlay_position_to_parent' => $parent,
+		'_gb_overlay_hover_buffer'       => (string) $hover,
+		'_gb_overlay_width_mode'         => $width_mode,
+	);
+	$unchanged = $existing
+		&& $existing->post_status === $status
+		&& $existing->post_title === $title
+		&& $existing->post_name === $slug
+		&& $existing->post_content === $content;
+	if ( $unchanged ) {
+		foreach ( $meta as $key => $value ) {
+			if ( get_post_meta( $existing->ID, $key, true ) !== $value ) {
+				$unchanged = false;
+				break;
+			}
+		}
+	}
+	if ( $unchanged ) {
+		return array( 'success' => true, 'id' => (int) $existing->ID, 'action' => 'unchanged', 'type' => $type, 'message' => 'GenerateBlocks Pro Overlay Panel is already current.' );
+	}
+
+	if ( $existing ) {
+		$post_data['ID'] = (int) $existing->ID;
+		$post_id = wp_update_post( wp_slash( $post_data ), true );
+		$action  = 'updated';
+	} else {
+		$post_id = wp_insert_post( wp_slash( $post_data ), true );
+		$action  = 'created';
+	}
+	if ( is_wp_error( $post_id ) ) {
+		return array( 'success' => false, 'message' => $post_id->get_error_message() );
+	}
+	foreach ( $meta as $key => $value ) {
+		update_post_meta( (int) $post_id, $key, $value );
+	}
+	update_option( 'generateblocks_dynamic_css_posts', array() );
+	if ( function_exists( 'generateblocks_pro_clear_overlay_cache' ) ) {
+		generateblocks_pro_clear_overlay_cache();
+	}
+
+	return array( 'success' => true, 'id' => (int) $post_id, 'action' => $action, 'type' => $type, 'message' => 'GenerateBlocks Pro Overlay Panel saved.' );
+}
+
+/**
+ * Attach one published native mega-menu Overlay Panel to a WordPress menu item.
+ *
+ * @param array<string,mixed> $input Attachment specification.
+ * @return array<string,mixed>
+ */
+function mcp_abilities_generatepress_attach_menu_item_mega_menu( array $input ): array {
+	$menu_item_id = absint( $input['menu_item_id'] ?? 0 );
+	$overlay_id   = absint( $input['overlay_id'] ?? 0 );
+	$anchor       = sanitize_text_field( (string) ( $input['anchor'] ?? '' ) );
+	$menu_item    = $menu_item_id ? get_post( $menu_item_id ) : null;
+	$overlay      = $overlay_id ? get_post( $overlay_id ) : null;
+	if ( ! $menu_item || 'nav_menu_item' !== $menu_item->post_type ) {
+		return array( 'success' => false, 'message' => 'menu_item_id must identify a WordPress navigation menu item.' );
+	}
+	if ( ! $overlay || 'gblocks_overlay' !== $overlay->post_type || 'publish' !== $overlay->post_status || 'mega-menu' !== get_post_meta( $overlay_id, '_gb_overlay_type', true ) ) {
+		return array( 'success' => false, 'message' => 'overlay_id must identify a published GenerateBlocks Pro mega-menu Overlay Panel.' );
+	}
+	if ( (string) $overlay_id === (string) get_post_meta( $menu_item_id, '_gb_mega_menu', true ) && $anchor === (string) get_post_meta( $menu_item_id, '_gb_mega_menu_anchor', true ) ) {
+		return array( 'success' => true, 'menu_item_id' => $menu_item_id, 'overlay_id' => $overlay_id, 'action' => 'unchanged', 'message' => 'Menu item mega menu is already current.' );
+	}
+	update_post_meta( $menu_item_id, '_gb_mega_menu', $overlay_id );
+	if ( '' === $anchor ) {
+		delete_post_meta( $menu_item_id, '_gb_mega_menu_anchor' );
+	} else {
+		update_post_meta( $menu_item_id, '_gb_mega_menu_anchor', $anchor );
+	}
+	if ( function_exists( 'generateblocks_pro_clear_overlay_cache' ) ) {
+		generateblocks_pro_clear_overlay_cache();
+	}
+
+	return array( 'success' => true, 'menu_item_id' => $menu_item_id, 'overlay_id' => $overlay_id, 'action' => 'updated', 'message' => 'GenerateBlocks Pro mega menu attached.' );
 }
 
 /**
@@ -6553,6 +6689,94 @@ function mcp_abilities_generatepress_register_abilities(): void {
 					'idempotent'  => true,
 				),
 			),
+		)
+	);
+
+	// =========================================================================
+	// GENERATEBLOCKS PRO - Overlay Panels and Mega Menus
+	// =========================================================================
+	mcp_abilities_generatepress_register_ability(
+		'generatepress/list-overlay-panels',
+		array(
+			'label' => 'List GenerateBlocks Pro Overlay Panels',
+			'description' => 'Lists native GenerateBlocks Pro Overlay Panels and their types.',
+			'category' => 'site',
+			'input_schema' => array( 'type' => 'object', 'properties' => array(), 'additionalProperties' => false ),
+			'output_schema' => array(
+				'type' => 'object',
+				'properties' => array(
+					'success' => array( 'type' => 'boolean' ),
+					'overlays' => array( 'type' => 'array' ),
+					'message' => array( 'type' => 'string' ),
+				),
+			),
+			'execute_callback' => function (): array {
+				if ( ! mcp_abilities_generatepress_overlay_panels_available() ) {
+					return array( 'success' => false, 'overlays' => array(), 'message' => 'GenerateBlocks Pro Overlay Panels are not available.' );
+				}
+				$posts = get_posts( array( 'post_type' => 'gblocks_overlay', 'post_status' => array( 'publish', 'draft' ), 'posts_per_page' => 500, 'orderby' => 'ID', 'order' => 'ASC' ) );
+				$overlays = array_map(
+					static function ( WP_Post $post ): array {
+						return array( 'id' => (int) $post->ID, 'title' => $post->post_title, 'slug' => $post->post_name, 'status' => $post->post_status, 'type' => (string) get_post_meta( $post->ID, '_gb_overlay_type', true ) );
+					},
+					$posts
+				);
+				return array( 'success' => true, 'overlays' => $overlays, 'message' => sprintf( 'Found %d Overlay Panel(s).', count( $overlays ) ) );
+			},
+			'permission_callback' => function (): bool { return current_user_can( 'edit_theme_options' ); },
+			'meta' => array( 'annotations' => array( 'readonly' => true, 'destructive' => false, 'idempotent' => true ) ),
+		)
+	);
+
+	mcp_abilities_generatepress_register_ability(
+		'generatepress/upsert-overlay-panel',
+		array(
+			'label' => 'Upsert GenerateBlocks Pro Overlay Panel',
+			'description' => 'Idempotently creates or updates one native GenerateBlocks Pro Overlay Panel at a stable slug.',
+			'category' => 'site',
+			'input_schema' => array(
+				'type' => 'object',
+				'required' => array( 'title', 'slug', 'content', 'type' ),
+				'properties' => array(
+					'title' => array( 'type' => 'string' ),
+					'slug' => array( 'type' => 'string' ),
+					'content' => array( 'type' => 'string' ),
+					'type' => array( 'type' => 'string', 'enum' => array( 'standard', 'anchored', 'mega-menu' ) ),
+					'status' => array( 'type' => 'string', 'enum' => array( 'publish', 'draft' ), 'default' => 'publish' ),
+					'placement' => array( 'type' => 'string', 'default' => 'bottom-start' ),
+					'position_to_parent' => array( 'type' => 'string', 'default' => '' ),
+					'hover_buffer' => array( 'type' => 'integer', 'minimum' => 0, 'maximum' => 100, 'default' => 20 ),
+					'width_mode' => array( 'type' => 'string', 'enum' => array( '', 'full' ), 'default' => '' ),
+				),
+				'additionalProperties' => false,
+			),
+			'output_schema' => array( 'type' => 'object', 'properties' => array( 'success' => array( 'type' => 'boolean' ), 'id' => array( 'type' => 'integer' ), 'action' => array( 'type' => 'string' ), 'type' => array( 'type' => 'string' ), 'message' => array( 'type' => 'string' ) ) ),
+			'execute_callback' => 'mcp_abilities_generatepress_upsert_overlay_panel',
+			'permission_callback' => function (): bool { return current_user_can( 'edit_theme_options' ); },
+			'meta' => array( 'annotations' => array( 'readonly' => false, 'destructive' => false, 'idempotent' => true ) ),
+		)
+	);
+
+	mcp_abilities_generatepress_register_ability(
+		'generatepress/attach-menu-item-mega-menu',
+		array(
+			'label' => 'Attach GenerateBlocks Pro Mega Menu',
+			'description' => 'Idempotently attaches a published native mega-menu Overlay Panel to one WordPress navigation menu item.',
+			'category' => 'site',
+			'input_schema' => array(
+				'type' => 'object',
+				'required' => array( 'menu_item_id', 'overlay_id' ),
+				'properties' => array(
+					'menu_item_id' => array( 'type' => 'integer', 'minimum' => 1 ),
+					'overlay_id' => array( 'type' => 'integer', 'minimum' => 1 ),
+					'anchor' => array( 'type' => 'string', 'default' => '' ),
+				),
+				'additionalProperties' => false,
+			),
+			'output_schema' => array( 'type' => 'object', 'properties' => array( 'success' => array( 'type' => 'boolean' ), 'menu_item_id' => array( 'type' => 'integer' ), 'overlay_id' => array( 'type' => 'integer' ), 'action' => array( 'type' => 'string' ), 'message' => array( 'type' => 'string' ) ) ),
+			'execute_callback' => 'mcp_abilities_generatepress_attach_menu_item_mega_menu',
+			'permission_callback' => function (): bool { return current_user_can( 'edit_theme_options' ); },
+			'meta' => array( 'annotations' => array( 'readonly' => false, 'destructive' => false, 'idempotent' => true ) ),
 		)
 	);
 
