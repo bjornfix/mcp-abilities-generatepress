@@ -37,7 +37,7 @@ assert.match(
 );
 assert.notMatch(workflowProjection, /data-devenia-card-(?:summary|action)/, "Workflow must not own GenerateBlocks card-role implementation");
 assert.notMatch(sitePresentation, /data-devenia-card-(?:summary|action)|generateblocks_dynamic_tag_replacement/, "Site Presentation must not own Query card data projection");
-assert.match(queryCollectionPattern, /data-devenia-card-inventory":"child-pages"/, "the real shared query-collection section must use the Adapter's generic inventory role");
+assert.notMatch(queryCollectionPattern, /data-devenia-card-inventory/, "a filtered group Query must not claim to be the complete direct-child inventory");
 assert.match(queryCollectionPattern, /data-devenia-card-action":"details"/, "the real shared query-collection section must use the Adapter's generic detail role");
 assert.match(queryCollectionPattern, /aria-label":"View \{\{post_title\}\} details"/, "the real shared query-collection section must satisfy the media projection Interface");
 assert.notMatch(moduleSource, /page_id|post_parent\s*===|locale|customCss|additionalCss/i, "Card projection must not infer policy from page IDs, locale, or CSS");
