@@ -534,7 +534,7 @@ final class MCP_Abilities_GeneratePress_GenerateBlocks_Card_Projection {
 	/** Expose declared Query inventory contracts to Workflow's relation owner. */
 	public static function dynamic_inventory_contracts( array $contracts, array $blocks ): array {
 		foreach ( self::find_card_inventory_contracts( $blocks ) as $contract ) {
-			$contracts[] = array_merge( array( 'adapter' => 'devenia-generateblocks-card-projection', 'type' => 'translated_direct_children' ), $contract );
+			$contracts[] = array_merge( array( 'adapter' => 'devenia-generateblocks-card-projection', 'type' => 'localized_direct_children' ), $contract );
 		}
 		return $contracts;
 	}
