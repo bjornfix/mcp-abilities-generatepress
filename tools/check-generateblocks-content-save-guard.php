@@ -83,8 +83,24 @@ $GLOBALS['mcp_guard_parsed'][ $missing_style ] = array(
 $missing_style_result = MCP_Abilities_GeneratePress_GenerateBlocks_Content_Save_Guard::validate_content( $missing_style );
 $assert( is_wp_error( $missing_style_result ) && 'generateblocks_global_styles_missing' === $missing_style_result->get_error_code(), 'A missing GenerateBlocks Global Style was allowed to save.' );
 
-$GLOBALS['mcp_guard_global_styles'] = array( array( 'selector' => '.gbp-section' ) );
+$GLOBALS['mcp_guard_global_styles'] = array(
+	array(
+		'selector' => '.gbp-section',
+		'status'   => 'publish',
+		'css'      => '.gbp-section{padding:1rem;}',
+	)
+);
 $assert( true === MCP_Abilities_GeneratePress_GenerateBlocks_Content_Save_Guard::validate_content( $missing_style ), 'An existing GenerateBlocks Global Style was reported missing.' );
+$assert( true === MCP_Abilities_GeneratePress_GenerateBlocks_Content_Save_Guard::validate_content( $missing_style, true ), 'A published GenerateBlocks Global Style with CSS was rejected.' );
+
+$GLOBALS['mcp_guard_global_styles'][0]['status'] = 'draft';
+$draft_style_result = MCP_Abilities_GeneratePress_GenerateBlocks_Content_Save_Guard::validate_content( $missing_style, true );
+$assert( is_wp_error( $draft_style_result ) && 'generateblocks_global_styles_missing' === $draft_style_result->get_error_code(), 'A draft Global Style was allowed on published page content.' );
+$GLOBALS['mcp_guard_global_styles'][0]['status'] = 'publish';
+$GLOBALS['mcp_guard_global_styles'][0]['css']    = '';
+$empty_css_result = MCP_Abilities_GeneratePress_GenerateBlocks_Content_Save_Guard::validate_content( $missing_style, true );
+$assert( is_wp_error( $empty_css_result ) && 'generateblocks_global_styles_missing' === $empty_css_result->get_error_code(), 'A Global Style without generated CSS was allowed to save.' );
+$GLOBALS['mcp_guard_global_styles'][0]['css'] = '.gbp-section{padding:1rem;}';
 
 $unknown = '<!-- wp:devenia/missing /-->';
 $GLOBALS['mcp_guard_parsed'][ $unknown ] = array( array( 'blockName' => 'devenia/missing', 'innerBlocks' => array() ) );
@@ -111,6 +127,12 @@ $mcp_result = MCP_Abilities_GeneratePress_GenerateBlocks_Content_Save_Guard::val
 	array( 'post_type' => 'page', 'content' => $nested )
 );
 $assert( is_wp_error( $mcp_result ), 'MCP page write bypassed the shared guard.' );
+$GLOBALS['mcp_guard_global_styles'] = array();
+$mcp_missing_style_result = MCP_Abilities_GeneratePress_GenerateBlocks_Content_Save_Guard::validate_mcp_write(
+	true,
+	array( 'post_type' => 'page', 'target_status' => 'publish', 'content' => $missing_style )
+);
+$assert( is_wp_error( $mcp_missing_style_result ) && 'generateblocks_global_styles_missing' === $mcp_missing_style_result->get_error_code(), 'MCP page write allowed a missing Global Style.' );
 $assert(
 	true === MCP_Abilities_GeneratePress_GenerateBlocks_Content_Save_Guard::validate_mcp_write(
 		true,
@@ -122,5 +144,9 @@ $assert(
 $prepared = (object) array( 'post_content' => $nested );
 $rest_result = MCP_Abilities_GeneratePress_GenerateBlocks_Content_Save_Guard::validate_rest_write( $prepared, null );
 $assert( is_wp_error( $rest_result ), 'Gutenberg page REST write bypassed the shared guard.' );
+
+$prepared_missing_style = (object) array( 'post_content' => $missing_style, 'post_status' => 'publish' );
+$rest_missing_style_result = MCP_Abilities_GeneratePress_GenerateBlocks_Content_Save_Guard::validate_rest_write( $prepared_missing_style, null );
+$assert( is_wp_error( $rest_missing_style_result ) && 'generateblocks_global_styles_missing' === $rest_missing_style_result->get_error_code(), 'Gutenberg REST page write allowed a missing Global Style.' );
 
 echo "GenerateBlocks content save guard checks passed.\n";

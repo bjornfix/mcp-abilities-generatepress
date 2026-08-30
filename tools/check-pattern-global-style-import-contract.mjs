@@ -11,6 +11,10 @@ assert.match(plugin, /mcp_abilities_generatepress_import_pattern_global_styles/)
 assert.match(plugin, /\/generateblocks-pro\/v1\/pattern-library\/get-global-style-data/);
 assert.match(plugin, /\/generateblocks-pro\/v1\/pattern-library\/import-styles/);
 assert.match(plugin, /globalStyleSelectors/);
+assert.match(plugin, /mcp_abilities_generatepress_pattern_library_headers/);
+assert.match(plugin, /X-GB-Public-Key/);
+assert.match(plugin, /mcp_abilities_generatepress_unusable_pattern_global_style_selectors/);
+assert.match(plugin, /generateblocks_pattern_global_styles_import_incomplete/);
 assert.match(plugin, /missing_pattern_ids/);
 assert.match(plugin, /missing_selectors/);
 assert.match(plugin, /\.gbp-section__inner/);

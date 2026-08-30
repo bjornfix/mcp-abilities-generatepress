@@ -3,7 +3,7 @@
  * Plugin Name: MCP Abilities - GeneratePress
  * Plugin URI: https://github.com/bjornfix/mcp-abilities-generatepress
  * Description: GeneratePress and GenerateBlocks abilities for MCP. Manage theme settings, elements, global styles, page meta, and caches.
- * Version: 1.1.60
+ * Version: 1.1.61
  * Author: basicus
  * Author URI: https://profiles.wordpress.org/basicus/
  * License: GPL-2.0+
@@ -2252,6 +2252,30 @@ function mcp_abilities_generatepress_public_pattern_library( array $library, boo
 }
 
 /**
+ * Return the native request headers for one trusted Pattern Library.
+ *
+ * Pattern discovery and Global Style import are two parts of the same native
+ * insertion flow. They must authenticate the selected library identically.
+ *
+ * @param array<string,mixed> $library Native Pattern Library definition.
+ * @return array<string,string>
+ */
+function mcp_abilities_generatepress_pattern_library_headers( array $library ): array {
+	if ( ! empty( $library['isLocal'] ) ) {
+		// GenerateBlocks protects local collections by comparing the request Host
+		// with the current request host. Keep CLI calls inside that native check.
+		$current_host = isset( $_SERVER['HTTP_HOST'] ) && is_scalar( $_SERVER['HTTP_HOST'] )
+			? sanitize_text_field( wp_unslash( (string) $_SERVER['HTTP_HOST'] ) )
+			: '';
+		return array( 'Host' => $current_host );
+	}
+
+	return array(
+		'X-GB-Public-Key' => isset( $library['publicKey'] ) ? (string) $library['publicKey'] : '',
+	);
+}
+
+/**
  * Get GenerateBlocks Pattern Library categories or patterns.
  */
 function mcp_abilities_generatepress_get_pattern_library_items( string $kind, string $library_id, string $category_id = '', string $search = '' ): array {
@@ -2278,19 +2302,7 @@ function mcp_abilities_generatepress_get_pattern_library_items( string $kind, st
 		$params['search']     = $search;
 	}
 
-	$headers = array();
-	if ( $is_local ) {
-		// GenerateBlocks protects local collections by comparing the request Host
-		// with the current request host. Keep CLI calls local to the same native
-		// permission check instead of inventing the public home URL, which makes
-		// the established WP-CLI transport fail closed with a false 403.
-		$current_host = isset( $_SERVER['HTTP_HOST'] ) && is_scalar( $_SERVER['HTTP_HOST'] )
-			? sanitize_text_field( wp_unslash( (string) $_SERVER['HTTP_HOST'] ) )
-			: '';
-		$headers['Host'] = $current_host;
-	} else {
-		$headers['X-GB-Public-Key'] = isset( $library['publicKey'] ) ? (string) $library['publicKey'] : '';
-	}
+	$headers = mcp_abilities_generatepress_pattern_library_headers( $library );
 
 	$response = mcp_abilities_generatepress_rest_request( 'GET', $route, $params, $headers );
 
@@ -2399,7 +2411,7 @@ function mcp_abilities_generatepress_import_pattern_global_styles( string $libra
 	}
 	$selectors = array_values( array_unique( $selectors ) );
 
-	if ( ! empty( $library['isLocal'] ) || empty( $selectors ) ) {
+	if ( empty( $selectors ) ) {
 		return array(
 			'success'     => true,
 			'library'     => mcp_abilities_generatepress_public_pattern_library( $library ),
@@ -2408,16 +2420,49 @@ function mcp_abilities_generatepress_import_pattern_global_styles( string $libra
 			'imported'    => array(),
 			'existing'    => array(),
 			'backfilled'  => array(),
-			'message'     => empty( $selectors )
-				? 'The selected patterns do not require Global Styles.'
-				: 'Local Pattern Library styles already belong to this site.',
+			'message'     => 'The selected patterns do not require Global Styles.',
 		);
 	}
+
+	$style_inventory = MCP_Abilities_GeneratePress_GenerateBlocks_Global_Styles::get_all();
+	$existing_before = array();
+	foreach ( $style_inventory as $style ) {
+		$selector = is_array( $style ) ? (string) ( $style['selector'] ?? '' ) : '';
+		if ( in_array( $selector, $selectors, true ) ) {
+			$existing_before[] = $selector;
+		}
+	}
+
+	if ( ! empty( $library['isLocal'] ) ) {
+		$unusable = mcp_abilities_generatepress_unusable_pattern_global_style_selectors( $selectors );
+		if ( ! empty( $unusable ) ) {
+			return array(
+				'success'           => false,
+				'code'              => 'generateblocks_pattern_global_styles_unavailable',
+				'missing_selectors' => $unusable,
+				'message'           => 'The local Pattern Library does not have every published Global Style required by the selected patterns.',
+			);
+		}
+
+		return array(
+			'success'     => true,
+			'library'     => mcp_abilities_generatepress_public_pattern_library( $library ),
+			'pattern_ids' => $pattern_ids,
+			'selectors'   => $selectors,
+			'imported'    => array(),
+			'existing'    => $selectors,
+			'backfilled'  => array(),
+			'message'     => 'The local Pattern Library Global Styles are present and usable.',
+		);
+	}
+
+	$library_headers = mcp_abilities_generatepress_pattern_library_headers( $library );
 
 	$style_response = mcp_abilities_generatepress_rest_request(
 		'GET',
 		'/generateblocks-pro/v1/pattern-library/get-global-style-data',
-		array( 'id' => $library_id )
+		array( 'id' => $library_id ),
+		$library_headers
 	);
 	$style_data     = mcp_abilities_generatepress_pattern_response_data( $style_response );
 	$available      = array();
@@ -2445,7 +2490,8 @@ function mcp_abilities_generatepress_import_pattern_global_styles( string $libra
 	$import_response = mcp_abilities_generatepress_rest_request(
 		'POST',
 		'/generateblocks-pro/v1/pattern-library/import-styles',
-		array( 'styles' => $required_styles )
+		array( 'styles' => $required_styles ),
+		$library_headers
 	);
 	$import_data     = mcp_abilities_generatepress_pattern_response_data( $import_response );
 	if ( empty( $import_response['success'] ) || ! is_array( $import_data ) ) {
@@ -2453,6 +2499,21 @@ function mcp_abilities_generatepress_import_pattern_global_styles( string $libra
 			'success' => false,
 			'code'    => 'generateblocks_pattern_global_styles_import_failed',
 			'message' => 'GenerateBlocks could not import the required Global Styles.',
+		);
+	}
+
+	$unusable_selectors = mcp_abilities_generatepress_unusable_pattern_global_style_selectors( $selectors );
+	if ( ! empty( $unusable_selectors ) ) {
+		$new_selectors = array_values( array_diff( $selectors, $existing_before ) );
+		if ( ! empty( $new_selectors ) ) {
+			MCP_Abilities_GeneratePress_GenerateBlocks_Global_Styles::synchronize( array(), $new_selectors );
+		}
+
+		return array(
+			'success'           => false,
+			'code'              => 'generateblocks_pattern_global_styles_import_incomplete',
+			'missing_selectors' => $unusable_selectors,
+			'message'           => 'GenerateBlocks did not persist every required Global Style as published, usable CSS.',
 		);
 	}
 
@@ -2500,6 +2561,31 @@ function mcp_abilities_generatepress_import_pattern_global_styles( string $libra
 		'backfilled'  => $backfilled,
 		'message'     => 'GenerateBlocks imported the Global Styles required by the selected patterns.',
 	);
+}
+
+/**
+ * Return required selectors that are absent, unpublished, or have no CSS.
+ *
+ * @param string[] $selectors Exact native class selectors.
+ * @return string[]
+ */
+function mcp_abilities_generatepress_unusable_pattern_global_style_selectors( array $selectors ): array {
+	$usable = array();
+	foreach ( MCP_Abilities_GeneratePress_GenerateBlocks_Global_Styles::get_all() as $style ) {
+		if ( ! is_array( $style ) ) {
+			continue;
+		}
+
+		$selector = (string) ( $style['selector'] ?? '' );
+		if (
+			'publish' === (string) ( $style['status'] ?? '' )
+			&& '' !== trim( (string) ( $style['css'] ?? '' ) )
+		) {
+			$usable[] = $selector;
+		}
+	}
+
+	return array_values( array_diff( array_values( array_unique( $selectors ) ), array_unique( $usable ) ) );
 }
 
 /** Normalize native catalog fields that may be returned as a list of labels. */

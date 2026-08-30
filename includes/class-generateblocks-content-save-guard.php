@@ -40,7 +40,10 @@ final class MCP_Abilities_GeneratePress_GenerateBlocks_Content_Save_Guard {
 			return $result;
 		}
 
-		return self::validate_content( (string) ( $context['content'] ?? '' ) );
+		return self::validate_content(
+			(string) ( $context['content'] ?? '' ),
+			'publish' === strtolower( (string) ( $context['target_status'] ?? '' ) )
+		);
 	}
 
 	/**
@@ -51,12 +54,23 @@ final class MCP_Abilities_GeneratePress_GenerateBlocks_Content_Save_Guard {
 	 * @return mixed
 	 */
 	public static function validate_rest_write( $prepared_post, $request ) {
-		unset( $request );
 		if ( is_wp_error( $prepared_post ) || ! is_object( $prepared_post ) ) {
 			return $prepared_post;
 		}
 
-		$validation = self::validate_content( (string) ( $prepared_post->post_content ?? '' ) );
+		$target_status = strtolower( (string) ( $prepared_post->post_status ?? '' ) );
+		if ( '' === $target_status && is_object( $request ) && method_exists( $request, 'get_param' ) ) {
+			$post_id = (int) $request->get_param( 'id' );
+			$post    = $post_id > 0 ? get_post( $post_id ) : null;
+			if ( is_object( $post ) ) {
+				$target_status = strtolower( (string) ( $post->post_status ?? '' ) );
+			}
+		}
+
+		$validation = self::validate_content(
+			(string) ( $prepared_post->post_content ?? '' ),
+			'publish' === $target_status
+		);
 		return true === $validation ? $prepared_post : $validation;
 	}
 
@@ -71,7 +85,7 @@ final class MCP_Abilities_GeneratePress_GenerateBlocks_Content_Save_Guard {
 	 * @param string $content Proposed post content.
 	 * @return true|WP_Error
 	 */
-	public static function validate_content( string $content ) {
+	public static function validate_content( string $content, bool $require_published_styles = false ) {
 		if ( ! self::contains_block_markup( $content ) ) {
 			return true;
 		}
@@ -103,11 +117,11 @@ final class MCP_Abilities_GeneratePress_GenerateBlocks_Content_Save_Guard {
 			);
 		}
 
-		$missing_global_styles = self::missing_global_styles( $global_classes );
+		$missing_global_styles = self::missing_global_styles( $global_classes, $require_published_styles );
 		if ( $missing_global_styles ) {
 			return self::error(
 				'generateblocks_global_styles_missing',
-				'Page save blocked because one or more GenerateBlocks Global Styles are missing.',
+				'Page save blocked because one or more GenerateBlocks Global Styles are missing or unusable.',
 				$missing_global_styles
 			);
 		}
@@ -185,7 +199,7 @@ final class MCP_Abilities_GeneratePress_GenerateBlocks_Content_Save_Guard {
 	 * @param string[] $global_classes Class names from GenerateBlocks blocks.
 	 * @return string[]
 	 */
-	private static function missing_global_styles( array $global_classes ): array {
+	private static function missing_global_styles( array $global_classes, bool $require_published_styles ): array {
 		$global_classes = array_values( array_unique( array_filter( $global_classes ) ) );
 		if ( empty( $global_classes ) ) {
 			return array();
@@ -198,7 +212,13 @@ final class MCP_Abilities_GeneratePress_GenerateBlocks_Content_Save_Guard {
 		$existing = array();
 		foreach ( MCP_Abilities_GeneratePress_GenerateBlocks_Global_Styles::get_all() as $style ) {
 			$selector = is_array( $style ) ? (string) ( $style['selector'] ?? '' ) : '';
-			if ( preg_match( '/^\.([A-Za-z0-9_-]+)$/', $selector, $match ) ) {
+			$status   = is_array( $style ) ? (string) ( $style['status'] ?? '' ) : '';
+			$css      = is_array( $style ) ? trim( (string) ( $style['css'] ?? '' ) ) : '';
+			if (
+				preg_match( '/^\.([A-Za-z0-9_-]+)$/', $selector, $match )
+				&& '' !== $css
+				&& ( ! $require_published_styles || 'publish' === $status )
+			) {
 				$existing[] = (string) $match[1];
 			}
 		}
