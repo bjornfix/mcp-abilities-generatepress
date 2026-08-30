@@ -2,7 +2,7 @@
 Contributors: basicus
 Tags: mcp, generatepress, theme, ai, automation
 Requires at least: 6.9
-Tested up to: 7.0
+Tested up to: 7.1
 Stable tag: 1.1.59
 Requires PHP: 8.0
 License: GPLv2 or later
@@ -52,6 +52,7 @@ Part of the MCP Expose Abilities ecosystem.
 
 = 1.1.59 =
 * Add native GenerateBlocks Pro Overlay Panel discovery, idempotent upsert, and menu-item mega-menu attachment abilities.
+* Document compatibility through WordPress 7.1.
 
 = 1.1.58 =
 * Disable the valid core featured-image scale default so card media emits no inline object-fit style.
@@ -145,6 +146,7 @@ Part of the MCP Expose Abilities ecosystem.
 * Fixed: Pattern Library abilities now read the GenerateBlocks library registry directly so enabled, disabled, custom, and local libraries are discoverable by library ID without exposing public keys.
 
 = 1.1.30 =
+* Added: `generatepress/list-design-catalog` for the complete active GeneratePress Site Library and GenerateBlocks Pattern Library catalog, with a revisioned payload for contextual source-page design selection.
 * Added: `generateblocks/list-pattern-libraries`, `generateblocks/list-pattern-categories`, and `generateblocks/search-pattern-library` for editor-native GenerateBlocks Pattern Library discovery, including custom/local design libraries by library ID.
 
 = 1.1.29 =

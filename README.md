@@ -7,7 +7,7 @@ GeneratePress and GenerateBlocks abilities for MCP. Manage theme settings, eleme
 [![WordPress](https://img.shields.io/badge/WordPress-6.9%2B-blue.svg)](https://wordpress.org)
 [![PHP](https://img.shields.io/badge/PHP-8.0%2B-purple.svg)](https://php.net)
 
-**Tested up to:** 7.0
+**Tested up to:** 7.1
 **Stable tag:** 1.1.59
 **Tags:** mcp, generatepress, theme, ai, automation
 **License:** GPLv2 or later
@@ -137,6 +137,7 @@ If you skip base-stack verification and start with add-ons immediately, troubles
 | `generatepress/get-blog-archive-settings` | Get native WordPress and GeneratePress blog archive controls |
 | `generatepress/update-blog-archive-settings` | Update native blog archive and GP blog module controls |
 | `generatepress/get-site-library-cache` | Inspect Starter Site cache metadata |
+| `generatepress/list-design-catalog` | Read the complete active GeneratePress Site Library and GenerateBlocks Pattern Library catalog for contextual source design selection |
 | `generatepress/clear-site-library-cache` | Clear Starter Site cache |
 | `generatepress/clear-cache` | Clear GeneratePress dynamic CSS cache |
 | `generatepress/get-page-meta` | Get page-specific settings (disable title, sidebar, footer, etc.) |
@@ -536,7 +537,7 @@ The adapter compiles the native style data into GenerateBlocks' generated CSS fi
 - Added `generatepress/audit-duplicate-headlines` to find and optionally fix existing duplicate-title pages.
 
 ### 1.1.18
-- Updated `Tested up to` to WordPress 7.0 for Plugin Check compliance.
+- Updated `Tested up to` to WordPress 7.1 for Plugin Check compliance.
 
 ### 1.1.17
 - Added typography groups for common GeneratePress surfaces beyond body/navigation/buttons/headings: `html`, `site_title`, `mobile_navigation_site_title`, `site_tagline`, `subnavigation`, `entry_meta`, `sidebar_widget_title`, `sidebar_widget_text`, `footer_widget_title`, `footer_widget_text`, and `footer_bar_text`.
