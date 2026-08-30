@@ -2285,7 +2285,7 @@ function mcp_abilities_generatepress_get_pattern_library_items( string $kind, st
 		// permission check instead of inventing the public home URL, which makes
 		// the established WP-CLI transport fail closed with a false 403.
 		$current_host = isset( $_SERVER['HTTP_HOST'] ) && is_scalar( $_SERVER['HTTP_HOST'] )
-			? sanitize_text_field( (string) $_SERVER['HTTP_HOST'] )
+			? sanitize_text_field( wp_unslash( (string) $_SERVER['HTTP_HOST'] ) )
 			: '';
 		$headers['Host'] = $current_host;
 	} else {
