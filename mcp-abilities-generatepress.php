@@ -3,7 +3,7 @@
  * Plugin Name: MCP Abilities - GeneratePress
  * Plugin URI: https://github.com/bjornfix/mcp-abilities-generatepress
  * Description: GeneratePress and GenerateBlocks abilities for MCP. Manage theme settings, elements, global styles, page meta, and caches.
- * Version: 1.1.59
+ * Version: 1.1.60
  * Author: basicus
  * Author URI: https://profiles.wordpress.org/basicus/
  * License: GPL-2.0+
@@ -2315,6 +2315,191 @@ function mcp_abilities_generatepress_public_pattern_item( array $pattern, bool $
 		unset( $pattern['preview'] );
 	}
 	return $pattern;
+}
+
+/**
+ * Import the native GenerateBlocks Global Styles required by selected patterns.
+ *
+ * The GenerateBlocks editor treats a Pattern Library pattern and its referenced
+ * Global Styles as one insertion unit. Keep the same ownership boundary here:
+ * callers identify trusted library pattern IDs, while GenerateBlocks resolves,
+ * validates, and imports the style payload through its own REST routes.
+ *
+ * @param string   $library_id Pattern Library ID.
+ * @param string[] $pattern_ids Pattern IDs selected from that library.
+ * @return array<string, mixed>
+ */
+function mcp_abilities_generatepress_import_pattern_global_styles( string $library_id, array $pattern_ids ): array {
+	$library = mcp_abilities_generatepress_find_pattern_library( $library_id );
+	if ( null === $library ) {
+		return array(
+			'success' => false,
+			'code'    => 'generateblocks_pattern_library_not_found',
+			'message' => 'Pattern library not found.',
+		);
+	}
+
+	$pattern_ids = array_values(
+		array_unique(
+			array_filter(
+				array_map(
+					static function ( $pattern_id ): string {
+						return is_scalar( $pattern_id ) ? sanitize_text_field( (string) $pattern_id ) : '';
+					},
+					$pattern_ids
+				)
+			)
+		)
+	);
+
+	if ( empty( $pattern_ids ) ) {
+		return array(
+			'success' => false,
+			'code'    => 'generateblocks_pattern_ids_required',
+			'message' => 'At least one pattern ID is required.',
+		);
+	}
+
+	$pattern_result = mcp_abilities_generatepress_get_pattern_library_items( 'patterns', $library_id );
+	if ( empty( $pattern_result['success'] ) ) {
+		return array(
+			'success' => false,
+			'code'    => (string) ( $pattern_result['code'] ?? 'generateblocks_pattern_library_request_failed' ),
+			'message' => (string) ( $pattern_result['message'] ?? 'Pattern library request failed.' ),
+		);
+	}
+
+	$patterns_by_id = array();
+	foreach ( (array) ( $pattern_result['items'] ?? array() ) as $pattern ) {
+		if ( is_array( $pattern ) && isset( $pattern['id'] ) && is_scalar( $pattern['id'] ) ) {
+			$patterns_by_id[ (string) $pattern['id'] ] = $pattern;
+		}
+	}
+
+	$missing_pattern_ids = array_values( array_diff( $pattern_ids, array_keys( $patterns_by_id ) ) );
+	if ( ! empty( $missing_pattern_ids ) ) {
+		return array(
+			'success'             => false,
+			'code'                => 'generateblocks_pattern_ids_not_found',
+			'missing_pattern_ids' => $missing_pattern_ids,
+			'message'             => 'One or more selected patterns were not found in the library.',
+		);
+	}
+
+	$selectors = array();
+	foreach ( $pattern_ids as $pattern_id ) {
+		foreach ( (array) ( $patterns_by_id[ $pattern_id ]['globalStyleSelectors'] ?? array() ) as $selector ) {
+			if ( is_scalar( $selector ) ) {
+				$selector = sanitize_text_field( (string) $selector );
+				if ( '' !== $selector ) {
+					$selectors[] = $selector;
+				}
+			}
+		}
+	}
+	$selectors = array_values( array_unique( $selectors ) );
+
+	if ( ! empty( $library['isLocal'] ) || empty( $selectors ) ) {
+		return array(
+			'success'     => true,
+			'library'     => mcp_abilities_generatepress_public_pattern_library( $library ),
+			'pattern_ids' => $pattern_ids,
+			'selectors'   => $selectors,
+			'imported'    => array(),
+			'existing'    => array(),
+			'backfilled'  => array(),
+			'message'     => empty( $selectors )
+				? 'The selected patterns do not require Global Styles.'
+				: 'Local Pattern Library styles already belong to this site.',
+		);
+	}
+
+	$style_response = mcp_abilities_generatepress_rest_request(
+		'GET',
+		'/generateblocks-pro/v1/pattern-library/get-global-style-data',
+		array( 'id' => $library_id )
+	);
+	$style_data     = mcp_abilities_generatepress_pattern_response_data( $style_response );
+	$available      = array();
+	foreach ( (array) ( is_array( $style_data ) ? ( $style_data['styles'] ?? array() ) : array() ) as $style ) {
+		if ( is_array( $style ) && isset( $style['className'] ) && is_scalar( $style['className'] ) ) {
+			$available[ (string) $style['className'] ] = $style;
+		}
+	}
+
+	$missing_selectors = array_values( array_diff( $selectors, array_keys( $available ) ) );
+	if ( empty( $style_response['success'] ) || ! empty( $missing_selectors ) ) {
+		return array(
+			'success'           => false,
+			'code'              => 'generateblocks_pattern_global_styles_unavailable',
+			'missing_selectors' => $missing_selectors,
+			'message'           => 'GenerateBlocks did not provide every Global Style required by the selected patterns.',
+		);
+	}
+
+	$required_styles = array();
+	foreach ( $selectors as $selector ) {
+		$required_styles[] = $available[ $selector ];
+	}
+
+	$import_response = mcp_abilities_generatepress_rest_request(
+		'POST',
+		'/generateblocks-pro/v1/pattern-library/import-styles',
+		array( 'styles' => $required_styles )
+	);
+	$import_data     = mcp_abilities_generatepress_pattern_response_data( $import_response );
+	if ( empty( $import_response['success'] ) || ! is_array( $import_data ) ) {
+		return array(
+			'success' => false,
+			'code'    => 'generateblocks_pattern_global_styles_import_failed',
+			'message' => 'GenerateBlocks could not import the required Global Styles.',
+		);
+	}
+
+	// Match the editor's compatibility step for an existing inner-section class:
+	// fill its missing maxWidth from the trusted library without overwriting an
+	// explicit site value or changing any other existing design decision.
+	$backfilled = array();
+	foreach ( (array) ( $import_data['existing'] ?? array() ) as $existing ) {
+		if ( ! is_array( $existing ) || '.gbp-section__inner' !== (string) ( $existing['selector'] ?? '' ) ) {
+			continue;
+		}
+
+		$current_styles = is_array( $existing['styles'] ?? null ) ? $existing['styles'] : array();
+		$remote_styles  = json_decode( (string) ( $available['.gbp-section__inner']['styles'] ?? '' ), true );
+		if ( ! is_array( $remote_styles ) || ! empty( $current_styles['maxWidth'] ) || empty( $remote_styles['maxWidth'] ) ) {
+			continue;
+		}
+
+		foreach ( MCP_Abilities_GeneratePress_GenerateBlocks_Global_Styles::get_all() as $current_style ) {
+			if ( '.gbp-section__inner' !== (string) ( $current_style['selector'] ?? '' ) ) {
+				continue;
+			}
+
+			$current_style['styles']['maxWidth'] = $remote_styles['maxWidth'];
+			$sync = MCP_Abilities_GeneratePress_GenerateBlocks_Global_Styles::synchronize( array( $current_style ) );
+			if ( empty( $sync['success'] ) ) {
+				return array(
+					'success' => false,
+					'code'    => 'generateblocks_pattern_global_style_backfill_failed',
+					'message' => (string) ( $sync['message'] ?? 'GenerateBlocks could not complete the inner-section Global Style.' ),
+				);
+			}
+			$backfilled[] = '.gbp-section__inner';
+			break;
+		}
+	}
+
+	return array(
+		'success'     => true,
+		'library'     => mcp_abilities_generatepress_public_pattern_library( $library ),
+		'pattern_ids' => $pattern_ids,
+		'selectors'   => $selectors,
+		'imported'    => array_values( (array) ( $import_data['imported'] ?? array() ) ),
+		'existing'    => array_values( (array) ( $import_data['existing'] ?? array() ) ),
+		'backfilled'  => $backfilled,
+		'message'     => 'GenerateBlocks imported the Global Styles required by the selected patterns.',
+	);
 }
 
 /** Normalize native catalog fields that may be returned as a list of labels. */
@@ -5666,6 +5851,71 @@ function mcp_abilities_generatepress_register_abilities(): void {
 			'meta'                => array(
 				'annotations' => array(
 					'readonly'    => true,
+					'destructive' => false,
+					'idempotent'  => true,
+				),
+			),
+		)
+	);
+
+	mcp_abilities_generatepress_register_ability(
+		'generateblocks/import-pattern-global-styles',
+		array(
+			'label'               => 'Import GenerateBlocks Pattern Global Styles',
+			'description'         => 'Imports the native GenerateBlocks Pro Global Styles required by selected Pattern Library patterns before their block markup is saved.',
+			'category'            => 'site',
+			'input_schema'        => array(
+				'type'                 => 'object',
+				'required'             => array( 'pattern_ids' ),
+				'properties'           => array(
+					'library_id' => array(
+						'type'        => 'string',
+						'default'     => 'gb_default_pro_library',
+						'description' => 'Pattern library ID. Defaults to the GenerateBlocks Pro library.',
+					),
+					'pattern_ids' => array(
+						'type'        => 'array',
+						'minItems'    => 1,
+						'maxItems'    => 100,
+						'uniqueItems' => true,
+						'items'       => array( 'type' => 'string' ),
+						'description' => 'Exact pattern IDs selected from search-pattern-library.',
+					),
+				),
+				'additionalProperties' => false,
+			),
+			'output_schema'       => array(
+				'type'       => 'object',
+				'properties' => array(
+					'success'             => array( 'type' => 'boolean' ),
+					'code'                => array( 'type' => 'string' ),
+					'library'             => array( 'type' => 'object' ),
+					'pattern_ids'         => array( 'type' => 'array' ),
+					'selectors'           => array( 'type' => 'array' ),
+					'imported'            => array( 'type' => 'array' ),
+					'existing'            => array( 'type' => 'array' ),
+					'backfilled'          => array( 'type' => 'array' ),
+					'missing_pattern_ids' => array( 'type' => 'array' ),
+					'missing_selectors'   => array( 'type' => 'array' ),
+					'message'             => array( 'type' => 'string' ),
+				),
+			),
+			'execute_callback'    => function ( array $input ): array {
+				$library_id = isset( $input['library_id'] ) && is_string( $input['library_id'] ) && '' !== $input['library_id']
+					? sanitize_text_field( $input['library_id'] )
+					: 'gb_default_pro_library';
+
+				return mcp_abilities_generatepress_import_pattern_global_styles(
+					$library_id,
+					(array) ( $input['pattern_ids'] ?? array() )
+				);
+			},
+			'permission_callback' => function (): bool {
+				return current_user_can( 'manage_options' );
+			},
+			'meta'                => array(
+				'annotations' => array(
+					'readonly'    => false,
 					'destructive' => false,
 					'idempotent'  => true,
 				),

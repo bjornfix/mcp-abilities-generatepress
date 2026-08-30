@@ -3,7 +3,7 @@ Contributors: basicus
 Tags: mcp, generatepress, theme, ai, automation
 Requires at least: 6.9
 Tested up to: 7.1
-Stable tag: 1.1.59
+Stable tag: 1.1.60
 Requires PHP: 8.0
 License: GPLv2 or later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
@@ -33,7 +33,7 @@ This add-on plugin exposes GeneratePress theme settings, elements, and GenerateB
 * Starter Site cache inspection/clear
 * Current GenerateBlocks Pro Global Styles backed by native global classes
 * GenerateBlocks defaults/settings and control-surface diagnostics
-* GenerateBlocks Pattern Library discovery and pattern search using the same source as the editor, including custom/local libraries
+* GenerateBlocks Pattern Library discovery, pattern search, and native required-Global-Style import using the same source as the editor, including custom/local libraries
 * GenerateBlocks and GenerateBlocks Pro options (list/get/update for GB-owned option prefixes)
 * GenerateBlocks CSS cache control
 * One reusable, opt-in native GenerateBlocks grid projection shared by frontend rendering and translation publication
@@ -49,6 +49,11 @@ Part of the MCP Expose Abilities ecosystem.
 4. Activate the plugin
 
 == Changelog ==
+
+= 1.1.60 =
+* Add native required-Global-Style import for selected GenerateBlocks Pattern Library patterns.
+* Resolve trusted style data by library pattern ID and preserve explicit site values on existing classes.
+* Block MCP and Gutenberg page saves when GenerateBlocks markup references a missing native Global Style.
 
 = 1.1.59 =
 * Add native GenerateBlocks Pro Overlay Panel discovery, idempotent upsert, and menu-item mega-menu attachment abilities.

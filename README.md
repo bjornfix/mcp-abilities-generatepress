@@ -2,13 +2,13 @@
 
 GeneratePress and GenerateBlocks abilities for MCP. Manage theme settings, elements, global styles, page meta, and caches.
 
-[![Release 1.1.59](https://img.shields.io/badge/release-1.1.59-blue.svg)](https://downloads.devenia.com/mcp-abilities-generatepress.zip)
+[![Release 1.1.60](https://img.shields.io/badge/release-1.1.60-blue.svg)](https://downloads.devenia.com/mcp-abilities-generatepress.zip)
 [![License: GPL v2](https://img.shields.io/badge/License-GPL%20v2-blue.svg)](https://www.gnu.org/licenses/gpl-2.0)
 [![WordPress](https://img.shields.io/badge/WordPress-6.9%2B-blue.svg)](https://wordpress.org)
 [![PHP](https://img.shields.io/badge/PHP-8.0%2B-purple.svg)](https://php.net)
 
 **Tested up to:** 7.1
-**Stable tag:** 1.1.59
+**Stable tag:** 1.1.60
 **Tags:** mcp, generatepress, theme, ai, automation
 **License:** GPLv2 or later
 **License URI:** https://www.gnu.org/licenses/gpl-2.0.html
@@ -163,6 +163,7 @@ If you skip base-stack verification and start with add-ons immediately, troubles
 | `generateblocks/list-pattern-libraries` | List GenerateBlocks Pattern Libraries available to the editor, including custom/local libraries |
 | `generateblocks/list-pattern-categories` | List categories for a GenerateBlocks Pattern Library by library ID |
 | `generateblocks/search-pattern-library` | Search GenerateBlocks Pattern Library patterns by library ID and optionally return block markup |
+| `generateblocks/import-pattern-global-styles` | Import the native Global Styles required by selected Pattern Library patterns |
 | `generateblocks/clear-cache` | Clear GenerateBlocks CSS cache |
 
 ## Usage Examples
@@ -380,6 +381,12 @@ The adapter compiles the native style data into GenerateBlocks' generated CSS fi
 `generateblocks/clear-cache` preserves existing generated CSS files by default and only clears cache metadata. Use `{"delete_files": true}` only with explicit `post_ids` for an atomic destructive refresh; global destructive deletion is rejected before mutation. Warming verifies that each expected per-page CSS file was regenerated. If any target fails or is skipped, the ability returns `success: false` and restores prior files, registry state, and regeneration metadata. You can also pass `limit` to bound warming. Targeted invalidation preserves unrelated registry entries; a non-destructive full clear derives its warm set from published WordPress content as well as regenerable cache metadata.
 
 ## Changelog
+
+### 1.1.60
+
+- Import the native GenerateBlocks Global Styles required by selected Pattern Library patterns before their block markup is saved.
+- Resolve style data from trusted library pattern IDs and preserve explicit site values when a required class already exists.
+- Block MCP and Gutenberg page saves when GenerateBlocks markup references a missing native Global Style.
 
 ### 1.1.59
 

@@ -93,12 +93,22 @@ final class MCP_Abilities_GeneratePress_GenerateBlocks_Content_Save_Guard {
 		}
 
 		$issues = array();
-		self::walk_blocks( parse_blocks( $content ), array(), $issues, array() );
+		$global_classes = array();
+		self::walk_blocks( parse_blocks( $content ), array(), $issues, array(), $global_classes );
 		if ( $issues ) {
 			return self::error(
 				'generateblocks_invalid_editor_content',
 				'Page save blocked because Gutenberg contains a block structure it cannot edit safely.',
 				$issues
+			);
+		}
+
+		$missing_global_styles = self::missing_global_styles( $global_classes );
+		if ( $missing_global_styles ) {
+			return self::error(
+				'generateblocks_global_styles_missing',
+				'Page save blocked because one or more GenerateBlocks Global Styles are missing.',
+				$missing_global_styles
 			);
 		}
 
@@ -114,8 +124,9 @@ final class MCP_Abilities_GeneratePress_GenerateBlocks_Content_Save_Guard {
 	 * @param array<int,int>                 $path
 	 * @param array<int,array<string,mixed>> $issues
 	 * @param array<int,array{name:string,attrs:array<string,mixed>}> $ancestors
+	 * @param string[]                       $global_classes
 	 */
-	private static function walk_blocks( array $blocks, array $path, array &$issues, array $ancestors ): void {
+	private static function walk_blocks( array $blocks, array $path, array &$issues, array $ancestors, array &$global_classes ): void {
 		foreach ( $blocks as $index => $block ) {
 			if ( ! is_array( $block ) ) {
 				continue;
@@ -138,6 +149,17 @@ final class MCP_Abilities_GeneratePress_GenerateBlocks_Content_Save_Guard {
 				);
 			}
 
+			if ( 0 === strpos( $name, 'generateblocks/' ) ) {
+				foreach ( (array) ( $block['attrs']['globalClasses'] ?? array() ) as $global_class ) {
+					if ( is_scalar( $global_class ) ) {
+						$global_class = trim( (string) $global_class );
+						if ( '' !== $global_class ) {
+							$global_classes[] = ltrim( $global_class, '.' );
+						}
+					}
+				}
+			}
+
 			$children = is_array( $block['innerBlocks'] ?? null ) ? $block['innerBlocks'] : array();
 			self::walk_blocks(
 				$children,
@@ -151,9 +173,37 @@ final class MCP_Abilities_GeneratePress_GenerateBlocks_Content_Save_Guard {
 							'attrs' => is_array( $block['attrs'] ?? null ) ? $block['attrs'] : array(),
 						),
 					)
-				)
+				),
+				$global_classes
 			);
 		}
+	}
+
+	/**
+	 * Return referenced GenerateBlocks class names that have no native style.
+	 *
+	 * @param string[] $global_classes Class names from GenerateBlocks blocks.
+	 * @return string[]
+	 */
+	private static function missing_global_styles( array $global_classes ): array {
+		$global_classes = array_values( array_unique( array_filter( $global_classes ) ) );
+		if ( empty( $global_classes ) ) {
+			return array();
+		}
+
+		if ( ! class_exists( 'MCP_Abilities_GeneratePress_GenerateBlocks_Global_Styles' ) ) {
+			return $global_classes;
+		}
+
+		$existing = array();
+		foreach ( MCP_Abilities_GeneratePress_GenerateBlocks_Global_Styles::get_all() as $style ) {
+			$selector = is_array( $style ) ? (string) ( $style['selector'] ?? '' ) : '';
+			if ( preg_match( '/^\.([A-Za-z0-9_-]+)$/', $selector, $match ) ) {
+				$existing[] = (string) $match[1];
+			}
+		}
+
+		return array_values( array_diff( $global_classes, array_unique( $existing ) ) );
 	}
 
 	/** @param array<string,mixed> $block @param array<int,array{name:string,attrs:array<string,mixed>}> $ancestors */

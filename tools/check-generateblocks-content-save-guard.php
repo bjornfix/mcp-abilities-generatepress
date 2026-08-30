@@ -40,6 +40,12 @@ function parse_blocks( string $content ): array {
 	return $GLOBALS['mcp_guard_parsed'][ $content ] ?? array();
 }
 
+final class MCP_Abilities_GeneratePress_GenerateBlocks_Global_Styles {
+	public static function get_all(): array {
+		return $GLOBALS['mcp_guard_global_styles'] ?? array();
+	}
+}
+
 require_once dirname( __DIR__ ) . '/includes/class-generateblocks-content-save-guard.php';
 
 $assert = static function ( bool $condition, string $message ): void {
@@ -65,6 +71,20 @@ $GLOBALS['mcp_guard_parsed'][ $valid ] = array(
 	),
 );
 $assert( true === MCP_Abilities_GeneratePress_GenerateBlocks_Content_Save_Guard::validate_content( $valid ), 'Valid GenerateBlocks content was blocked.' );
+
+$missing_style = '<!-- wp:generateblocks/element {"tagName":"div","globalClasses":["gbp-section"]} --><div></div><!-- /wp:generateblocks/element -->';
+$GLOBALS['mcp_guard_parsed'][ $missing_style ] = array(
+	array(
+		'blockName'   => 'generateblocks/element',
+		'attrs'       => array( 'tagName' => 'div', 'globalClasses' => array( 'gbp-section' ) ),
+		'innerBlocks' => array(),
+	),
+);
+$missing_style_result = MCP_Abilities_GeneratePress_GenerateBlocks_Content_Save_Guard::validate_content( $missing_style );
+$assert( is_wp_error( $missing_style_result ) && 'generateblocks_global_styles_missing' === $missing_style_result->get_error_code(), 'A missing GenerateBlocks Global Style was allowed to save.' );
+
+$GLOBALS['mcp_guard_global_styles'] = array( array( 'selector' => '.gbp-section' ) );
+$assert( true === MCP_Abilities_GeneratePress_GenerateBlocks_Content_Save_Guard::validate_content( $missing_style ), 'An existing GenerateBlocks Global Style was reported missing.' );
 
 $unknown = '<!-- wp:devenia/missing /-->';
 $GLOBALS['mcp_guard_parsed'][ $unknown ] = array( array( 'blockName' => 'devenia/missing', 'innerBlocks' => array() ) );
