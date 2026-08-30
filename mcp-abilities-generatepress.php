@@ -25,6 +25,10 @@ require_once __DIR__ . '/includes/class-generateblocks-grid-projection.php';
 MCP_Abilities_GeneratePress_GenerateBlocks_Grid_Projection::register();
 require_once __DIR__ . '/includes/class-generateblocks-card-projection.php';
 MCP_Abilities_GeneratePress_GenerateBlocks_Card_Projection::register();
+require_once __DIR__ . '/includes/class-generateblocks-content-save-guard.php';
+MCP_Abilities_GeneratePress_GenerateBlocks_Content_Save_Guard::register();
+require_once __DIR__ . '/includes/class-generateblocks-overlay-projection.php';
+MCP_Abilities_GeneratePress_GenerateBlocks_Overlay_Projection::register();
 require_once __DIR__ . '/includes/class-generateblocks-global-styles.php';
 
 /**
@@ -169,6 +173,7 @@ function mcp_abilities_generatepress_default_element_meta_keys(): array {
 		'_generate_element_display_conditions',
 		'_generate_element_exclude_conditions',
 		'_generate_element_user_conditions',
+		'_generate_element_ignore_languages',
 	);
 }
 
@@ -193,6 +198,7 @@ function mcp_abilities_generatepress_upsert_block_element( array $input ): array
 	$display_conditions = is_array( $input['display_conditions'] ?? null ) ? array_values( $input['display_conditions'] ) : array();
 	$exclude_conditions = is_array( $input['exclude_conditions'] ?? null ) ? array_values( $input['exclude_conditions'] ) : array();
 	$user_conditions    = is_array( $input['user_conditions'] ?? null ) ? array_values( $input['user_conditions'] ) : array();
+	$ignore_languages   = ! empty( $input['ignore_languages'] );
 
 	$block_types = array( 'hook', 'content-template', 'loop-template', 'post-meta-template', 'post-navigation-template', 'archive-navigation-template', 'site-header', 'site-footer', 'right-sidebar', 'left-sidebar', 'search-modal' );
 	if ( '' === $title || '' === $slug || '' === trim( $content ) || ! in_array( $block_type, $block_types, true ) || empty( $display_conditions ) ) {
@@ -204,7 +210,8 @@ function mcp_abilities_generatepress_upsert_block_element( array $input ): array
 	if ( ! in_array( $status, array( 'publish', 'draft' ), true ) ) {
 		return array( 'success' => false, 'message' => 'status must be publish or draft.' );
 	}
-	if ( false === strpos( $content, 'wp:generateblocks/' ) ) {
+	$native_post_content_template = 'content-template' === $block_type && false !== strpos( $content, '<!-- wp:post-content' );
+	if ( false === strpos( $content, 'wp:generateblocks/' ) && ! $native_post_content_template ) {
 		return array( 'success' => false, 'message' => 'Block Elements must use native GenerateBlocks markup.' );
 	}
 
@@ -249,6 +256,11 @@ function mcp_abilities_generatepress_upsert_block_element( array $input ): array
 		'_generate_element_user_conditions'    => $user_conditions,
 	);
 	$absent_meta = array( '_generate_hook_execute_php' );
+	if ( $ignore_languages ) {
+		$meta_values['_generate_element_ignore_languages'] = 'true';
+	} else {
+		$absent_meta[] = '_generate_element_ignore_languages';
+	}
 	if ( 'hook' === $block_type ) {
 		$meta_values['_generate_hook_type']     = 'hook';
 		$meta_values['_generate_hook']          = $hook;
@@ -387,7 +399,7 @@ function mcp_abilities_generatepress_upsert_overlay_panel( array $input ): array
 	);
 	$meta = array(
 		'_gb_overlay_type'               => $type,
-		'_gb_overlay_trigger_type'       => 'click',
+		'_gb_overlay_trigger_type'       => 'mega-menu' === $type ? 'hover' : 'click',
 		'_gb_overlay_placement'          => $placement,
 		'_gb_overlay_position_to_parent' => $parent,
 		'_gb_overlay_hover_buffer'       => (string) $hover,
@@ -1122,6 +1134,154 @@ function mcp_abilities_generatepress_module_settings_map(): array {
 }
 
 /**
+ * Update one native GeneratePress module settings option.
+ *
+ * This public plugin-to-plugin Interface owns the mutation. The registered
+ * Ability delegates to it and adds its own caller permission check.
+ *
+ * @param array<string,mixed> $input Module update input.
+ * @return array<string,mixed>
+ */
+function mcp_abilities_generatepress_update_module_settings( array $input = array() ): array {
+	$module      = isset( $input['module'] ) ? sanitize_key( $input['module'] ) : '';
+	$module      = str_replace( '-', '_', $module );
+	$map         = mcp_abilities_generatepress_module_settings_map();
+	$settings    = isset( $input['settings'] ) && is_array( $input['settings'] ) ? $input['settings'] : array();
+	$option_name = isset( $input['option_name'] ) && is_string( $input['option_name'] ) ? sanitize_key( $input['option_name'] ) : '';
+
+	if ( '' !== $option_name ) {
+		if ( ! mcp_abilities_generatepress_is_allowed_option_name( $option_name ) || ! str_ends_with( $option_name, '_settings' ) ) {
+			return array( 'success' => false, 'message' => 'Option name is not an allowed GeneratePress settings option.' );
+		}
+	} elseif ( '' !== $module && isset( $map[ $module ] ) ) {
+		$option_name = $map[ $module ];
+	} else {
+		return array( 'success' => false, 'message' => 'Provide a known module or allowed option_name.' );
+	}
+
+	if ( empty( $settings ) ) {
+		return array( 'success' => false, 'message' => 'No settings provided.' );
+	}
+
+	if ( ! empty( $input['replace'] ) ) {
+		$updated = $settings;
+	} else {
+		$current = get_option( $option_name, array() );
+		$current = is_array( $current ) ? $current : array();
+		$updated = array_merge( $current, $settings );
+	}
+
+	update_option( $option_name, $updated );
+	mcp_abilities_generatepress_clear_dynamic_css_cache();
+
+	return array(
+		'success'     => true,
+		'module'      => '' !== $module ? $module : preg_replace( '/^generate_|_settings$/', '', $option_name ),
+		'option_name' => $option_name,
+		'message'     => 'Module settings updated successfully',
+	);
+}
+
+/**
+ * Update native GeneratePress global design settings.
+ *
+ * This public plugin-to-plugin Interface owns the mutation. The registered
+ * Ability delegates to it and adds its own caller permission check.
+ *
+ * @param array<string,mixed> $input Global design input.
+ * @return array<string,mixed>
+ */
+function mcp_abilities_generatepress_update_global_design_settings( array $input = array() ): array {
+	$settings = get_option( 'generate_settings', array() );
+	if ( ! is_array( $settings ) ) {
+		$settings = array();
+	}
+
+	$rules = isset( $settings['typography'] ) && is_array( $settings['typography'] ) ? $settings['typography'] : array();
+	if ( array_keys( $rules ) !== range( 0, count( $rules ) - 1 ) ) {
+		$rules = array();
+	}
+
+	$allowed          = mcp_abilities_generatepress_setting_groups();
+	$updated_sections = array();
+	$updated_keys     = array();
+
+	if ( isset( $input['typography'] ) && is_array( $input['typography'] ) ) {
+		foreach ( array( 'body', 'html', 'site_title', 'mobile_navigation_site_title', 'site_tagline', 'navigation', 'subnavigation', 'buttons', 'entry_meta', 'sidebar_widget_title', 'sidebar_widget_text', 'footer_widget_title', 'footer_widget_text', 'footer_bar_text', 'h1', 'h2', 'h3', 'h4', 'h5', 'h6' ) as $group ) {
+			if ( isset( $input['typography'][ $group ] ) && is_array( $input['typography'][ $group ] ) ) {
+				$changed = mcp_abilities_generatepress_apply_typography_group( $settings, $rules, $group, $input['typography'][ $group ] );
+				if ( ! empty( $changed ) ) {
+					$updated_sections[] = 'typography.' . $group;
+					$updated_keys       = array_merge( $updated_keys, $changed );
+				}
+			}
+		}
+		if ( isset( $input['typography']['selector_rules'] ) && is_array( $input['typography']['selector_rules'] ) ) {
+			$changed = mcp_abilities_generatepress_apply_selector_typography_rules( $rules, $input['typography']['selector_rules'] );
+			if ( ! empty( $changed ) ) {
+				$updated_sections[] = 'typography.selector_rules';
+				$updated_keys       = array_merge( $updated_keys, $changed );
+			}
+		}
+	}
+
+	if ( isset( $input['settings'] ) && is_array( $input['settings'] ) ) {
+		foreach ( $input['settings'] as $key => $value ) {
+			if ( ! is_string( $key ) || '' === $key ) {
+				continue;
+			}
+			if ( 'typography' === $key ) {
+				return array( 'success' => false, 'message' => 'Use the typography groups in generatepress/update-global-design-settings instead of writing the raw typography rule array.' );
+			}
+			if ( ! mcp_abilities_generatepress_is_flat_setting_value( $value ) ) {
+				return array( 'success' => false, 'message' => 'Refusing nested value for GeneratePress setting "' . $key . '".' );
+			}
+			if ( null === $value || '' === $value ) {
+				unset( $settings[ $key ] );
+			} else {
+				$settings[ $key ] = $value;
+			}
+			$updated_sections[] = 'settings';
+			$updated_keys[]     = $key;
+		}
+	}
+
+	foreach ( $allowed as $section => $keys ) {
+		if ( empty( $input[ $section ] ) || ! is_array( $input[ $section ] ) ) {
+			continue;
+		}
+		foreach ( $input[ $section ] as $key => $value ) {
+			if ( ! is_string( $key ) || ! in_array( $key, $keys, true ) ) {
+				continue;
+			}
+			if ( null === $value || '' === $value ) {
+				unset( $settings[ $key ] );
+			} else {
+				$settings[ $key ] = $value;
+			}
+			$updated_sections[] = $section;
+			$updated_keys[]     = $key;
+		}
+	}
+
+	if ( empty( $updated_keys ) ) {
+		return array( 'success' => false, 'message' => 'No allowed global GeneratePress design settings provided.' );
+	}
+
+	$settings['typography'] = array_values( $rules );
+	update_option( 'generate_settings', $settings );
+	mcp_abilities_generatepress_clear_dynamic_css_cache();
+
+	return array(
+		'success'               => true,
+		'updated_sections'      => array_values( array_unique( $updated_sections ) ),
+		'updated_keys'          => array_values( array_unique( $updated_keys ) ),
+		'typography_rule_count' => count( $settings['typography'] ),
+		'message'               => 'GeneratePress global design settings updated successfully.',
+	);
+}
+
+/**
  * Discover GeneratePress module-like settings options currently stored.
  */
 function mcp_abilities_generatepress_discover_module_setting_options(): array {
@@ -1464,6 +1624,56 @@ function mcp_abilities_generatepress_apply_typography_group( array &$settings, a
 
 	if ( ! empty( $rule_updates ) ) {
 		mcp_abilities_generatepress_upsert_typography_rule( $rules, $config['selector'], $rule_updates, $config['rule_group'] );
+	}
+
+	return array_values( array_unique( $changed ) );
+}
+
+/**
+ * Apply bounded selector-only typography rules through GeneratePress's native typography store.
+ *
+ * @param array<int,array<string,mixed>> $rules Existing GeneratePress typography rules.
+ * @param array<int,mixed>               $selector_rules Selector-only typography rules.
+ * @return array<int,string> Changed rule identifiers.
+ */
+function mcp_abilities_generatepress_apply_selector_typography_rules( array &$rules, array $selector_rules ): array {
+	$changed = array();
+	$allowed_keys = array( 'fontFamily', 'fontWeight', 'fontSize', 'fontSizeMobile', 'lineHeight', 'letterSpacing', 'textTransform' );
+
+	foreach ( $selector_rules as $rule ) {
+		if ( ! is_array( $rule ) || ! isset( $rule['selector'] ) || ! is_string( $rule['selector'] ) ) {
+			continue;
+		}
+		$selector = trim( $rule['selector'] );
+		if ( '' === $selector || 255 < strlen( $selector ) || preg_match( '/[\x00-\x1F\x7F{};@]/', $selector ) ) {
+			continue;
+		}
+
+		$updates = array();
+		foreach ( $allowed_keys as $key ) {
+			if ( ! array_key_exists( $key, $rule ) ) {
+				continue;
+			}
+			$value = is_string( $rule[ $key ] ) ? trim( $rule[ $key ] ) : $rule[ $key ];
+			if ( null === $value || '' === $value ) {
+				$updates[ $key ] = null;
+				continue;
+			}
+			if ( 'fontFamily' === $key ) {
+				$updates[ $key ] = mcp_abilities_generatepress_font_family_value( (string) $value );
+				continue;
+			}
+			$updates[ $key ] = (string) $value;
+		}
+		if ( array_key_exists( 'fontSizeUnit', $rule ) ) {
+			$updates['fontSizeUnit'] = (string) $rule['fontSizeUnit'];
+		}
+		if ( empty( $updates ) ) {
+			continue;
+		}
+
+		mcp_abilities_generatepress_upsert_typography_rule( $rules, $selector, $updates, 'content' );
+		$changed[] = 'typography.selector_rules.' . $selector;
 	}
 
 	return array_values( array_unique( $changed ) );
@@ -1914,7 +2124,7 @@ function mcp_abilities_generatepress_rest_request( string $method, string $route
 		$request->set_param( $key, $value );
 	}
 	foreach ( $headers as $key => $value ) {
-		if ( '' !== (string) $value ) {
+		if ( '' !== (string) $value || 'host' === strtolower( (string) $key ) ) {
 			$request->set_header( $key, (string) $value );
 		}
 	}
@@ -2004,6 +2214,21 @@ function mcp_abilities_generatepress_get_pattern_libraries(): array {
 	);
 }
 
+/** Return safe GenerateCloud state without exposing the license key. */
+function mcp_abilities_generatepress_generatecloud_status(): array {
+	$plugin_file = defined( 'WP_PLUGIN_DIR' ) ? trailingslashit( WP_PLUGIN_DIR ) . 'generatecloud/generatecloud.php' : '';
+	$license     = get_option( 'generatecloud_licensing', array() );
+	return array(
+		'provider' => 'generatecloud',
+		'plugin_slug' => 'generatecloud',
+		'installed' => '' !== $plugin_file && file_exists( $plugin_file ),
+		'active' => defined( 'GENERATECLOUD_VERSION' ) && class_exists( 'GenerateCloud\\Plugin' ),
+		'license_configured' => is_array( $license ) && '' !== trim( (string) ( $license['key'] ?? '' ) ),
+		'native_local_collections_supported' => class_exists( 'GenerateBlocks_Pro_Pattern_Library' ),
+		'license_key_exposed' => false,
+	);
+}
+
 /**
  * Find a GenerateBlocks pattern library by ID.
  */
@@ -2053,22 +2278,30 @@ function mcp_abilities_generatepress_get_pattern_library_items( string $kind, st
 		$params['search']     = $search;
 	}
 
-	$response = mcp_abilities_generatepress_rest_request(
-		'GET',
-		$route,
-		$params,
-		array(
-			'X-GB-Public-Key' => isset( $library['publicKey'] ) ? (string) $library['publicKey'] : '',
-			'Host'            => wp_parse_url( home_url(), PHP_URL_HOST ),
-		)
-	);
+	$headers = array();
+	if ( $is_local ) {
+		// GenerateBlocks protects local collections by comparing the request Host
+		// with the current request host. Keep CLI calls local to the same native
+		// permission check instead of inventing the public home URL, which makes
+		// the established WP-CLI transport fail closed with a false 403.
+		$current_host = isset( $_SERVER['HTTP_HOST'] ) && is_scalar( $_SERVER['HTTP_HOST'] )
+			? sanitize_text_field( (string) $_SERVER['HTTP_HOST'] )
+			: '';
+		$headers['Host'] = $current_host;
+	} else {
+		$headers['X-GB-Public-Key'] = isset( $library['publicKey'] ) ? (string) $library['publicKey'] : '';
+	}
+
+	$response = mcp_abilities_generatepress_rest_request( 'GET', $route, $params, $headers );
 
 	$data = mcp_abilities_generatepress_pattern_response_data( $response );
+	$success = ! empty( $response['success'] ) && is_array( $data );
 	return array(
-		'success' => ! empty( $response['success'] ) && is_array( $data ),
+		'success' => $success,
 		'status'  => (int) ( $response['status'] ?? 0 ),
-		'items'   => is_array( $data ) ? $data : array(),
-		'message' => is_array( $data ) ? 'Pattern library items retrieved.' : (string) ( $response['message'] ?? 'Pattern library request failed.' ),
+		'items'   => $success ? $data : array(),
+		'code'    => $success ? '' : 'generateblocks_pattern_library_request_failed',
+		'message' => $success ? 'Pattern library items retrieved.' : (string) ( $response['message'] ?? 'Pattern library request failed.' ),
 		'library' => mcp_abilities_generatepress_public_pattern_library( $library ),
 	);
 }
@@ -2082,6 +2315,327 @@ function mcp_abilities_generatepress_public_pattern_item( array $pattern, bool $
 		unset( $pattern['preview'] );
 	}
 	return $pattern;
+}
+
+/** Normalize native catalog fields that may be returned as a list of labels. */
+function mcp_abilities_generatepress_catalog_text( $value ): string {
+	if ( is_array( $value ) ) {
+		$values = array();
+		foreach ( $value as $item ) {
+			if ( is_scalar( $item ) ) {
+				$item = sanitize_text_field( (string) $item );
+				if ( '' !== $item ) {
+					$values[] = $item;
+				}
+			}
+		}
+		return implode( ', ', array_values( array_unique( $values ) ) );
+	}
+	return is_scalar( $value ) ? sanitize_text_field( (string) $value ) : '';
+}
+
+/**
+ * Read the native GeneratePress Site Library through its own controller.
+ *
+ * The site library is a separate catalog from the GenerateBlocks Pattern
+ * Library. Keep both catalogs behind this adapter so consumers can make one
+ * complete, revisioned design decision without inventing a second remote API.
+ *
+ * @return array<string,mixed>
+ */
+function mcp_abilities_generatepress_get_site_library_catalog( bool $force_refresh = false ): array {
+	if ( ! class_exists( 'GeneratePress_Site_Library_Rest' ) ) {
+		return array(
+			'success' => false,
+			'code'    => 'generatepress_site_library_unavailable',
+			'sites'   => array(),
+			'message' => 'The native GeneratePress Site Library controller is unavailable.',
+		);
+	}
+
+	if ( $force_refresh && ! current_user_can( 'manage_options' ) ) {
+		$force_refresh = false;
+	}
+
+	$request = new WP_REST_Request( 'GET', '/generatepress-site-library/v1/get_sites/' );
+	$request->set_param( 'forceRefresh', $force_refresh );
+	$response = GeneratePress_Site_Library_Rest::get_instance()->get_sites( $request );
+	if ( is_wp_error( $response ) ) {
+		return array(
+			'success' => false,
+			'code'    => 'generatepress_site_library_request_failed',
+			'sites'   => array(),
+			'message' => $response->get_error_message(),
+		);
+	}
+
+	if ( $response instanceof WP_REST_Response ) {
+		$response = rest_get_server()->response_to_data( $response, false );
+	}
+	$response = is_array( $response ) ? $response : array();
+	if ( empty( $response['success'] ) ) {
+		return array(
+			'success' => false,
+			'code'    => 'generatepress_site_library_request_failed',
+			'sites'   => array(),
+			'message' => 'The native GeneratePress Site Library did not return a complete catalog.',
+		);
+	}
+
+	$raw_sites = $response['response'] ?? array();
+	if ( ! is_array( $raw_sites ) ) {
+		return array(
+			'success' => false,
+			'code'    => 'generatepress_site_library_shape_invalid',
+			'sites'   => array(),
+			'message' => 'The native GeneratePress Site Library returned an invalid catalog shape.',
+		);
+	}
+
+	$sites = array();
+	foreach ( $raw_sites as $site_key => $site ) {
+		if ( ! is_array( $site ) ) {
+			continue;
+		}
+		$name      = sanitize_text_field( (string) ( $site['name'] ?? $site_key ) );
+		$directory = sanitize_text_field( (string) ( $site['directory'] ?? '' ) );
+		if ( '' === $name || '' === $directory ) {
+			continue;
+		}
+		$plugins = array();
+		foreach ( (array) ( $site['plugins'] ?? array() ) as $plugin_name => $plugin_slug ) {
+			$plugin_name = sanitize_text_field( (string) $plugin_name );
+			$plugin_slug = sanitize_text_field( (string) $plugin_slug );
+			if ( '' !== $plugin_name && '' !== $plugin_slug ) {
+				$plugins[ $plugin_name ] = $plugin_slug;
+			}
+		}
+		ksort( $plugins, SORT_STRING );
+		$sites[] = array(
+			'id'                         => sanitize_key( $directory ),
+			'name'                       => $name,
+			'directory'                  => $directory,
+			'preview_url'                => esc_url_raw( (string) ( $site['preview_url'] ?? '' ) ),
+			'author_name'                => sanitize_text_field( (string) ( $site['author_name'] ?? '' ) ),
+			'author_url'                 => esc_url_raw( (string) ( $site['author_url'] ?? '' ) ),
+			'description'                => sanitize_textarea_field( (string) ( $site['description'] ?? '' ) ),
+			'page_builder'               => mcp_abilities_generatepress_catalog_text( $site['page_builder'] ?? '' ),
+			'category'                   => mcp_abilities_generatepress_catalog_text( $site['category'] ?? '' ),
+			'min_version'                => sanitize_text_field( (string) ( $site['min_version'] ?? '' ) ),
+			'min_theme_version'          => sanitize_text_field( (string) ( $site['min_theme_version'] ?? '' ) ),
+			'min_generateblocks_version' => sanitize_text_field( (string) ( $site['min_generateblocks_version'] ?? '' ) ),
+			'uploads_url'                => esc_url_raw( (string) ( $site['uploads_url'] ?? '' ) ),
+			'plugins'                    => $plugins,
+			'documentation'              => esc_url_raw( (string) ( $site['documentation'] ?? '' ) ),
+			'image_width'                => max( 1, absint( $site['image_width'] ?? 600 ) ),
+			'image_height'               => max( 1, absint( $site['image_height'] ?? 600 ) ),
+		);
+	}
+
+	usort(
+		$sites,
+		static fn( array $left, array $right ): int => strcasecmp( (string) $left['id'], (string) $right['id'] )
+	);
+
+	if ( empty( $sites ) ) {
+		return array(
+			'success' => false,
+			'code'    => 'generatepress_site_library_empty',
+			'sites'   => array(),
+			'message' => 'The native GeneratePress Site Library returned no usable sites.',
+		);
+	}
+
+	return array(
+		'success' => true,
+		'sites'   => $sites,
+		'message' => 'The native GeneratePress Site Library catalog was read successfully.',
+	);
+}
+
+/**
+ * Read every active remote and native local GenerateBlocks Pattern Library category and pattern.
+ *
+ * @return array<string,mixed>
+ */
+function mcp_abilities_generatepress_get_full_pattern_catalog( bool $include_pattern_markup = false ): array {
+	$libraries = array();
+	foreach ( mcp_abilities_generatepress_get_pattern_libraries() as $library ) {
+		if ( ! is_array( $library ) || ( empty( $library['isEnabled'] ) && empty( $library['isLocal'] ) ) || '' === (string) ( $library['id'] ?? '' ) ) {
+			continue;
+		}
+
+		$library_id         = (string) $library['id'];
+		$categories_result  = mcp_abilities_generatepress_get_pattern_library_items( 'categories', $library_id );
+		if ( empty( $categories_result['success'] ) ) {
+			return array(
+				'success' => false,
+				'code'    => 'generateblocks_pattern_categories_unavailable',
+				'libraries' => array(),
+				'message' => (string) ( $categories_result['message'] ?? 'A pattern library category catalog could not be read.' ),
+			);
+		}
+
+		$categories = array();
+		foreach ( (array) ( $categories_result['items'] ?? array() ) as $category ) {
+			if ( ! is_array( $category ) ) {
+				continue;
+			}
+			$category_id = sanitize_text_field( (string) ( $category['id'] ?? '' ) );
+			$name        = sanitize_text_field( (string) ( $category['name'] ?? $category['label'] ?? '' ) );
+			if ( '' === $category_id || '' === $name ) {
+				continue;
+			}
+			$categories[ $category_id ] = array( 'id' => $category_id, 'name' => $name );
+		}
+		ksort( $categories, SORT_STRING );
+
+		$patterns = array();
+		$category_ids = array_merge( array( '' ), array_keys( $categories ) );
+		foreach ( array_values( array_unique( $category_ids ) ) as $category_id ) {
+			$patterns_result = mcp_abilities_generatepress_get_pattern_library_items( 'patterns', $library_id, (string) $category_id );
+			if ( empty( $patterns_result['success'] ) ) {
+				return array(
+					'success' => false,
+					'code'    => 'generateblocks_pattern_catalog_unavailable',
+					'libraries' => array(),
+					'message' => (string) ( $patterns_result['message'] ?? 'A pattern library catalog could not be read.' ),
+				);
+			}
+			foreach ( (array) ( $patterns_result['items'] ?? array() ) as $pattern ) {
+				if ( ! is_array( $pattern ) ) {
+					continue;
+				}
+				$pattern_id = sanitize_text_field( (string) ( $pattern['id'] ?? '' ) );
+				if ( '' === $pattern_id ) {
+					continue;
+				}
+				$key = $library_id . ':' . $pattern_id;
+				if ( ! isset( $patterns[ $key ] ) ) {
+					$pattern = mcp_abilities_generatepress_public_pattern_item( $pattern, $include_pattern_markup );
+					$pattern['id'] = $pattern_id;
+					$pattern['library_id'] = $library_id;
+					$pattern['category_ids'] = array();
+					$pattern['category_names'] = array();
+					$patterns[ $key ] = $pattern;
+				}
+				if ( '' !== (string) $category_id ) {
+					$patterns[ $key ]['category_ids'][ $category_id ] = $category_id;
+					if ( isset( $categories[ $category_id ] ) ) {
+						$patterns[ $key ]['category_names'][ $category_id ] = $categories[ $category_id ]['name'];
+					}
+				}
+			}
+		}
+
+		foreach ( $patterns as &$pattern ) {
+			$pattern['category_ids'] = array_values( $pattern['category_ids'] ?? array() );
+			$pattern['category_names'] = array_values( $pattern['category_names'] ?? array() );
+			sort( $pattern['category_ids'], SORT_STRING );
+			sort( $pattern['category_names'], SORT_STRING );
+		}
+		unset( $pattern );
+		$patterns = array_values( $patterns );
+		usort(
+			$patterns,
+			static fn( array $left, array $right ): int => strcasecmp( (string) $left['id'], (string) $right['id'] )
+		);
+
+		$libraries[] = array(
+			'id'         => $library_id,
+			'name'       => sanitize_text_field( (string) ( $library['name'] ?? $library_id ) ),
+			'domain'     => esc_url_raw( (string) ( $library['domain'] ?? '' ) ),
+			'isDefault'  => ! empty( $library['isDefault'] ),
+			'isLocal'    => ! empty( $library['isLocal'] ),
+			'catalog_source' => ! empty( $library['isLocal'] ) ? 'native-local-collection' : 'native-remote-library',
+			'custom_design_source' => ! empty( $library['isLocal'] ) ? 'native-custom-collection' : 'generateblocks',
+			'categories' => array_values( $categories ),
+			'patterns'   => $patterns,
+			'count'      => count( $patterns ),
+		);
+	}
+
+	if ( empty( $libraries ) ) {
+		return array(
+			'success'   => false,
+			'code'      => 'generateblocks_pattern_libraries_empty',
+			'libraries' => array(),
+			'message'   => 'No active GenerateBlocks Pattern Library is available.',
+		);
+	}
+
+	return array(
+		'success'   => true,
+		'libraries' => $libraries,
+		'message'   => 'The complete native GenerateBlocks Pattern Library catalog was read successfully, including local custom collections.',
+	);
+}
+
+/**
+ * Return the complete revisioned design catalog used by source writers.
+ *
+ * @return array<string,mixed>
+ */
+function mcp_abilities_generatepress_design_catalog( array $input = array() ): array {
+	$site_catalog = mcp_abilities_generatepress_get_site_library_catalog( ! empty( $input['force_site_refresh'] ) );
+	if ( empty( $site_catalog['success'] ) ) {
+		return array(
+			'success'           => false,
+			'code'              => (string) ( $site_catalog['code'] ?? 'generatepress_site_library_unavailable' ),
+			'catalog_revision'  => '',
+			'site_library'      => array( 'provider' => 'generatepress-site-library', 'sites' => array(), 'count' => 0 ),
+			'pattern_libraries' => array(),
+			'counts'            => array( 'sites' => 0, 'libraries' => 0, 'categories' => 0, 'patterns' => 0 ),
+			'message'           => (string) ( $site_catalog['message'] ?? 'The native GeneratePress Site Library is unavailable.' ),
+		);
+	}
+
+	$pattern_catalog = mcp_abilities_generatepress_get_full_pattern_catalog( ! empty( $input['include_pattern_markup'] ) );
+	if ( empty( $pattern_catalog['success'] ) ) {
+		return array(
+			'success'           => false,
+			'code'              => (string) ( $pattern_catalog['code'] ?? 'generateblocks_pattern_catalog_unavailable' ),
+			'catalog_revision'  => '',
+			'site_library'      => array( 'provider' => 'generatepress-site-library', 'sites' => $site_catalog['sites'], 'count' => count( $site_catalog['sites'] ) ),
+			'pattern_libraries' => array(),
+			'counts'            => array( 'sites' => count( $site_catalog['sites'] ), 'libraries' => 0, 'categories' => 0, 'patterns' => 0 ),
+			'message'           => (string) ( $pattern_catalog['message'] ?? 'The GenerateBlocks Pattern Library is unavailable.' ),
+		);
+	}
+
+	$custom_pattern_sources = array( 'generatecloud' => mcp_abilities_generatepress_generatecloud_status() );
+	$catalog_for_revision = array(
+		'sites'             => $site_catalog['sites'],
+		'pattern_libraries' => $pattern_catalog['libraries'],
+		'custom_pattern_sources' => $custom_pattern_sources,
+	);
+	$catalog_revision = 'gpc_' . substr( hash( 'sha256', wp_json_encode( $catalog_for_revision ) ), 0, 48 );
+	$category_count = 0;
+	$pattern_count  = 0;
+	foreach ( $pattern_catalog['libraries'] as $library ) {
+		$category_count += count( (array) ( $library['categories'] ?? array() ) );
+		$pattern_count  += count( (array) ( $library['patterns'] ?? array() ) );
+	}
+
+	return array(
+		'success'          => true,
+		'catalog_revision' => $catalog_revision,
+		'generated_at'     => gmdate( 'c' ),
+		'site_library'     => array(
+			'provider' => 'generatepress-site-library',
+			'sites'    => $site_catalog['sites'],
+			'count'    => count( $site_catalog['sites'] ),
+		),
+		'pattern_libraries' => $pattern_catalog['libraries'],
+		'custom_pattern_sources' => $custom_pattern_sources,
+		'counts'            => array(
+			'sites'      => count( $site_catalog['sites'] ),
+			'libraries'  => count( $pattern_catalog['libraries'] ),
+			'categories' => $category_count,
+			'patterns'   => $pattern_count,
+		),
+		'message'           => 'The complete GeneratePress, GenerateBlocks, and available native custom-collection design catalog is ready for contextual source selection.',
+	);
 }
 
 /**
@@ -3550,7 +4104,10 @@ function mcp_abilities_generatepress_register_abilities(): void {
 			'input_schema'        => array(
 				'type'                 => 'object',
 				'properties'           => array(
-					'typography'   => array( 'type' => 'object' ),
+					'typography'   => array(
+						'type'        => 'object',
+						'description' => 'Named global groups plus selector_rules for bounded native selector-only typography.',
+					),
 					'colors'       => array( 'type' => 'object' ),
 					'layout'       => array( 'type' => 'object' ),
 					'spacing'      => array( 'type' => 'object' ),
@@ -3573,100 +4130,7 @@ function mcp_abilities_generatepress_register_abilities(): void {
 					'message'               => array( 'type' => 'string' ),
 				),
 			),
-			'execute_callback'    => function ( array $input = array() ): array {
-				$input = is_array( $input ) ? $input : array();
-
-				$settings = get_option( 'generate_settings', array() );
-				if ( ! is_array( $settings ) ) {
-					$settings = array();
-				}
-
-				$rules = isset( $settings['typography'] ) && is_array( $settings['typography'] ) ? $settings['typography'] : array();
-				if ( array_keys( $rules ) !== range( 0, count( $rules ) - 1 ) ) {
-					$rules = array();
-				}
-
-				$allowed = mcp_abilities_generatepress_setting_groups();
-
-				$updated_sections = array();
-				$updated_keys     = array();
-
-				if ( isset( $input['typography'] ) && is_array( $input['typography'] ) ) {
-					foreach ( array( 'body', 'html', 'site_title', 'mobile_navigation_site_title', 'site_tagline', 'navigation', 'subnavigation', 'buttons', 'entry_meta', 'sidebar_widget_title', 'sidebar_widget_text', 'footer_widget_title', 'footer_widget_text', 'footer_bar_text', 'h1', 'h2', 'h3', 'h4', 'h5', 'h6' ) as $group ) {
-						if ( isset( $input['typography'][ $group ] ) && is_array( $input['typography'][ $group ] ) ) {
-							$changed = mcp_abilities_generatepress_apply_typography_group( $settings, $rules, $group, $input['typography'][ $group ] );
-							if ( ! empty( $changed ) ) {
-								$updated_sections[] = 'typography.' . $group;
-								$updated_keys       = array_merge( $updated_keys, $changed );
-							}
-						}
-					}
-				}
-
-				if ( isset( $input['settings'] ) && is_array( $input['settings'] ) ) {
-					foreach ( $input['settings'] as $key => $value ) {
-						if ( ! is_string( $key ) || '' === $key ) {
-							continue;
-						}
-						if ( 'typography' === $key ) {
-							return array(
-								'success' => false,
-								'message' => 'Use the typography groups in generatepress/update-global-design-settings instead of writing the raw typography rule array.',
-							);
-						}
-						if ( ! mcp_abilities_generatepress_is_flat_setting_value( $value ) ) {
-							return array(
-								'success' => false,
-								'message' => 'Refusing nested value for GeneratePress setting "' . $key . '".',
-							);
-						}
-						if ( null === $value || '' === $value ) {
-							unset( $settings[ $key ] );
-						} else {
-							$settings[ $key ] = $value;
-						}
-						$updated_sections[] = 'settings';
-						$updated_keys[]     = $key;
-					}
-				}
-
-				foreach ( $allowed as $section => $keys ) {
-					if ( empty( $input[ $section ] ) || ! is_array( $input[ $section ] ) ) {
-						continue;
-					}
-					foreach ( $input[ $section ] as $key => $value ) {
-						if ( ! is_string( $key ) || ! in_array( $key, $keys, true ) ) {
-							continue;
-						}
-						if ( null === $value || '' === $value ) {
-							unset( $settings[ $key ] );
-						} else {
-							$settings[ $key ] = $value;
-						}
-						$updated_sections[] = $section;
-						$updated_keys[]     = $key;
-					}
-				}
-
-				if ( empty( $updated_keys ) ) {
-					return array(
-						'success' => false,
-						'message' => 'No allowed global GeneratePress design settings provided.',
-					);
-				}
-
-				$settings['typography'] = array_values( $rules );
-				update_option( 'generate_settings', $settings );
-				mcp_abilities_generatepress_clear_dynamic_css_cache();
-
-				return array(
-					'success'               => true,
-					'updated_sections'      => array_values( array_unique( $updated_sections ) ),
-					'updated_keys'          => array_values( array_unique( $updated_keys ) ),
-					'typography_rule_count' => count( $settings['typography'] ),
-					'message'               => 'GeneratePress global design settings updated successfully.',
-				);
-			},
+			'execute_callback'    => 'mcp_abilities_generatepress_update_global_design_settings',
 			'permission_callback' => function (): bool {
 				return current_user_can( 'edit_theme_options' );
 			},
@@ -4013,49 +4477,7 @@ function mcp_abilities_generatepress_register_abilities(): void {
 					'message'     => array( 'type' => 'string' ),
 				),
 			),
-			'execute_callback'    => function ( array $input = array() ): array {
-				$module  = isset( $input['module'] ) ? sanitize_key( $input['module'] ) : '';
-				$module  = str_replace( '-', '_', $module );
-				$map     = mcp_abilities_generatepress_module_settings_map();
-				$settings = isset( $input['settings'] ) && is_array( $input['settings'] ) ? $input['settings'] : array();
-				$option_name = isset( $input['option_name'] ) && is_string( $input['option_name'] ) ? sanitize_key( $input['option_name'] ) : '';
-
-				if ( '' !== $option_name ) {
-					if ( ! mcp_abilities_generatepress_is_allowed_option_name( $option_name ) || ! str_ends_with( $option_name, '_settings' ) ) {
-						return array( 'success' => false, 'message' => 'Option name is not an allowed GeneratePress settings option.' );
-					}
-				} elseif ( '' !== $module && isset( $map[ $module ] ) ) {
-					$option_name = $map[ $module ];
-				} else {
-					return array( 'success' => false, 'message' => 'Provide a known module or allowed option_name.' );
-				}
-
-				if ( empty( $settings ) ) {
-					return array( 'success' => false, 'message' => 'No settings provided.' );
-				}
-
-				$replace     = ! empty( $input['replace'] );
-
-				if ( $replace ) {
-					$updated = $settings;
-				} else {
-					$current = get_option( $option_name, array() );
-					if ( ! is_array( $current ) ) {
-						$current = array();
-					}
-					$updated = array_merge( $current, $settings );
-				}
-
-				update_option( $option_name, $updated );
-				mcp_abilities_generatepress_clear_dynamic_css_cache();
-
-				return array(
-					'success'     => true,
-					'module'      => '' !== $module ? $module : preg_replace( '/^generate_|_settings$/', '', $option_name ),
-					'option_name' => $option_name,
-					'message'     => 'Module settings updated successfully',
-				);
-			},
+			'execute_callback'    => 'mcp_abilities_generatepress_update_module_settings',
 			'permission_callback' => function (): bool {
 				return current_user_can( 'edit_theme_options' );
 			},
@@ -4447,6 +4869,61 @@ function mcp_abilities_generatepress_register_abilities(): void {
 			},
 			'permission_callback' => function (): bool {
 				return current_user_can( 'manage_options' );
+			},
+			'meta'                => array(
+				'annotations' => array(
+					'readonly'    => true,
+					'destructive' => false,
+					'idempotent'  => true,
+				),
+			),
+		)
+	);
+
+	// =========================================================================
+	// GENERATEPRESS - Full Design Catalog
+	// =========================================================================
+	mcp_abilities_generatepress_register_ability(
+		'generatepress/list-design-catalog',
+		array(
+			'label'               => 'List Full GeneratePress Design Catalog',
+			'description'         => 'Returns the complete active GeneratePress Site Library and GenerateBlocks Pattern Library catalog for contextual source-page design selection. The agent must choose from this live catalog; no site or pattern is preselected.',
+			'category'            => 'site',
+			'input_schema'        => array(
+				'type'                 => 'object',
+				'properties'           => array(
+					'force_site_refresh' => array(
+						'type'        => 'boolean',
+						'default'     => false,
+						'description' => 'Refresh the native Site Library before reading it. Only administrators can force the refresh.',
+					),
+					'include_pattern_markup' => array(
+						'type'        => 'boolean',
+						'default'     => false,
+						'description' => 'Include full saved block markup for every catalog pattern. Keep false for design selection; request markup only for an explicitly selected pattern.',
+					),
+				),
+				'additionalProperties' => false,
+			),
+			'output_schema'       => array(
+				'type'       => 'object',
+				'properties' => array(
+					'success'           => array( 'type' => 'boolean' ),
+					'code'              => array( 'type' => 'string' ),
+					'catalog_revision'  => array( 'type' => 'string' ),
+					'generated_at'      => array( 'type' => 'string' ),
+					'site_library'      => array( 'type' => 'object' ),
+					'pattern_libraries' => array( 'type' => 'array' ),
+					'custom_pattern_sources' => array( 'type' => 'object' ),
+					'counts'            => array( 'type' => 'object' ),
+					'message'           => array( 'type' => 'string' ),
+				),
+			),
+			'execute_callback'    => static function ( $input = array() ): array {
+				return mcp_abilities_generatepress_design_catalog( is_array( $input ) ? $input : array() );
+			},
+			'permission_callback' => static function (): bool {
+				return current_user_can( 'edit_posts' );
 			},
 			'meta'                => array(
 				'annotations' => array(
@@ -6644,6 +7121,11 @@ function mcp_abilities_generatepress_register_abilities(): void {
 						'type'        => 'array',
 						'default'     => array(),
 						'description' => 'Exact native GeneratePress Element user conditions.',
+					),
+					'ignore_languages' => array(
+						'type'        => 'boolean',
+						'default'     => false,
+						'description' => 'Use GeneratePress native Ignore Languages behavior for a language-independent Element.',
 					),
 					'use_theme_post_container' => array(
 						'type' => 'boolean',

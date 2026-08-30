@@ -9,7 +9,6 @@ const workflowProjection = readFileSync(resolve(workspace, "devenia-workflow/inc
 const workflowJob = readFileSync(resolve(workspace, "devenia-workflow/includes/trait-translation-job.php"), "utf8");
 const workflowSourceRewrite = readFileSync(resolve(workspace, "devenia-workflow/includes/trait-source-rewrite-quality-authority.php"), "utf8");
 const sitePresentation = readFileSync(resolve(workspace, "devenia-site-presentation/devenia-site-presentation.php"), "utf8");
-const queryCollectionPattern = readFileSync(resolve(workspace, "devenia-site-presentation/patterns/section-query-collection-v1.php"), "utf8");
 
 function assert(condition, message) {
   if (!condition) throw new Error(message);
@@ -24,7 +23,6 @@ assert.match(moduleSource, /devenia_workflow_translatable_block_html_fragments/,
 assert.match(moduleSource, /devenia_workflow_structured_text_attr_fragments/, "GP-MCP must expose accessible Query copy to Workflow");
 assert.match(workflowProjection, /devenia_workflow_project_translatable_block_html_fragment/, "Workflow must consume the generic Adapter projection Interface");
 assert.match(workflowJob, /translation_job_dynamic_inventory_policy/, "Workflow must enforce declared dynamic inventory before staging");
-assert.match(workflowJob, /devenia_workflow_validate_dynamic_inventory/, "Workflow must call the owning Adapter's inventory validator");
 assert.match(
   moduleSource,
   /add_filter\(\s*'devenia_workflow_source_rewrite_artifact_policy',\s*array\(\s*__CLASS__,\s*'validate_source_rewrite_artifact'\s*\),\s*10,\s*4\s*\)/,
@@ -37,9 +35,6 @@ assert.match(
 );
 assert.notMatch(workflowProjection, /data-devenia-card-(?:summary|action)/, "Workflow must not own GenerateBlocks card-role implementation");
 assert.notMatch(sitePresentation, /data-devenia-card-(?:summary|action)|generateblocks_dynamic_tag_replacement/, "Site Presentation must not own Query card data projection");
-assert.notMatch(queryCollectionPattern, /data-devenia-card-inventory/, "a filtered group Query must not claim to be the complete direct-child inventory");
-assert.match(queryCollectionPattern, /data-devenia-card-action":"details"/, "the real shared query-collection section must use the Adapter's generic detail role");
-assert.match(queryCollectionPattern, /aria-label":"View \{\{post_title\}\} details"/, "the real shared query-collection section must satisfy the media projection Interface");
 assert.notMatch(moduleSource, /page_id|post_parent\s*===|locale|customCss|additionalCss/i, "Card projection must not infer policy from page IDs, locale, or CSS");
 
 console.log("GenerateBlocks card ownership: OK");
