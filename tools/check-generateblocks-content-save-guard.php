@@ -93,6 +93,12 @@ $GLOBALS['mcp_guard_global_styles'] = array(
 $assert( true === MCP_Abilities_GeneratePress_GenerateBlocks_Content_Save_Guard::validate_content( $missing_style ), 'An existing GenerateBlocks Global Style was reported missing.' );
 $assert( true === MCP_Abilities_GeneratePress_GenerateBlocks_Content_Save_Guard::validate_content( $missing_style, true ), 'A published GenerateBlocks Global Style with CSS was rejected.' );
 
+$GLOBALS['mcp_guard_global_styles'][0]['selector'] = '.gbp-section .fixture-child';
+$GLOBALS['mcp_guard_global_styles'][0]['css']      = '.gbp-section .fixture-child{padding:1rem;}';
+$assert( true === MCP_Abilities_GeneratePress_GenerateBlocks_Content_Save_Guard::validate_content( $missing_style, true ), 'A Global Style class used by a compound native selector was reported missing.' );
+$GLOBALS['mcp_guard_global_styles'][0]['selector'] = '.gbp-section';
+$GLOBALS['mcp_guard_global_styles'][0]['css']      = '.gbp-section{padding:1rem;}';
+
 $GLOBALS['mcp_guard_global_styles'][0]['status'] = 'draft';
 $draft_style_result = MCP_Abilities_GeneratePress_GenerateBlocks_Content_Save_Guard::validate_content( $missing_style, true );
 $assert( is_wp_error( $draft_style_result ) && 'generateblocks_global_styles_missing' === $draft_style_result->get_error_code(), 'A draft Global Style was allowed on published page content.' );

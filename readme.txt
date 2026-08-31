@@ -3,7 +3,7 @@ Contributors: basicus
 Tags: mcp, generatepress, theme, ai, automation
 Requires at least: 6.9
 Tested up to: 7.1
-Stable tag: 1.1.61
+Stable tag: 1.1.62
 Requires PHP: 8.0
 License: GPLv2 or later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
@@ -49,6 +49,10 @@ Part of the MCP Expose Abilities ecosystem.
 4. Activate the plugin
 
 == Changelog ==
+
+= 1.1.62 =
+* Supply published native GenerateBlocks Global Style CSS through the Block Editor design-context filter.
+* Recognize Global Style classes inside compound native selectors when guarding page saves.
 
 = 1.1.61 =
 * Authenticate Pattern Library style imports through the same native library seam as pattern discovery.

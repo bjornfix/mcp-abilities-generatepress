@@ -214,12 +214,14 @@ final class MCP_Abilities_GeneratePress_GenerateBlocks_Content_Save_Guard {
 			$selector = is_array( $style ) ? (string) ( $style['selector'] ?? '' ) : '';
 			$status   = is_array( $style ) ? (string) ( $style['status'] ?? '' ) : '';
 			$css      = is_array( $style ) ? trim( (string) ( $style['css'] ?? '' ) ) : '';
-			if (
-				preg_match( '/^\.([A-Za-z0-9_-]+)$/', $selector, $match )
-				&& '' !== $css
-				&& ( ! $require_published_styles || 'publish' === $status )
-			) {
-				$existing[] = (string) $match[1];
+			if ( '' === $css || ( $require_published_styles && 'publish' !== $status ) ) {
+				continue;
+			}
+
+			if ( preg_match_all( '/\.([A-Za-z_][A-Za-z0-9_-]*)/', $selector, $matches ) ) {
+				foreach ( $matches[1] as $class_name ) {
+					$existing[] = (string) $class_name;
+				}
 			}
 		}
 
