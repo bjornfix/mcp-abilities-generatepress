@@ -2,12 +2,12 @@
 
 Change the site's shared design through the same GeneratePress settings, Elements and GenerateBlocks Global Styles that WordPress editors use. Ask an authenticated assistant to inspect the current design, make a specific change and read it back.
 
-[![Release 1.1.65](https://img.shields.io/badge/release-1.1.65-blue.svg)](https://downloads.devenia.com/mcp-abilities-generatepress.zip)
+[![Release 1.1.66](https://img.shields.io/badge/release-1.1.66-blue.svg)](https://downloads.devenia.com/mcp-abilities-generatepress.zip)
 [![License: GPL v2 or later](https://img.shields.io/badge/license-GPLv2%2B-blue.svg)](https://www.gnu.org/licenses/gpl-2.0.html)
 [![WordPress 6.9+](https://img.shields.io/badge/WordPress-6.9%2B-blue.svg)](https://wordpress.org/)
 [![PHP 8.0+](https://img.shields.io/badge/PHP-8.0%2B-purple.svg)](https://www.php.net/)
 
-**Stable tag:** 1.1.65
+**Stable tag:** 1.1.66
 
 **Tested up to:** WordPress 7.1
 
@@ -156,7 +156,7 @@ Read it back through `generateblocks/get-global-styles` and check a block using 
 
 ## Safety and Ownership
 
-Every ability has a WordPress capability check. Theme operations normally require `edit_theme_options`; broader option and module operations require `manage_options`. Pattern discovery requires `edit_posts`, while featured-image operations require `upload_files`. These operations act with the connected WordPress user's privileges.
+Every ability has a WordPress capability check. Theme operations normally require `edit_theme_options`; broader option and module operations require `manage_options`. Pattern discovery requires `edit_posts`, while featured-image operations require `upload_files`. Regeneration also checks `edit_post` for each attachment before accessing its file or changing metadata. These operations act with the connected WordPress user's privileges.
 
 Option and metadata operations are bounded to the supported GeneratePress and GenerateBlocks names. Destructive operations have their own schemas and confirmation requirements. Read the discovered schema before a write, and inspect the result afterwards. An authenticated write can affect many pages when it changes a global setting.
 
@@ -167,6 +167,10 @@ RTL sidebar mirroring is opt-in through `mcp_generatepress_mirror_rtl_sidebars`.
 Download the [plugin ZIP](https://downloads.devenia.com/mcp-abilities-generatepress.zip). In WordPress, open **Plugins → Add New → Upload Plugin**, select the ZIP, install it and activate it. Configure the required theme, optional premium features and authenticated MCP connection, then verify discovery.
 
 ## Recent Changes
+
+### 1.1.66
+
+- Require permission to edit each attachment before regenerating its image files or metadata.
 
 ### 1.1.65
 

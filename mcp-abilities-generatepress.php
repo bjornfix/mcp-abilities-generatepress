@@ -3,7 +3,7 @@
  * Plugin Name: MCP Abilities - GeneratePress
  * Plugin URI: https://github.com/bjornfix/mcp-abilities-generatepress
  * Description: GeneratePress and GenerateBlocks abilities for MCP. Manage theme settings, elements, global styles, page meta, and caches.
- * Version: 1.1.65
+ * Version: 1.1.66
  * Author: basicus
  * Author URI: https://profiles.wordpress.org/basicus/
  * License: GPL-2.0+
@@ -8063,6 +8063,10 @@ function mcp_abilities_generatepress_register_abilities(): void {
 					$attachment_id = (int) get_post_thumbnail_id( $post_id );
 					if ( $attachment_id <= 0 ) {
 						$failed[ $post_id ] = 'Post has no featured image.';
+						continue;
+					}
+					if ( ! current_user_can( 'edit_post', $attachment_id ) ) {
+						$failed[ $post_id ] = 'You do not have permission to edit this attachment.';
 						continue;
 					}
 					$file = get_attached_file( $attachment_id );
