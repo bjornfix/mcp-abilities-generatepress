@@ -104,7 +104,7 @@ final class MCP_Abilities_GeneratePress_GenerateBlocks_Global_Styles {
 					'order'                  => 'ASC',
 					'update_post_meta_cache' => false,
 					'update_post_term_cache' => false,
-					'suppress_filters'       => true,
+					'suppress_filters'       => false,
 				)
 			);
 			foreach ( $ids as $post_id ) {
