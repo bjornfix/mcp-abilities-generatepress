@@ -2,12 +2,12 @@
 
 Change the site's shared design through the same GeneratePress settings, Elements and GenerateBlocks Global Styles that WordPress editors use. Ask an authenticated assistant to inspect the current design, make a specific change and read it back.
 
-[![Release 1.1.63](https://img.shields.io/badge/release-1.1.63-blue.svg)](https://downloads.devenia.com/mcp-abilities-generatepress.zip)
+[![Release 1.1.64](https://img.shields.io/badge/release-1.1.64-blue.svg)](https://downloads.devenia.com/mcp-abilities-generatepress.zip)
 [![License: GPL v2 or later](https://img.shields.io/badge/license-GPLv2%2B-blue.svg)](https://www.gnu.org/licenses/gpl-2.0.html)
 [![WordPress 6.9+](https://img.shields.io/badge/WordPress-6.9%2B-blue.svg)](https://wordpress.org/)
 [![PHP 8.0+](https://img.shields.io/badge/PHP-8.0%2B-purple.svg)](https://www.php.net/)
 
-**Stable tag:** 1.1.63
+**Stable tag:** 1.1.64
 
 **Tested up to:** WordPress 7.1
 
@@ -168,7 +168,7 @@ Download the [plugin ZIP](https://downloads.devenia.com/mcp-abilities-generatepr
 
 ## Recent Changes
 
-### 1.1.63
+### 1.1.64
 
 - Add opt-in native RTL sidebar mirroring and copy GeneratePress layout metadata when Polylang creates translations.
 - Extend the Global Style content guard to posts and use a compact style validation index.

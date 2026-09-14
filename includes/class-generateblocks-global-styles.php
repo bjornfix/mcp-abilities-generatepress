@@ -72,7 +72,7 @@ final class MCP_Abilities_GeneratePress_GenerateBlocks_Global_Styles {
 	/**
 	 * Return the minimal native style data required to validate page content.
 	 *
-	 * This deliberately uses the WordPress database abstraction to select only
+	 * This deliberately uses native WordPress ID queries to select only
 	 * the native style identity/status, then lets WordPress populate post meta
 	 * through its normal cache. It must not share the full `WP_Post` inventory
 	 * returned by get_all(), because that inventory is unnecessarily expensive
@@ -90,29 +90,28 @@ final class MCP_Abilities_GeneratePress_GenerateBlocks_Global_Styles {
 			return self::$validation_index;
 		}
 
-		global $wpdb;
-		$statuses = array( 'publish', 'draft', 'private' );
-		$format   = implode( ',', array_fill( 0, count( $statuses ), '%s' ) );
-		$query    = $wpdb->prepare(
-			"SELECT ID, post_status FROM {$wpdb->posts} WHERE post_type = %s AND post_status IN ({$format})",
-			array_merge( array( self::POST_TYPE ), $statuses )
-		);
-		$rows     = $wpdb->get_results( $query );
-		$post_ids = array();
+		$post_ids       = array();
 		$statuses_by_id = array();
-
-		foreach ( (array) $rows as $row ) {
-			if ( ! is_object( $row ) ) {
-				continue;
+		// Query each status so native ID-only queries never load full style posts.
+		foreach ( array( 'publish', 'draft', 'private' ) as $status ) {
+			$ids = get_posts(
+				array(
+					'post_type'              => self::POST_TYPE,
+					'post_status'            => $status,
+					'posts_per_page'         => -1,
+					'fields'                 => 'ids',
+					'orderby'                => 'ID',
+					'order'                  => 'ASC',
+					'update_post_meta_cache' => false,
+					'update_post_term_cache' => false,
+					'suppress_filters'       => true,
+				)
+			);
+			foreach ( $ids as $post_id ) {
+				$post_id = (int) $post_id;
+				$post_ids[] = $post_id;
+				$statuses_by_id[ $post_id ] = $status;
 			}
-
-			$post_id = isset( $row->ID ) ? (int) $row->ID : 0;
-			if ( $post_id <= 0 ) {
-				continue;
-			}
-
-			$post_ids[]                = $post_id;
-			$statuses_by_id[ $post_id ] = isset( $row->post_status ) ? (string) $row->post_status : '';
 		}
 
 		if ( function_exists( 'update_meta_cache' ) && $post_ids ) {

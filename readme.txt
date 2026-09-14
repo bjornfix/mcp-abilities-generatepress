@@ -3,7 +3,7 @@ Contributors: basicus
 Tags: mcp, generatepress, theme, ai, automation
 Requires at least: 6.9
 Tested up to: 7.1
-Stable tag: 1.1.63
+Stable tag: 1.1.64
 Requires PHP: 8.0
 License: GPLv2 or later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
@@ -50,7 +50,7 @@ Part of the MCP Expose Abilities ecosystem.
 
 == Changelog ==
 
-= 1.1.63 =
+= 1.1.64 =
 * Add opt-in RTL sidebar mirroring through native GeneratePress layout and WordPress widget filters, preserving stored layouts and widget assignments.
 * Include native GeneratePress page-layout settings when Polylang copies a translation, without forcing two-way layout synchronization.
 * Apply the native content guard to posts as well as pages.
