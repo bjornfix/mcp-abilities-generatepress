@@ -3,7 +3,7 @@ Contributors: basicus
 Tags: mcp, generatepress, theme, ai, automation
 Requires at least: 6.9
 Tested up to: 7.1
-Stable tag: 1.1.62
+Stable tag: 1.1.63
 Requires PHP: 8.0
 License: GPLv2 or later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
@@ -49,6 +49,15 @@ Part of the MCP Expose Abilities ecosystem.
 4. Activate the plugin
 
 == Changelog ==
+
+= 1.1.63 =
+* Add opt-in RTL sidebar mirroring through native GeneratePress layout and WordPress widget filters, preserving stored layouts and widget assignments.
+* Include native GeneratePress page-layout settings when Polylang copies a translation, without forcing two-way layout synchronization.
+* Apply the native content guard to posts as well as pages.
+* Accept intentional semantic Global Styles and native inline generated CSS.
+* Use a compact Global Style validation index and distinguish missing or malformed style data from intentional empty styles.
+* Recognise actual CSS class selectors without accepting class-like text in URLs, comments, attributes or generated content.
+* Honour include_content=false throughout the Element response.
 
 = 1.1.62 =
 * Supply published native GenerateBlocks Global Style CSS through the Block Editor design-context filter.

@@ -18,6 +18,18 @@ final class MCP_Abilities_GeneratePress_GenerateBlocks_Global_Styles {
 	private const POST_TYPE = 'gblocks_styles';
 
 	/**
+	 * Compact per-request index used by the content save guard.
+	 *
+	 * The editor guard only needs selector, status, generated CSS, and whether
+	 * a native style declaration exists. Keeping that read separate from the
+	 * full Global Styles representation avoids materialising every style post
+	 * (including post content) on each page write.
+	 *
+	 * @var array<int, array{selector:string,status:string,styles:array<string,mixed>|null,css:string}>|null
+	 */
+	private static ?array $validation_index = null;
+
+	/**
 	 * Return current Global Styles in their native stored representation.
 	 *
 	 * @return array<int, array<string, mixed>>
@@ -58,6 +70,71 @@ final class MCP_Abilities_GeneratePress_GenerateBlocks_Global_Styles {
 	}
 
 	/**
+	 * Return the minimal native style data required to validate page content.
+	 *
+	 * This deliberately uses the WordPress database abstraction to select only
+	 * the native style identity/status, then lets WordPress populate post meta
+	 * through its normal cache. It must not share the full `WP_Post` inventory
+	 * returned by get_all(), because that inventory is unnecessarily expensive
+	 * on the shared page-save seam.
+	 *
+	 * @return array<int, array{selector:string,status:string,styles:array<string,mixed>|null,css:string}>
+	 */
+	public static function get_validation_index(): array {
+		if ( null !== self::$validation_index ) {
+			return self::$validation_index;
+		}
+
+		if ( ! post_type_exists( self::POST_TYPE ) ) {
+			self::$validation_index = array();
+			return self::$validation_index;
+		}
+
+		global $wpdb;
+		$statuses = array( 'publish', 'draft', 'private' );
+		$format   = implode( ',', array_fill( 0, count( $statuses ), '%s' ) );
+		$query    = $wpdb->prepare(
+			"SELECT ID, post_status FROM {$wpdb->posts} WHERE post_type = %s AND post_status IN ({$format})",
+			array_merge( array( self::POST_TYPE ), $statuses )
+		);
+		$rows     = $wpdb->get_results( $query );
+		$post_ids = array();
+		$statuses_by_id = array();
+
+		foreach ( (array) $rows as $row ) {
+			if ( ! is_object( $row ) ) {
+				continue;
+			}
+
+			$post_id = isset( $row->ID ) ? (int) $row->ID : 0;
+			if ( $post_id <= 0 ) {
+				continue;
+			}
+
+			$post_ids[]                = $post_id;
+			$statuses_by_id[ $post_id ] = isset( $row->post_status ) ? (string) $row->post_status : '';
+		}
+
+		if ( function_exists( 'update_meta_cache' ) && $post_ids ) {
+			update_meta_cache( 'post', $post_ids );
+		}
+
+		$index = array();
+		foreach ( $post_ids as $post_id ) {
+			$style_data = get_post_meta( $post_id, 'gb_style_data', true );
+			$index[] = array(
+				'selector' => (string) get_post_meta( $post_id, 'gb_style_selector', true ),
+				'status'   => $statuses_by_id[ $post_id ] ?? '',
+				'styles'   => is_array( $style_data ) ? $style_data : null,
+				'css'      => (string) get_post_meta( $post_id, 'gb_style_css', true ),
+			);
+		}
+
+		self::$validation_index = $index;
+		return self::$validation_index;
+	}
+
+	/**
 	 * Upsert supplied Global Styles and explicitly delete named selectors.
 	 *
 	 * @param array<int, array<string, mixed>> $styles Global Style definitions.
@@ -65,6 +142,7 @@ final class MCP_Abilities_GeneratePress_GenerateBlocks_Global_Styles {
 	 * @return array<string, mixed>
 	 */
 	public static function synchronize( array $styles, array $delete_selectors = array() ): array {
+		self::$validation_index = null;
 		if ( ! post_type_exists( self::POST_TYPE ) ) {
 			return array(
 				'success' => false,

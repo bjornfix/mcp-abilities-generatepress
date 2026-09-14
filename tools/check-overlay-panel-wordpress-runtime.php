@@ -49,6 +49,7 @@ try {
 	}
 	if (
 		'mega-menu' !== get_post_meta( $overlay_id, '_gb_overlay_type', true )
+		|| 'hover' !== get_post_meta( $overlay_id, '_gb_overlay_trigger_type', true )
 		|| 'bottom' !== get_post_meta( $overlay_id, '_gb_overlay_placement', true )
 		|| '.gb-navigation' !== get_post_meta( $overlay_id, '_gb_overlay_position_to_parent', true )
 		|| 'full' !== get_post_meta( $overlay_id, '_gb_overlay_width_mode', true )

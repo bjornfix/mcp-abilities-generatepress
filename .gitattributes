@@ -3,3 +3,4 @@
 tools export-ignore
 README.md export-ignore
 CONTEXT.md export-ignore
+DEPENDENCIES.md export-ignore

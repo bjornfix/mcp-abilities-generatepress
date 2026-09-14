@@ -12,17 +12,18 @@ if ( ! defined( 'ABSPATH' ) ) {
 }
 
 /**
- * Owns the shared pre-save validation for GenerateBlocks page content.
+ * Owns the shared pre-save validation for GenerateBlocks page and post content.
  *
  * The MCP content ability and Gutenberg REST endpoint are two Interfaces for
- * the same page write. This Adapter keeps their guard identical, so invalid
+ * the same content write. This Adapter keeps their guard identical, so invalid
  * block structures cannot enter WordPress through either path.
  */
 final class MCP_Abilities_GeneratePress_GenerateBlocks_Content_Save_Guard {
-	/** Register both page-write Interfaces. */
+	/** Register the MCP and native page/post REST write Interfaces. */
 	public static function register(): void {
 		add_filter( 'mcp_content_write_preflight', array( __CLASS__, 'validate_mcp_write' ), 999, 2 );
 		add_filter( 'rest_pre_insert_page', array( __CLASS__, 'validate_rest_write' ), 999, 2 );
+		add_filter( 'rest_pre_insert_post', array( __CLASS__, 'validate_rest_write' ), 999, 2 );
 	}
 
 	/**
@@ -36,7 +37,7 @@ final class MCP_Abilities_GeneratePress_GenerateBlocks_Content_Save_Guard {
 		if ( true !== $result ) {
 			return $result;
 		}
-		if ( 'page' !== strtolower( (string) ( $context['post_type'] ?? '' ) ) ) {
+		if ( ! in_array( strtolower( (string) ( $context['post_type'] ?? '' ) ), array( 'page', 'post' ), true ) ) {
 			return $result;
 		}
 
@@ -166,9 +167,15 @@ final class MCP_Abilities_GeneratePress_GenerateBlocks_Content_Save_Guard {
 			if ( 0 === strpos( $name, 'generateblocks/' ) ) {
 				foreach ( (array) ( $block['attrs']['globalClasses'] ?? array() ) as $global_class ) {
 					if ( is_scalar( $global_class ) ) {
-						$global_class = trim( (string) $global_class );
-						if ( '' !== $global_class ) {
-							$global_classes[] = ltrim( $global_class, '.' );
+						// GenerateBlocks can serialize several native classes in one
+						// globalClasses value. Treat each token as its own class so a
+						// valid source tree is not rejected during a full rebuild.
+						$class_tokens = preg_split( '/\s+/', trim( (string) $global_class ) );
+						foreach ( (array) $class_tokens as $class_token ) {
+							$class_token = trim( (string) $class_token );
+							if ( '' !== $class_token ) {
+								$global_classes[] = ltrim( $class_token, '.' );
+							}
 						}
 					}
 				}
@@ -210,22 +217,94 @@ final class MCP_Abilities_GeneratePress_GenerateBlocks_Content_Save_Guard {
 		}
 
 		$existing = array();
-		foreach ( MCP_Abilities_GeneratePress_GenerateBlocks_Global_Styles::get_all() as $style ) {
-			$selector = is_array( $style ) ? (string) ( $style['selector'] ?? '' ) : '';
-			$status   = is_array( $style ) ? (string) ( $style['status'] ?? '' ) : '';
-			$css      = is_array( $style ) ? trim( (string) ( $style['css'] ?? '' ) ) : '';
-			if ( '' === $css || ( $require_published_styles && 'publish' !== $status ) ) {
+		$style_index = MCP_Abilities_GeneratePress_GenerateBlocks_Global_Styles::get_validation_index();
+		foreach ( $style_index as $style ) {
+			$selector          = is_array( $style ) ? (string) ( $style['selector'] ?? '' ) : '';
+			$status            = is_array( $style ) ? (string) ( $style['status'] ?? '' ) : '';
+			$css               = is_array( $style ) ? trim( (string) ( $style['css'] ?? '' ) ) : '';
+			$declared_styles   = is_array( $style ) && array_key_exists( 'styles', $style ) && is_array( $style['styles'] ) ? $style['styles'] : null;
+			$intentional_empty = is_array( $declared_styles ) && empty( $declared_styles );
+			if ( '' === $selector || ( $require_published_styles && 'publish' !== $status ) ) {
+				continue;
+			}
+			// Native semantic classes may be registered deliberately without CSS.
+			// A non-empty style definition still needs generated CSS before a
+			// published page may reference it.
+			if ( '' === $css && ! $intentional_empty ) {
 				continue;
 			}
 
-			if ( preg_match_all( '/\.([A-Za-z_][A-Za-z0-9_-]*)/', $selector, $matches ) ) {
-				foreach ( $matches[1] as $class_name ) {
-					$existing[] = (string) $class_name;
-				}
-			}
+			$existing = array_merge( $existing, self::style_selector_classes( $selector, $css ) );
 		}
 
 		return array_values( array_diff( $global_classes, array_unique( $existing ) ) );
+	}
+
+	/**
+	 * Read classes from rule selectors, never declaration values or comments.
+	 *
+	 * Native generated CSS can include nested rules and media queries. Track
+	 * strings, comments and parentheses so their punctuation cannot invent a rule.
+	 *
+	 * @return string[]
+	 */
+	private static function style_selector_classes( string $selector, string $css ): array {
+		$selectors = array( $selector );
+		$prelude   = '';
+		$quote     = '';
+		$depth     = 0;
+		$length    = strlen( $css );
+		for ( $i = 0; $i < $length; $i++ ) {
+			$char = $css[ $i ];
+			if ( '' !== $quote ) {
+				if ( '\\' === $char ) {
+					$i++;
+				} elseif ( $char === $quote ) {
+					$quote = '';
+				}
+				continue;
+			}
+			if ( '/' === $char && $i + 1 < $length && '*' === $css[ $i + 1 ] ) {
+				$end = strpos( $css, '*/', $i + 2 );
+				if ( false === $end ) {
+					break;
+				}
+				$i = $end + 1;
+				$prelude .= ' ';
+				continue;
+			}
+			if ( '"' === $char || "'" === $char ) {
+				$quote = $char;
+				$prelude .= ' ';
+				continue;
+			}
+			if ( '(' === $char ) {
+				$depth++;
+			} elseif ( ')' === $char ) {
+				$depth = max( 0, $depth - 1 );
+			}
+			if ( 0 === $depth && '{' === $char ) {
+				$rule = trim( $prelude );
+				if ( '' !== $rule && '@' !== $rule[0] ) {
+					$selectors[] = $rule;
+				}
+				$prelude = '';
+			} elseif ( 0 === $depth && ( '}' === $char || ';' === $char ) ) {
+				$prelude = '';
+			} else {
+				$prelude .= $char;
+			}
+		}
+
+		$classes = array();
+		foreach ( $selectors as $rule ) {
+			// Attribute values, including dotted filenames, are not class tokens.
+			$rule = (string) preg_replace( '/\[[^\]]*\]/', '', $rule );
+			if ( preg_match_all( '/\.([A-Za-z_][A-Za-z0-9_-]*)/', $rule, $matches ) ) {
+				$classes = array_merge( $classes, $matches[1] );
+			}
+		}
+		return array_values( array_unique( $classes ) );
 	}
 
 	/** @param array<string,mixed> $block @param array<int,array{name:string,attrs:array<string,mixed>}> $ancestors */

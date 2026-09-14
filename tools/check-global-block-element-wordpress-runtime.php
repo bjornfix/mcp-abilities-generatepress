@@ -41,6 +41,7 @@ try {
 		'priority'           => 10,
 		'status'             => 'draft',
 		'display_conditions' => array( array( 'rule' => 'general:site', 'object' => '0' ) ),
+		'ignore_languages'   => true,
 	);
 	$created = $ability->execute( $input );
 	if ( empty( $created['success'] ) || empty( $created['id'] ) || 'created' !== (string) ( $created['action'] ?? '' ) ) {
@@ -107,6 +108,7 @@ try {
 		'_generate_block_type'               => 'hook',
 		'_generate_hook_type'                => 'hook',
 		'_generate_hook'                     => 'generate_after_header',
+		'_generate_element_ignore_languages' => 'true',
 		'_generate_element_display_conditions' => array( array( 'rule' => 'general:site', 'object' => '0' ) ),
 	);
 	foreach ( $expected_meta as $key => $expected ) {

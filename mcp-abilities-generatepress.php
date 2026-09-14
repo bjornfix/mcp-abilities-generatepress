@@ -3,7 +3,7 @@
  * Plugin Name: MCP Abilities - GeneratePress
  * Plugin URI: https://github.com/bjornfix/mcp-abilities-generatepress
  * Description: GeneratePress and GenerateBlocks abilities for MCP. Manage theme settings, elements, global styles, page meta, and caches.
- * Version: 1.1.62
+ * Version: 1.1.63
  * Author: basicus
  * Author URI: https://profiles.wordpress.org/basicus/
  * License: GPL-2.0+
@@ -722,10 +722,18 @@ function mcp_abilities_generatepress_warm_generateblocks_css( ?array $post_ids =
 		}
 
 		$status = (int) wp_remote_retrieve_response_code( $response );
-		if ( $status >= 200 && $status < 400 && file_exists( $css_file ) ) {
+		// GenerateBlocks deliberately inlines small stylesheets and can render
+		// without a per-post file. Verify its native output before reporting failure.
+		$inline_css = array();
+		$has_inline_css = preg_match(
+			'/<style\b[^>]*\bid\s*=\s*([\x22\x27])generateblocks-inline-css\1[^>]*>([\s\S]*?)<\/style\s*>/i',
+			(string) wp_remote_retrieve_body( $response ),
+			$inline_css
+		) && '' !== trim( preg_replace( '~/\*[\s\S]*?\*/~', '', $inline_css[2] ) );
+		if ( $status >= 200 && $status < 400 && ( file_exists( $css_file ) || $has_inline_css ) ) {
 			$warmed[] = $post_id;
 		} elseif ( $status >= 200 && $status < 400 ) {
-			$failed[ $post_id ] = 'CSS file was not generated.';
+			$failed[ $post_id ] = 'Neither a CSS file nor native inline CSS was generated.';
 		} else {
 			$failed[ $post_id ] = 'HTTP ' . $status;
 		}
@@ -737,6 +745,54 @@ function mcp_abilities_generatepress_warm_generateblocks_css( ?array $post_ids =
 		'skipped' => $skipped,
 	);
 }
+
+/** Whether this site mirrors its native sidebars with the reading direction. */
+function mcp_abilities_generatepress_mirror_sidebars_enabled(): bool {
+	return ! is_admin() && is_rtl() && mcp_abilities_generatepress_is_active()
+		&& (bool) get_option( 'mcp_generatepress_mirror_rtl_sidebars', false );
+}
+
+/** Declare the native setting which changes the public sidebar projection. */
+function mcp_abilities_generatepress_public_options( array $names ): array {
+	return array_values( array_unique( array_merge( $names, array( 'mcp_generatepress_mirror_rtl_sidebars' ) ) ) );
+}
+add_filter( 'static_publication_public_options', 'mcp_abilities_generatepress_public_options' );
+
+/**
+ * Project native sidebar placement without rewriting the source layout.
+ *
+ * @param string $layout GeneratePress sidebar layout.
+ * @return string
+ */
+function mcp_abilities_generatepress_mirror_sidebar_layout( string $layout ): string {
+	if ( ! mcp_abilities_generatepress_mirror_sidebars_enabled() ) {
+		return $layout;
+	}
+
+	$mirrored = array( 'right-sidebar' => 'left-sidebar', 'left-sidebar' => 'right-sidebar', 'both-right' => 'both-left', 'both-left' => 'both-right' );
+	return $mirrored[ $layout ] ?? $layout;
+}
+add_filter( 'generate_sidebar_layout', 'mcp_abilities_generatepress_mirror_sidebar_layout' );
+
+/**
+ * Keep each widget collection with its mirrored native sidebar.
+ *
+ * Only the request projection changes; stored widgets and editor controls do not.
+ *
+ * @param array<string,mixed> $sidebars Native widget assignments.
+ * @return array<string,mixed>
+ */
+function mcp_abilities_generatepress_mirror_sidebar_widgets( array $sidebars ): array {
+	if ( ! mcp_abilities_generatepress_mirror_sidebars_enabled() ) {
+		return $sidebars;
+	}
+
+	$right = $sidebars['sidebar-1'] ?? array();
+	$sidebars['sidebar-1'] = $sidebars['sidebar-2'] ?? array();
+	$sidebars['sidebar-2'] = $right;
+	return $sidebars;
+}
+add_filter( 'sidebars_widgets', 'mcp_abilities_generatepress_mirror_sidebar_widgets' );
 
 /**
  * Map page meta labels to GeneratePress meta keys.
@@ -753,6 +809,26 @@ function mcp_abilities_generatepress_page_meta_map(): array {
 		'sticky_header'          => '_generate-sticky-navigation-meta',
 	);
 }
+
+/**
+ * Include native page layout when Polylang copies a source translation.
+ *
+ * These protected keys are excluded by Polylang's generic custom-field copy.
+ * Copy once: a save of an empty target must never erase its siblings' layout.
+ * GeneratePress retains ownership of the keys and their native values.
+ *
+ * @param string[] $keys Metadata selected by Polylang and other providers.
+ * @param bool     $sync Whether this is automatic two-way synchronization.
+ * @return string[]
+ */
+function mcp_abilities_generatepress_polylang_copy_page_meta( array $keys, bool $sync = false ): array {
+	if ( $sync || ! mcp_abilities_generatepress_is_active() ) {
+		return $keys;
+	}
+
+	return array_values( array_unique( array_merge( $keys, array_values( mcp_abilities_generatepress_page_meta_map() ) ) ) );
+}
+add_filter( 'pll_copy_post_metas', 'mcp_abilities_generatepress_polylang_copy_page_meta', 10, 2 );
 
 /**
  * Normalize a GeneratePress page meta input value to the value stored by the theme.
@@ -7009,7 +7085,7 @@ function mcp_abilities_generatepress_register_abilities(): void {
 					'slug'         => $post->post_name,
 					'element_type' => get_post_meta( $post->ID, '_generate_element_type', true ),
 					'content'      => $content,
-					'post_content' => $post->post_content,
+					'post_content' => $include_content ? $post->post_content : '',
 					'meta'         => $meta,
 					'message'      => 'GeneratePress element retrieved successfully',
 				);
