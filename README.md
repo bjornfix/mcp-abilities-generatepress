@@ -2,12 +2,12 @@
 
 Change the site's shared design through the same GeneratePress settings, Elements and GenerateBlocks Global Styles that WordPress editors use. Ask an authenticated assistant to inspect the current design, make a specific change and read it back.
 
-[![Release 1.1.66](https://img.shields.io/badge/release-1.1.66-blue.svg)](https://downloads.devenia.com/mcp-abilities-generatepress.zip)
+[![Release 1.1.67](https://img.shields.io/badge/release-1.1.67-blue.svg)](https://downloads.devenia.com/mcp-abilities-generatepress.zip)
 [![License: GPL v2 or later](https://img.shields.io/badge/license-GPLv2%2B-blue.svg)](https://www.gnu.org/licenses/gpl-2.0.html)
 [![WordPress 6.9+](https://img.shields.io/badge/WordPress-6.9%2B-blue.svg)](https://wordpress.org/)
 [![PHP 8.0+](https://img.shields.io/badge/PHP-8.0%2B-purple.svg)](https://www.php.net/)
 
-**Stable tag:** 1.1.66
+**Stable tag:** 1.1.67
 
 **Tested up to:** WordPress 7.1
 
@@ -164,9 +164,17 @@ RTL sidebar mirroring is opt-in through `mcp_generatepress_mirror_rtl_sidebars`.
 
 ## Installation
 
+
+For update notifications in WordPress, install [Devenia MCP Updater](https://downloads.devenia.com/devenia-mcp-updater.zip). The updater is optional. You choose which plugins update automatically through WordPress.
+
 Download the [plugin ZIP](https://downloads.devenia.com/mcp-abilities-generatepress.zip). In WordPress, open **Plugins → Add New → Upload Plugin**, select the ZIP, install it and activate it. Configure the required theme, optional premium features and authenticated MCP connection, then verify discovery.
 
 ## Recent Changes
+
+
+### 1.1.67
+
+Add one dismissible Plugins-screen reminder when Devenia MCP Updater is missing or inactive, with persistent install or activate links. Automatic updates remain your choice in WordPress.
 
 ### 1.1.66
 

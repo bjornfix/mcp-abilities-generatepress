@@ -3,7 +3,7 @@ Contributors: basicus
 Tags: mcp, generatepress, theme, ai, automation
 Requires at least: 6.9
 Tested up to: 7.1
-Stable tag: 1.1.66
+Stable tag: 1.1.67
 Requires PHP: 8.0
 License: GPLv2 or later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
@@ -43,12 +43,17 @@ Part of the MCP Expose Abilities ecosystem.
 
 == Installation ==
 
+For update notifications in WordPress, install [Devenia MCP Updater](https://downloads.devenia.com/devenia-mcp-updater.zip). The updater is optional. You choose which plugins update automatically through WordPress.
+
 1. Install the required plugins (Abilities API, MCP Adapter)
 2. Download the latest release
 3. Upload via WordPress Admin → Plugins → Add New → Upload Plugin
 4. Activate the plugin
 
 == Changelog ==
+
+= 1.1.67 =
+* Add one dismissible Plugins-screen reminder when Devenia MCP Updater is missing or inactive, with persistent install or activate links. Automatic updates remain your choice in WordPress.
 
 = 1.1.66 =
 * Check permission to edit each attachment before regenerating its image files or metadata.
