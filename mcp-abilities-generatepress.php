@@ -21,8 +21,10 @@ if ( ! defined( 'ABSPATH' ) ) {
 	exit;
 }
 
-require_once __DIR__ . '/includes/devenia-updater-notice.php';
-mcp_abilities_generatepress_Updater_Notice::register( __FILE__ );
+add_action( 'admin_init', static function () {
+	require_once __DIR__ . '/includes/devenia-updater-notice.php';
+	mcp_abilities_generatepress_Updater_Notice::register( __FILE__ );
+} );
 
 require_once __DIR__ . '/includes/class-generateblocks-grid-projection.php';
 MCP_Abilities_GeneratePress_GenerateBlocks_Grid_Projection::register();
