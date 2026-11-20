@@ -1,0 +1,13 @@
+body:has([data-generatepress-inline-wonderpush-bell]) > .wonderpush-bell {
+	position: relative;
+	/* The provider can set the dock offsets inline. */
+	inset: auto !important;
+	inline-size: fit-content;
+	margin-left: 0;
+	margin-right: auto;
+}
+
+body:has([data-generatepress-inline-wonderpush-bell]) > .wonderpush-bell.wonderpush-right {
+	margin-left: auto;
+	margin-right: 0;
+}
