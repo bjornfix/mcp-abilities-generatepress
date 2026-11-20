@@ -3,7 +3,7 @@ Contributors: basicus
 Tags: mcp, generatepress, theme, ai, automation
 Requires at least: 6.9
 Tested up to: 7.1
-Stable tag: 1.1.68
+Stable tag: 1.1.69
 Requires PHP: 8.0
 License: GPLv2 or later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
@@ -58,7 +58,7 @@ For update notifications in WordPress, install [Devenia MCP Updater](https://dow
 
 == Changelog ==
 
-= 1.1.68 =
+= 1.1.69 =
 * Add opt-in mobile footer placement for the existing WonderPush bell and GeneratePress back-to-top control.
 
 = 1.1.67 =
