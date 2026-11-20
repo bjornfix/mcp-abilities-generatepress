@@ -2,12 +2,12 @@
 
 Change the site's shared design through the same GeneratePress settings, Elements and GenerateBlocks Global Styles that WordPress editors use. Ask an authenticated assistant to inspect the current design, make a specific change and read it back.
 
-[![Release 1.1.69](https://img.shields.io/badge/release-1.1.69-blue.svg)](https://downloads.devenia.com/mcp-abilities-generatepress.zip)
+[![Release 1.1.70](https://img.shields.io/badge/release-1.1.70-blue.svg)](https://downloads.devenia.com/mcp-abilities-generatepress.zip)
 [![License: GPL v2 or later](https://img.shields.io/badge/license-GPLv2%2B-blue.svg)](https://www.gnu.org/licenses/gpl-2.0.html)
 [![WordPress 6.9+](https://img.shields.io/badge/WordPress-6.9%2B-blue.svg)](https://wordpress.org/)
 [![PHP 8.0+](https://img.shields.io/badge/PHP-8.0%2B-purple.svg)](https://www.php.net/)
 
-**Stable tag:** 1.1.69
+**Stable tag:** 1.1.70
 
 **Tested up to:** WordPress 7.1
 
@@ -172,9 +172,9 @@ Download the [plugin ZIP](https://downloads.devenia.com/mcp-abilities-generatepr
 ## Recent Changes
 
 
-### 1.1.69
+### 1.1.70
 
-Add mobile footer placement for the existing WonderPush bell and GeneratePress back-to-top control. In a shared GeneratePress footer Element, use `[generatepress_mobile_wonderpush_bell]` and `[generatepress_mobile_back_to_top]`. The latter requires GeneratePress Back to Top to be enabled.
+When GeneratePress has Back to Top enabled, use `[generatepress_mobile_back_to_top]` in a shared GeneratePress footer Element. On mobile, the link takes the place of the floating button.
 
 ### 1.1.67
 

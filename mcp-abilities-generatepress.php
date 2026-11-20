@@ -3,7 +3,7 @@
  * Plugin Name: MCP Abilities - GeneratePress
  * Plugin URI: https://github.com/bjornfix/mcp-abilities-generatepress
  * Description: GeneratePress and GenerateBlocks abilities for MCP. Manage theme settings, elements, global styles, page meta, and caches.
- * Version: 1.1.69
+ * Version: 1.1.70
  * Author: basicus
  * Author URI: https://profiles.wordpress.org/basicus/
  * License: GPL-2.0+
@@ -38,7 +38,6 @@ require_once __DIR__ . '/includes/class-generateblocks-global-styles.php';
 require_once __DIR__ . '/includes/class-generateblocks-design-context.php';
 MCP_Abilities_GeneratePress_GenerateBlocks_Design_Context::register();
 require_once __DIR__ . '/includes/mobile-back-to-top.php';
-require_once __DIR__ . '/includes/mobile-wonderpush-bell.php';
 
 /**
  * Supply GenerateBlocks design markers to the vendor-neutral content gate.

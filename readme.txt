@@ -3,7 +3,7 @@ Contributors: basicus
 Tags: mcp, generatepress, theme, ai, automation
 Requires at least: 6.9
 Tested up to: 7.1
-Stable tag: 1.1.69
+Stable tag: 1.1.70
 Requires PHP: 8.0
 License: GPLv2 or later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
@@ -41,11 +41,9 @@ This add-on plugin exposes GeneratePress theme settings, elements, and GenerateB
 
 Part of the MCP Expose Abilities ecosystem.
 
-== Mobile Footer Controls ==
+== Mobile Back to Top ==
 
-Add the `[generatepress_mobile_wonderpush_bell]` shortcode to a shared GeneratePress footer Element to keep the existing WonderPush bell in the page flow on mobile.
-
-When GeneratePress has Back to Top enabled, add `[generatepress_mobile_back_to_top]` to show a link in the mobile footer.
+When GeneratePress has Back to Top enabled, add `[generatepress_mobile_back_to_top]` to your shared GeneratePress footer Element. On mobile, the link takes the place of the floating button.
 
 == Installation ==
 
@@ -58,8 +56,8 @@ For update notifications in WordPress, install [Devenia MCP Updater](https://dow
 
 == Changelog ==
 
-= 1.1.69 =
-* Add opt-in mobile footer placement for the existing WonderPush bell and GeneratePress back-to-top control.
+= 1.1.70 =
+* Add an opt-in mobile footer link for the native GeneratePress Back to Top control.
 
 = 1.1.67 =
 * Add one dismissible Plugins-screen reminder when Devenia MCP Updater is missing or inactive, with persistent install or activate links. Automatic updates remain your choice in WordPress.
